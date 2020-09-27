@@ -6,6 +6,7 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate serde_derive;
+
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
@@ -13,8 +14,14 @@ use structopt::StructOpt;
 // use clap::{Arg, App, SubCommand};
 use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+
 use std::io;
-use std::path;
+use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
+
+use chrono::prelude::*;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -72,9 +79,11 @@ struct InitRfc {
 #[derive(StructOpt, Debug)]
 #[structopt(about = "New RFC")]
 struct NewRfc {
-    #[structopt(long, short, help = "title of RFC")]
-    title: Option<String>,
+    #[structopt(long, short, help = "RFC number")]
+    number: Option<i32>,
     
+    #[structopt(long, short, help = "title of RFC")]
+    title: String,
 }
 
 #[derive(StructOpt, Debug)]
@@ -155,8 +164,10 @@ struct InitAdr {
 #[structopt(name = "new", about = "New ADR")]
 struct NewAdr {
     #[structopt(long, short, help = "title of ADR")]
-    title: Option<String>,
+    number: Option<i32>,
     
+    #[structopt(long, short, help = "title of ADR")]
+    title: String,
 }
 
 #[derive(StructOpt, Debug)]
@@ -274,6 +285,19 @@ where
     }
 }
 
+// impl<A> std::fmt::Display for List<A>
+// where
+//     A: std::fmt::Display,
+// {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         for value in self.0.iter() {
+//             writeln!(f, "{}", value)?;
+//         }
+
+//         Ok(())
+//     }
+// }
+
 impl<A> serde::ser::Serialize for List<A>
 where
     A: serde::ser::Serialize,
@@ -291,7 +315,11 @@ where
     }
 }
 
-
+fn get_extension_from_filename(filename: &str) -> Option<&str> {
+    Path::new(filename)
+        .extension()
+        .and_then(OsStr::to_str)
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let matches = App::new("Doctavious")
@@ -403,7 +431,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // TODO: call ADRCommand::new to create first ADR with record-architecture-decisions
 
-                fs::copy(path::Path::new("./init.md"), path::PathBuf::from(dir).join("file.md"))?;
+                fs::copy(Path::new("./init.md"), PathBuf::from(dir).join("file.md"))?;
 
                 // let file_path = path::PathBuf::from(dir).join("file.md");
                 // let write_result = fs::write(file_path, "lets us ADRs");
@@ -415,6 +443,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             AdrCommand::New(params) => {
+
+                // TODO: get directory from default or from configuration / .adr-dir
+                let dir = "./doc/adr";
+
+                let custom_template = Path::new(dir).join("template.md");
+                
+                // TODO: fallback to /usr/local/... or whatever the installation dir is
+                let template = if custom_template.exists() { custom_template } else { custom_template };
+
+                // TODO: get next adr number
+                let files = fs::read_dir(dir).expect("Directory should exist");
+                let maxid:i32 = files
+                    .filter_map(Result::ok)
+                    .filter(|f| f.path().extension().unwrap() == "md")
+                    .map(|f| f.file_name())
+                    .map(|s| {
+                        // The only way I can get this to pass the borrow checker is first mapping 
+                        // to file_name and then doing the rest. I'm probably doing this wrong and
+                        // should review later
+                        let ss = s.to_str().unwrap();
+                        let first_space_index = ss.find(" ").expect("didnt find a space");
+                        let num:String = ss.chars().take(first_space_index).collect();
+                        return num.parse::<i32>().unwrap();
+                    })
+                    .max().unwrap();
+
+                println!("found max id: {}", maxid);
+
+                // TODO: convert title to slug
+                // to_lower_case vs to_ascii_lowercase
+                let slug = params.title.to_lowercase();
+
+                // TODO: replace following in template - number, title, date, status
+                let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
+                contents = contents.replace("NUMBER", &maxid.to_string());
+                contents = contents.replace("TITLE", &params.title);
+                contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
+                contents = contents.replace("STATUS", "Accepted");
+
+                // TODO: supersceded
+                // TODO: reverse links
+                
+
+                let mut file = File::create(slug)?;
+                file.write_all(contents.as_bytes())?;
+
                 // TODO:
                 // If the ADR directory contains a template.md file it will be used as the template for the new ADR
                 // Otherwise the following file is used:
@@ -432,16 +506,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // read_dir does not guarantee any specific order
                 // in order to sort would need to read into a Vec and sort there
 
+
+                // let mut paths: Vec<_> = fs::read_dir("/").unwrap()
+                // .map(|r| r.unwrap())
+                // .collect();
+
                 // TODO: strip_prefix .
                 let files = fs::read_dir(dir).expect("Directory should exist");
-                files
+                let paths = files
                     .filter_map(Result::ok)
                     .filter(|f| f.path().extension().unwrap() == "md")
-                    .for_each(|f| {
-                        println!("{}", f.path().as_path().display());
-                    });
+                    .map(|f| f.path())
+                    .collect();
 
-                
+
+                print_output(opt.output, List(paths))?;
             }
 
             AdrCommand::Generate(generate) => match generate.generate_adr_command {
