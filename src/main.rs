@@ -11,7 +11,6 @@ use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
 use structopt::StructOpt;
-// use clap::{Arg, App, SubCommand};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -22,6 +21,15 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use chrono::prelude::*;
+
+// TODO: for ADR and RFC make sure template can be either markdown or asciidoc
+// TODO: Automatically update readme TOC
+// TODO: configuration
+// TODO: output options
+// config file
+// env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
+// --output  - overrides env var and config
+// TODO: RFC / ADR meta frontmatter
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -38,11 +46,20 @@ pub struct Opt {
     cmd: Command,
 }
 
-// TODO: what outputs to support? plantext/json/...?
+
+// TODO: 
+// should text be the following?
+// The text format organizes the CLI output into tab-delimited lines. 
+// It works well with traditional Unix text tools such as grep, sed, and awk, and the text processing performed by PowerShell.
+// The text output format follows the basic structure shown below. 
+// The columns are sorted alphabetically by the corresponding key names of the underlying JSON object.
+// What about table?
+// The table format produces human-readable representations of complex CLI output in a tabular form.
 #[derive(Debug, Copy, Clone)]
 pub enum Output {
     Json,
-    Default,
+    Text,
+    Table,
 }
 
 #[derive(StructOpt, Debug)]
@@ -228,8 +245,7 @@ lazy_static! {
     static ref OUTPUT_TYPES: HashMap<&'static str, Output> = {
         let mut map = HashMap::new();
         map.insert("json", Output::Json);
-        map.insert("default", Output::Default);
-
+        map.insert("text", Output::Text);
         map
     };
 }
@@ -261,8 +277,11 @@ fn print_output<A: std::fmt::Debug + Serialize>(
             serde_json::to_writer_pretty(std::io::stdout(), &value)?;
             Ok(())
         }
-        Output::Default => {
+        Output::Text => {
             println!("{:?}", value);
+            Ok(())
+        }
+        Output::Table => {
             Ok(())
         }
     }
@@ -322,36 +341,6 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let matches = App::new("Doctavious")
-    //     .version("0.0.1")
-    //     .about("Doctavious CLI")
-    //     .arg("-c, --config=[FILE] 'Sets a custom config file'")
-    //     .arg("<output> 'Sets an optional output file'")
-    //     .arg("-d... 'Turn debugging information on'")
-    //     .subcommand(
-    //         App::new("rfc")
-    //             .about("related to RFCs")
-    //             .arg(Arg::new("init")
-    //                 .short('i')
-    //                 .about("
-    //                 Initialises the directory of request for comments (RFCs):
-    //                  * creates a subdirectory of the current working directory
-    //                  * creates the first RFC in that subdirectory, recording the decision to record request for comments.
-
-    //                  If the DIRECTORY is not given, the RFcs are stored in the directory `doc/rfc`.
-    //                 ")
-    //                 .arg(Arg::new("directory")
-    //                     .short('d')
-    //                     .about("Directory to store RFCs")
-    //                 )
-    //             )
-    //             .arg(Arg::new("new")
-    //                 .short('n')
-    //                 .about("Create new RFC")
-    //             )
-    //         )
-    //     )
-    //     .get_matches();
 
     let opt = Opt::from_args();
     if opt.debug {
@@ -387,13 +376,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
 
-            //     Initialises the directory of architecture decision records:
-            //     * creates a subdirectory of the current working directory
-            //     * creates the first ADR in that subdirectory, recording the decision to
-            //       record architectural decisions with ADRs.
-            //    If the DIRECTORY is not given, the ADRs are stored in the directory `doc/adr`.
-
-
+                //     Initialises the directory of architecture decision records:
+                //     * creates a subdirectory of the current working directory
+                //     * creates the first ADR in that subdirectory, recording the decision to
+                //       record architectural decisions with ADRs.
+                //    If the DIRECTORY is not given, the ADRs are stored in the directory `doc/adr`.
 
 
                 // TODO: if directory is provided use it otherwise default
@@ -442,6 +429,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             }
 
+            // TODO: should be able to call new even if you dont init 
             AdrCommand::New(params) => {
 
                 // TODO: get directory from default or from configuration / .adr-dir
@@ -450,11 +438,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let custom_template = Path::new(dir).join("template.md");
                 
                 // TODO: fallback to /usr/local/... or whatever the installation dir is
-                let template = if custom_template.exists() { custom_template } else { custom_template };
+                let template = if custom_template.exists() { custom_template } else { Path::new("./template.md").to_path_buf() };
 
-                // TODO: get next adr number
-                let files = fs::read_dir(dir).expect("Directory should exist");
-                let maxid:i32 = files
+                let maxid;
+                if let Some(i) = params.number {
+                    maxid = i;
+                } else {
+                    let files = fs::read_dir(dir).expect("Directory should exist");
+                    maxid = files
                     .filter_map(Result::ok)
                     .filter(|f| f.path().extension().unwrap() == "md")
                     .map(|f| f.file_name())
@@ -467,7 +458,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let num:String = ss.chars().take(first_space_index).collect();
                         return num.parse::<i32>().unwrap();
                     })
-                    .max().unwrap();
+                    .max()
+                    .unwrap();
+                }
 
                 println!("found max id: {}", maxid);
 
@@ -476,6 +469,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let slug = params.title.to_lowercase();
 
                 // TODO: replace following in template - number, title, date, status
+                println!("{:?}", template);
                 let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
                 contents = contents.replace("NUMBER", &maxid.to_string());
                 contents = contents.replace("TITLE", &params.title);
@@ -486,7 +480,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // TODO: reverse links
                 
 
-                let mut file = File::create(slug)?;
+                let mut file = File::create(slug + ".md")?;
                 file.write_all(contents.as_bytes())?;
 
                 // TODO:
