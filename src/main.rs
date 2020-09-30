@@ -33,13 +33,13 @@ use chrono::prelude::*;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "eventfully"
+    name = "eventfully",
 )]
 pub struct Opt {
-    #[structopt(long, help = "Prints a verbose output during the program execution")]
+    #[structopt(long, help = "Prints a verbose output during the program execution", global = true)]
     debug: bool,
 
-    #[structopt(long, short, default_value = "default", parse(try_from_str = parse_output), help = "How a command output should be rendered")]
+    #[structopt(long, short, default_value = "json", parse(try_from_str = parse_output), help = "How a command output should be rendered", global = true)]
     output: Output,
 
     #[structopt(subcommand)]
@@ -60,6 +60,10 @@ pub enum Output {
     Json,
     Text,
     Table,
+}
+
+impl Default for Output {
+    fn default() -> Self { Output::Json }
 }
 
 #[derive(StructOpt, Debug)]
@@ -274,7 +278,20 @@ fn print_output<A: std::fmt::Debug + Serialize>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     match output {
         Output::Json => {
-            serde_json::to_writer_pretty(std::io::stdout(), &value)?;
+            // let mut a = HashMap::new();
+
+            // a.insert(
+            //     "Adventures of Huckleberry Finn".to_string(),
+            //     "My favorite book.".to_string(),
+            // );
+
+            // let mut a = Vec::new();
+            // a.push("message");
+
+            // serde_json::to_writer_pretty(std::io::stdout(), &List(a))?;
+            
+            // println!("{}", serde_json::to_string_pretty(&value)?);
+            serde_json::to_writer_pretty(std::io::stdout(), &value)?; // this prints a trailing %
             Ok(())
         }
         Output::Text => {
@@ -338,6 +355,12 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
     Path::new(filename)
         .extension()
         .and_then(OsStr::to_str)
+}
+
+
+/// Remove the `./` prefix from a path.
+pub fn strip_current_dir(path: &Path) -> &Path {
+    return path.strip_prefix(".").unwrap_or(path);
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -505,14 +528,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // .map(|r| r.unwrap())
                 // .collect();
 
-                // TODO: strip_prefix .
                 let files = fs::read_dir(dir).expect("Directory should exist");
-                let paths = files
+                let paths: Vec<_> = files
                     .filter_map(Result::ok)
                     .filter(|f| f.path().extension().unwrap() == "md")
-                    .map(|f| f.path())
+                    .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap())) // TODO: I dont kno  a better way to do this
                     .collect();
-
 
                 print_output(opt.output, List(paths))?;
             }
