@@ -71,6 +71,16 @@ impl Default for Output {
     fn default() -> Self { Output::Json }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum FileExtension {
+    Markdown,
+    Asciidoc,
+}
+
+impl Default for FileExtension {
+    fn default() -> Self { FileExtension::Markdown }
+}
+
 #[derive(StructOpt, Debug)]
 enum Command {
     Rfc(Rfc),
@@ -291,7 +301,7 @@ fn print_output<A: std::fmt::Display + Serialize>(
             Ok(())
         }
         Output::Table => {
-            Ok(())
+            todo!()
         }
     }
 }
@@ -357,6 +367,7 @@ fn strip_current_dir(path: &Path) -> &Path {
 
 
 fn is_valid_file(path: &Path) -> bool {
+    // TODO: iter over FileExtensions
     return path.extension().unwrap() == "md" || path.extension().unwrap() == "adoc";
 }
 
