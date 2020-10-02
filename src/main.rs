@@ -31,6 +31,11 @@ use chrono::prelude::*;
 // --output  - overrides env var and config
 // TODO: RFC / ADR meta frontmatter
 
+// TODO: why do I get a % at the end when using json output
+
+// TODO: add configuration option for whether to use md or adoc
+// probably makes sense to make enum. default to md
+
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "eventfully",
@@ -271,31 +276,18 @@ fn parse_enum<A: Copy>(env: &'static HashMap<&'static str, A>, src: &str) -> Res
     }
 }
 
-
-fn print_output<A: std::fmt::Debug + Serialize>(
+// std::fmt::Debug
+fn print_output<A: std::fmt::Display + Serialize>(
     output: Output,
     value: A,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match output {
         Output::Json => {
-            // let mut a = HashMap::new();
-
-            // a.insert(
-            //     "Adventures of Huckleberry Finn".to_string(),
-            //     "My favorite book.".to_string(),
-            // );
-
-            // let mut a = Vec::new();
-            // a.push("message");
-
-            // serde_json::to_writer_pretty(std::io::stdout(), &List(a))?;
-            
-            // println!("{}", serde_json::to_string_pretty(&value)?);
-            serde_json::to_writer_pretty(std::io::stdout(), &value)?; // this prints a trailing %
+            serde_json::to_writer_pretty(std::io::stdout(), &value)?;
             Ok(())
         }
         Output::Text => {
-            println!("{:?}", value);
+            println!("{}", value);
             Ok(())
         }
         Output::Table => {
@@ -321,18 +313,18 @@ where
     }
 }
 
-// impl<A> std::fmt::Display for List<A>
-// where
-//     A: std::fmt::Display,
-// {
-//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//         for value in self.0.iter() {
-//             writeln!(f, "{}", value)?;
-//         }
+impl<A> std::fmt::Display for List<A>
+where
+    A: std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for value in self.0.iter() {
+            writeln!(f, "{}", value)?;
+        }
 
-//         Ok(())
-//     }
-// }
+        Ok(())
+    }
+}
 
 impl<A> serde::ser::Serialize for List<A>
 where
@@ -359,8 +351,32 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 
 
 /// Remove the `./` prefix from a path.
-pub fn strip_current_dir(path: &Path) -> &Path {
+fn strip_current_dir(path: &Path) -> &Path {
     return path.strip_prefix(".").unwrap_or(path);
+}
+
+
+fn is_valid_file(path: &Path) -> bool {
+    return path.extension().unwrap() == "md" || path.extension().unwrap() == "adoc";
+}
+
+fn get_max_id(dir: &str) -> i32 {
+    let files = fs::read_dir(dir).expect("Directory should exist");
+    return files
+    .filter_map(Result::ok)
+    .filter(|f| is_valid_file(&f.path()))
+    .map(|f| f.file_name())
+    .map(|s| {
+        // The only way I can get this to pass the borrow checker is first mapping 
+        // to file_name and then doing the rest. I'm probably doing this wrong and
+        // should review later
+        let ss = s.to_str().unwrap();
+        let first_space_index = ss.find(" ").expect("didnt find a space");
+        let num:String = ss.chars().take(first_space_index).collect();
+        return num.parse::<i32>().unwrap();
+    })
+    .max()
+    .unwrap();
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -463,26 +479,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // TODO: fallback to /usr/local/... or whatever the installation dir is
                 let template = if custom_template.exists() { custom_template } else { Path::new("./template.md").to_path_buf() };
 
+                
                 let maxid;
                 if let Some(i) = params.number {
                     maxid = i;
                 } else {
-                    let files = fs::read_dir(dir).expect("Directory should exist");
-                    maxid = files
-                    .filter_map(Result::ok)
-                    .filter(|f| f.path().extension().unwrap() == "md")
-                    .map(|f| f.file_name())
-                    .map(|s| {
-                        // The only way I can get this to pass the borrow checker is first mapping 
-                        // to file_name and then doing the rest. I'm probably doing this wrong and
-                        // should review later
-                        let ss = s.to_str().unwrap();
-                        let first_space_index = ss.find(" ").expect("didnt find a space");
-                        let num:String = ss.chars().take(first_space_index).collect();
-                        return num.parse::<i32>().unwrap();
-                    })
-                    .max()
-                    .unwrap();
+                    maxid = get_max_id(dir);
                 }
 
                 println!("found max id: {}", maxid);
@@ -523,15 +525,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // read_dir does not guarantee any specific order
                 // in order to sort would need to read into a Vec and sort there
 
-
-                // let mut paths: Vec<_> = fs::read_dir("/").unwrap()
-                // .map(|r| r.unwrap())
-                // .collect();
-
                 let files = fs::read_dir(dir).expect("Directory should exist");
                 let paths: Vec<_> = files
                     .filter_map(Result::ok)
-                    .filter(|f| f.path().extension().unwrap() == "md")
+                    .filter(|f| is_valid_file(&f.path()))
                     .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap())) // TODO: I dont kno  a better way to do this
                     .collect();
 
