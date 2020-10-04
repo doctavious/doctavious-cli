@@ -28,6 +28,7 @@ use chrono::prelude::*;
 
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
+// Update CVS file? From Oxide - we automatically update a CSV file of all the RFDs along with their state, links, and other information in the repo for easy parsing.
 // TODO: configuration
 // TODO: output options
 // config file
@@ -81,68 +82,60 @@ impl Default for Output {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum FileExtension {
+pub enum TemplateExtension {
     Markdown,
     Asciidoc,
 }
 
-impl Default for FileExtension {
-    fn default() -> Self { FileExtension::Markdown }
+impl Default for TemplateExtension {
+    fn default() -> Self { TemplateExtension::Markdown }
 }
 
+// TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
+pub static DEFAULT_ADR_DIR: &str = "./docs/adr";
+pub static DEFAULT_RFC_DIR: &str = "./docs/rfc";
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 #[serde(rename_all = "kebab-case")]
-struct Config {
-    adrDir: String,
-    rfcDir: String,
+pub struct Settings {
+    adr_dir: Option<String>,
+    rfc_dir: Option<String>,
 }
-
-
-// lazy_static! {
-//     pub static ref DOCTAVIOUS_DIR: PathBuf = {
-//         let home_dir = dirs::home_dir().expect("Not supported platform: can't find home directory");
-//         Path::new(&home_dir).join(".doctavious")
-//     };
-// }
-
-// TODO: doctavious config will live in project directory
-// lazy_static! {
-//     pub static ref SETTINGS_FILE: PathBuf = Path::new(DOCTAVIOUS_DIR.as_path()).join("settings.toml");
-// }
 
 lazy_static! {
-    static ref CONFIG: Config = {
-        let contents = fs::read_to_string(".doctavious").unwrap_or("{}".to_string());
-        return toml::from_str(&contents).unwrap();
+    pub static ref DOCTAVIOUS_DIR: PathBuf = {
+        let home_dir = dirs::home_dir().expect("Unsupported platform: can't find home directory");
+        Path::new(&home_dir).join(".doctavious")
+    };
+
+    // TODO: doctavious config will live in project directory
+    pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(".doctavious");
+
+    pub static ref SETTINGS: Settings = {
+        match load_settings() {
+            Ok(settings) => settings,
+            Err(e) => {
+                if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
+                    eprintln!(
+                        "Error when parsing {}, fallback to default settings. Error: {}\n",
+                        SETTINGS_FILE.as_path().display(),
+                        e
+                    );
+                }
+
+                Default::default()
+            }
+        }
     };
 }
 
 // TODO: this might be a better option
-// fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
-//     let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
-//     let settings: Settings = toml::from_slice(&bytes)?;
+fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
+    let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
+    let settings: Settings = toml::from_slice(&bytes)?;
 
-//     Ok(settings)
-// }
-// lazy_static! {
-//     pub static ref SETTINGS: Settings = {
-//         match load_settings() {
-//             Ok(settings) => settings,
-//             Err(e) => {
-//                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
-//                     eprintln!(
-//                         "Error when parsing {}, fallback to default settings. Error: {}\n",
-//                         SETTINGS_FILE.as_path().display(),
-//                         e
-//                     );
-//                 }
-
-//                 Default::default()
-//             }
-//         }
-//     };
-// }
+    Ok(settings)
+}
 
 #[derive(StructOpt, Debug)]
 enum Command {
@@ -454,20 +447,20 @@ fn get_max_id(dir: &str) -> i32 {
 }
 
 
-fn get_dir_configuration<'a>(key: &str) -> &'a str {
-    return Ini::load_from_file(".doctavious").unwrap().get_from(None::<String>, key).unwrap().as_ref();
-    // return i.get_from(Some(""), key).unwrap().to_string();
-    //return i.get_from(None::<String>, key).unwrap();
-}
+// fn get_dir_configuration<'a>(key: &str) -> &'a str {
+//     return Ini::load_from_file(".doctavious").unwrap().get_from(None::<String>, key).unwrap().as_ref();
+//     // return i.get_from(Some(""), key).unwrap().to_string();
+//     //return i.get_from(None::<String>, key).unwrap();
+// }
 
 
-fn get_dir<'a>(arg_dir: Option<&String>) -> String {
-    let dir = match arg_dir {
-        None => get_dir_configuration("adr-dir"),
-        Some(ref x) => x,
-    };
-    return dir.to_string();
-}
+// fn get_dir<'a>(arg_dir: Option<&String>) -> String {
+//     let dir = match arg_dir {
+//         None => get_dir_configuration("adr-dir"),
+//         Some(ref x) => x,
+//     };
+//     return dir.to_string();
+// }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -533,12 +526,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // if it does prompt user
                 // TODO: create the first ADR in that subdirectory, recording the decision to record architectural decisions with ADRs.
                 // TODO: would like to avoid the .to_string
-                // let dir = match params.directory {
-                //     None => get_dir_configuration("adr-dir").unwrap(),
-                //     Some(ref x) => x,
-                // };
+                let dir = match params.directory {
+                    None => "./docs/adr",
+                    Some(ref x) => x,
+                };
 
-                let dir = get_dir(params.directory.as_ref());
+                // let dir = get_dir(params.directory.as_ref());
 
                 println!("RFC directory {}", dir);
 
