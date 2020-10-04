@@ -10,6 +10,10 @@ extern crate serde_derive;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
+use serde_derive::Serialize;
+use serde_derive::Deserialize;
+
+
 use structopt::StructOpt;
 use std::collections::HashMap;
 use std::fs;
@@ -35,6 +39,11 @@ use chrono::prelude::*;
 
 // TODO: add configuration option for whether to use md or adoc
 // probably makes sense to make enum. default to md
+
+// TODO: review https://github.com/joyent/rfd/blob/master/tools/rfdlint
+
+// TODO: do we need an init for RFC? What would it include? init should at least create .doctavious
+
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -80,6 +89,60 @@ pub enum FileExtension {
 impl Default for FileExtension {
     fn default() -> Self { FileExtension::Markdown }
 }
+
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct Config {
+    adrDir: String,
+    rfcDir: String,
+}
+
+
+// lazy_static! {
+//     pub static ref DOCTAVIOUS_DIR: PathBuf = {
+//         let home_dir = dirs::home_dir().expect("Not supported platform: can't find home directory");
+//         Path::new(&home_dir).join(".doctavious")
+//     };
+// }
+
+// TODO: doctavious config will live in project directory
+// lazy_static! {
+//     pub static ref SETTINGS_FILE: PathBuf = Path::new(DOCTAVIOUS_DIR.as_path()).join("settings.toml");
+// }
+
+lazy_static! {
+    static ref CONFIG: Config = {
+        let contents = fs::read_to_string(".doctavious").unwrap_or("{}".to_string());
+        return toml::from_str(&contents).unwrap();
+    };
+}
+
+// TODO: this might be a better option
+// fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
+//     let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
+//     let settings: Settings = toml::from_slice(&bytes)?;
+
+//     Ok(settings)
+// }
+// lazy_static! {
+//     pub static ref SETTINGS: Settings = {
+//         match load_settings() {
+//             Ok(settings) => settings,
+//             Err(e) => {
+//                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
+//                     eprintln!(
+//                         "Error when parsing {}, fallback to default settings. Error: {}\n",
+//                         SETTINGS_FILE.as_path().display(),
+//                         e
+//                     );
+//                 }
+
+//                 Default::default()
+//             }
+//         }
+//     };
+// }
 
 #[derive(StructOpt, Debug)]
 enum Command {
@@ -258,8 +321,6 @@ struct AdrGraph {
     link_prefix: Option<String>,
 }
 
-
-
 lazy_static! {
     static ref OUTPUT_TYPES: HashMap<&'static str, Output> = {
         let mut map = HashMap::new();
@@ -366,11 +427,13 @@ fn strip_current_dir(path: &Path) -> &Path {
 }
 
 
+/// 
 fn is_valid_file(path: &Path) -> bool {
     // TODO: iter over FileExtensions
     return path.extension().unwrap() == "md" || path.extension().unwrap() == "adoc";
 }
 
+///
 fn get_max_id(dir: &str) -> i32 {
     let files = fs::read_dir(dir).expect("Directory should exist");
     return files
@@ -390,6 +453,22 @@ fn get_max_id(dir: &str) -> i32 {
     .unwrap();
 }
 
+
+fn get_dir_configuration<'a>(key: &str) -> &'a str {
+    return Ini::load_from_file(".doctavious").unwrap().get_from(None::<String>, key).unwrap().as_ref();
+    // return i.get_from(Some(""), key).unwrap().to_string();
+    //return i.get_from(None::<String>, key).unwrap();
+}
+
+
+fn get_dir<'a>(arg_dir: Option<&String>) -> String {
+    let dir = match arg_dir {
+        None => get_dir_configuration("adr-dir"),
+        Some(ref x) => x,
+    };
+    return dir.to_string();
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opt = Opt::from_args();
@@ -405,11 +484,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             RfcCommand::New(params) => {
+                // allocate new RFC number
+                // create directory with rfc number (left pad 2 zeros)
+                // create readme file within directory via template
 
             }
 
             RfcCommand::List(params) => {
-                
+                 // TODO: get directory from default or from configuration / .adr-dir
+                 let dir = "./doc/rfc";
+
+                 // read_dir does not guarantee any specific order
+                 // in order to sort would need to read into a Vec and sort there
+ 
+                 let files = fs::read_dir(dir).expect("Directory should exist");
+                 let paths: Vec<_> = files
+                     .filter_map(Result::ok)
+                     .filter(|f| is_valid_file(&f.path()))
+                     .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                     .collect();
+ 
+                 print_output(opt.output, List(paths))?;
             }
             
             RfcCommand::Generate(generate) => match generate.generate_rfc_command {
@@ -437,11 +532,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // TODO: see if adr directory aleady exists
                 // if it does prompt user
                 // TODO: create the first ADR in that subdirectory, recording the decision to record architectural decisions with ADRs.
-                
-                let dir = match params.directory {
-                    None => "./doc/adr",
-                    Some(ref x) => x,
-                };
+                // TODO: would like to avoid the .to_string
+                // let dir = match params.directory {
+                //     None => get_dir_configuration("adr-dir").unwrap(),
+                //     Some(ref x) => x,
+                // };
+
+                let dir = get_dir(params.directory.as_ref());
 
                 println!("RFC directory {}", dir);
 
@@ -493,6 +590,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 let maxid;
                 if let Some(i) = params.number {
+                    // TODO: see if its already taken
                     maxid = i;
                 } else {
                     maxid = get_max_id(dir);
@@ -540,7 +638,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let paths: Vec<_> = files
                     .filter_map(Result::ok)
                     .filter(|f| is_valid_file(&f.path()))
-                    .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap())) // TODO: I dont kno  a better way to do this
+                    .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
                     .collect();
 
                 print_output(opt.output, List(paths))?;
