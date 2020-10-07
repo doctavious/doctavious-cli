@@ -26,6 +26,8 @@ use std::ffi::OsStr;
 
 use chrono::prelude::*;
 
+use std::slice::Iter;
+
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
 // Update CVS file? From Oxide - we automatically update a CSV file of all the RFDs along with their state, links, and other information in the repo for easy parsing.
@@ -91,6 +93,15 @@ impl Default for TemplateExtension {
     fn default() -> Self { TemplateExtension::Markdown }
 }
 
+lazy_static! {
+    static ref TEMPLATE_EXTENSIONS: HashMap<&'static str, TemplateExtension> = {
+        let mut map = HashMap::new();
+        map.insert("md", TemplateExtension::Markdown);
+        map.insert("asciidoc", TemplateExtension::Asciidoc);
+        map
+    };
+}
+
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "./docs/adr";
 pub static DEFAULT_RFC_DIR: &str = "./docs/rfc";
@@ -102,6 +113,20 @@ pub struct Settings {
     rfc_dir: Option<String>,
 }
 
+impl Settings {
+
+    fn get_adr_dir(&self) -> &str {
+        // TODO: is there a better way to do this?
+        return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
+    }
+
+    fn get_rfc_dir(&self) -> &str {
+        // TODO: is there a better way to do this?
+        return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
+    }
+
+ }
+
 lazy_static! {
     pub static ref DOCTAVIOUS_DIR: PathBuf = {
         let home_dir = dirs::home_dir().expect("Unsupported platform: can't find home directory");
@@ -109,6 +134,7 @@ lazy_static! {
     };
 
     // TODO: doctavious config will live in project directory
+    // do we also want a default settings file
     pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(".doctavious");
 
     pub static ref SETTINGS: Settings = {
@@ -129,7 +155,6 @@ lazy_static! {
     };
 }
 
-// TODO: this might be a better option
 fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
     let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
     let settings: Settings = toml::from_slice(&bytes)?;
@@ -340,7 +365,6 @@ fn parse_enum<A: Copy>(env: &'static HashMap<&'static str, A>, src: &str) -> Res
     }
 }
 
-// std::fmt::Debug
 fn print_output<A: std::fmt::Display + Serialize>(
     output: Output,
     value: A,
@@ -361,7 +385,6 @@ fn print_output<A: std::fmt::Display + Serialize>(
 }
 
 
-// TODO: review this code
 struct List<A>(Vec<A>);
 
 impl<A> std::fmt::Debug for List<A>
@@ -422,28 +445,27 @@ fn strip_current_dir(path: &Path) -> &Path {
 
 /// 
 fn is_valid_file(path: &Path) -> bool {
-    // TODO: iter over FileExtensions
-    return path.extension().unwrap() == "md" || path.extension().unwrap() == "adoc";
+    return TEMPLATE_EXTENSIONS.contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
 ///
 fn get_max_id(dir: &str) -> i32 {
     let files = fs::read_dir(dir).expect("Directory should exist");
     return files
-    .filter_map(Result::ok)
-    .filter(|f| is_valid_file(&f.path()))
-    .map(|f| f.file_name())
-    .map(|s| {
-        // The only way I can get this to pass the borrow checker is first mapping 
-        // to file_name and then doing the rest. I'm probably doing this wrong and
-        // should review later
-        let ss = s.to_str().unwrap();
-        let first_space_index = ss.find(" ").expect("didnt find a space");
-        let num:String = ss.chars().take(first_space_index).collect();
-        return num.parse::<i32>().unwrap();
-    })
-    .max()
-    .unwrap();
+        .filter_map(Result::ok)
+        .filter(|f| is_valid_file(&f.path()))
+        .map(|f| f.file_name())
+        .map(|s| {
+            // The only way I can get this to pass the borrow checker is first mapping 
+            // to file_name and then doing the rest. I'm probably doing this wrong and
+            // should review later
+            let ss = s.to_str().unwrap();
+            let first_space_index = ss.find(" ").expect("didnt find a space");
+            let num:String = ss.chars().take(first_space_index).collect();
+            return num.parse::<i32>().unwrap();
+        })
+        .max()
+        .unwrap();
 }
 
 
@@ -483,21 +505,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             }
 
-            RfcCommand::List(params) => {
+            RfcCommand::List(_) => {
                  // TODO: get directory from default or from configuration / .adr-dir
-                 let dir = "./doc/rfc";
+                 let dir = SETTINGS.get_rfc_dir(); //"./doc/rfc";
+                 
 
                  // read_dir does not guarantee any specific order
                  // in order to sort would need to read into a Vec and sort there
  
-                 let files = fs::read_dir(dir).expect("Directory should exist");
-                 let paths: Vec<_> = files
-                     .filter_map(Result::ok)
-                     .filter(|f| is_valid_file(&f.path()))
-                     .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                     .collect();
+                 // let files = fs::read_dir(dir); //.expect("Directory should exist");
+                 
+                 match fs::read_dir(dir) {
+                    Ok(files) => {
+                        let paths: Vec<_> = files
+                            .filter_map(Result::ok)
+                            .filter(|f| is_valid_file(&f.path()))
+                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                            .collect();
+    
+                        print_output(opt.output, List(paths))?;
+                    },
+                    Err(_) => eprintln!("Directory should exist"),
+                };
+
+
+                //  let paths: Vec<_> = files
+                //      .filter_map(Result::ok)
+                //      .filter(|f| is_valid_file(&f.path()))
+                //      .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                //      .collect();
  
-                 print_output(opt.output, List(paths))?;
+                //  print_output(opt.output, List(paths))?;
             }
             
             RfcCommand::Generate(generate) => match generate.generate_rfc_command {
@@ -627,14 +665,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // read_dir does not guarantee any specific order
                 // in order to sort would need to read into a Vec and sort there
 
-                let files = fs::read_dir(dir).expect("Directory should exist");
-                let paths: Vec<_> = files
-                    .filter_map(Result::ok)
-                    .filter(|f| is_valid_file(&f.path()))
-                    .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                    .collect();
-
-                print_output(opt.output, List(paths))?;
+                match fs::read_dir(dir) {
+                    Ok(files) => {
+                        let paths: Vec<_> = files
+                            .filter_map(Result::ok)
+                            .filter(|f| is_valid_file(&f.path()))
+                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                            .collect();
+    
+                        print_output(opt.output, List(paths))?;
+                    },
+                    // TODO: better error mesage. should also use configured output?
+                    Err(_) => eprintln!("Directory should exist"),
+                }
             }
 
             AdrCommand::Generate(generate) => match generate.generate_adr_command {
