@@ -13,21 +13,19 @@ use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
-
 use structopt::StructOpt;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 
-use std::io;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use chrono::prelude::*;
 
-use std::slice::Iter;
+use std::env;
 
 
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
@@ -108,6 +106,7 @@ lazy_static! {
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
 pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
 
+// TODO: should this include output?
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
@@ -153,7 +152,6 @@ lazy_static! {
         match load_settings() {
             Ok(settings) => settings,
             Err(e) => {
-                // TODO: log this only when during debug mode
                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
                     eprintln!(
                         "Error when parsing {}, fallback to default settings. Error: {}\n",
@@ -461,6 +459,7 @@ fn is_valid_file(path: &Path) -> bool {
     return TEMPLATE_EXTENSIONS.contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
+// TODO: terrible name
 ///
 fn get_max_id(dir: &str) -> i32 {
     let files = fs::read_dir(dir).expect("Directory should exist");
@@ -480,6 +479,25 @@ fn get_max_id(dir: &str) -> i32 {
         .max()
         .unwrap();
 }
+
+/// get output based on following order of precednece
+/// Output default
+/// config file overrides output default -- TOOD: implement
+/// env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
+/// --output  - overrides env var and config
+fn get_output(opt_output: Option<Output>) -> Output {
+    match opt_output {
+        Some(o) => o,
+        None => {
+            let key = "DOCTAVIOUS_DEFAULT_OUTPUT";
+            match env::var(key) {
+                Ok(val) => parse_output(&val).unwrap(), // TODO: is unwrap ok here?
+                Err(_) => Output::default() // TODO: implement output via settings/config file
+            }
+        }
+    }
+}
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
