@@ -21,12 +21,14 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use std::io;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use chrono::prelude::*;
 
 use std::slice::Iter;
+
 
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
@@ -103,8 +105,8 @@ lazy_static! {
 }
 
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
-pub static DEFAULT_ADR_DIR: &str = "./docs/adr";
-pub static DEFAULT_RFC_DIR: &str = "./docs/rfc";
+pub static DEFAULT_ADR_DIR: &str = "docs/adr";
+pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
 #[serde(rename_all = "kebab-case")]
@@ -116,13 +118,23 @@ pub struct Settings {
 impl Settings {
 
     fn get_adr_dir(&self) -> &str {
-        // TODO: is there a better way to do this?
-        return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
+        // an alternative to the below is 
+        // return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
+        if let Some(adr_dir) = &self.adr_dir {
+            return adr_dir;
+        } else {
+            return DEFAULT_ADR_DIR;
+        }
     }
 
     fn get_rfc_dir(&self) -> &str {
-        // TODO: is there a better way to do this?
-        return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
+        // an alternative to the below is 
+        // return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
+        if let Some(rfc_dir) = &self.rfc_dir {
+            return rfc_dir;
+        } else {
+            return DEFAULT_RFC_DIR;
+        }
     }
 
  }
@@ -141,6 +153,7 @@ lazy_static! {
         match load_settings() {
             Ok(settings) => settings,
             Err(e) => {
+                // TODO: log this only when during debug mode
                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
                     eprintln!(
                         "Error when parsing {}, fallback to default settings. Error: {}\n",
@@ -468,22 +481,6 @@ fn get_max_id(dir: &str) -> i32 {
         .unwrap();
 }
 
-
-// fn get_dir_configuration<'a>(key: &str) -> &'a str {
-//     return Ini::load_from_file(".doctavious").unwrap().get_from(None::<String>, key).unwrap().as_ref();
-//     // return i.get_from(Some(""), key).unwrap().to_string();
-//     //return i.get_from(None::<String>, key).unwrap();
-// }
-
-
-// fn get_dir<'a>(arg_dir: Option<&String>) -> String {
-//     let dir = match arg_dir {
-//         None => get_dir_configuration("adr-dir"),
-//         Some(ref x) => x,
-//     };
-//     return dir.to_string();
-// }
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opt = Opt::from_args();
@@ -506,15 +503,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             RfcCommand::List(_) => {
-                 // TODO: get directory from default or from configuration / .adr-dir
-                 let dir = SETTINGS.get_rfc_dir(); //"./doc/rfc";
+                 let dir = SETTINGS.get_rfc_dir();
                  
-
+                 // TODO: do we want to order?
                  // read_dir does not guarantee any specific order
                  // in order to sort would need to read into a Vec and sort there
  
-                 // let files = fs::read_dir(dir); //.expect("Directory should exist");
-                 
                  match fs::read_dir(dir) {
                     Ok(files) => {
                         let paths: Vec<_> = files
@@ -525,7 +519,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
                         print_output(opt.output, List(paths))?;
                     },
-                    Err(_) => eprintln!("Directory should exist"),
+                    Err(e) => match e.kind() {
+                        ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
+                        _ => eprintln!("Error occurred: {:?}", e)
+                    }
                 };
 
 
@@ -564,30 +561,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // if it does prompt user
                 // TODO: create the first ADR in that subdirectory, recording the decision to record architectural decisions with ADRs.
                 // TODO: would like to avoid the .to_string
-                let dir = match params.directory {
-                    None => "./docs/adr",
-                    Some(ref x) => x,
-                };
 
-                // let dir = get_dir(params.directory.as_ref());
-
-                println!("RFC directory {}", dir);
+                let dir = SETTINGS.get_adr_dir();
 
                 // TODO: create_dir_all doesnt appear to throw AlreadyExists.
                 // I think this is fine just need to make sure that we dont overwrite initial file
-                let create_dir_result = fs::create_dir_all(dir);
-                match create_dir_result {
-                    Ok(_) => println!("Created {}", dir),
-                    Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-                        println!("{} already exists", dir);
-                        // TODO: return
-                    }
-                    Err(e) => {
-                        println!("Other error: {}", e);
-                        // TODO: return
-                    }
-                    
-                }
+                match fs::read_dir(dir) {
+                    Ok(files) => {
+                        let paths: Vec<_> = files
+                            .filter_map(Result::ok)
+                            .filter(|f| is_valid_file(&f.path()))
+                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                            .collect();
+    
+                        print_output(opt.output, List(paths))?;
+                    },
+                    Err(_) => eprintln!("Directory should exist"),
+                };
 
                 // TODO: variables for the following
                 // adr_bin_dir "/usr/local/Cellar/adr-tools/3.0.0/bin"'
@@ -610,8 +600,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // TODO: should be able to call new even if you dont init 
             AdrCommand::New(params) => {
 
-                // TODO: get directory from default or from configuration / .adr-dir
-                let dir = "./doc/adr";
+                let dir = SETTINGS.get_adr_dir();
 
                 let custom_template = Path::new(dir).join("template.md");
                 
@@ -659,9 +648,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             AdrCommand::List(_) => {
 
-                // TODO: get directory from default or from configuration / .adr-dir
-                let dir = "./doc/adr";
+                let dir = SETTINGS.get_adr_dir();
 
+                // TODO: do we want to order?
                 // read_dir does not guarantee any specific order
                 // in order to sort would need to read into a Vec and sort there
 
@@ -675,8 +664,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
                         print_output(opt.output, List(paths))?;
                     },
-                    // TODO: better error mesage. should also use configured output?
-                    Err(_) => eprintln!("Directory should exist"),
+                    Err(e) => match e.kind() {
+                        ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
+                        _ => eprintln!("Error occurred: {:?}", e)
+                    }
                 }
             }
 
@@ -694,4 +685,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     Ok(())
+
 }
