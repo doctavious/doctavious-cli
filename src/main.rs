@@ -46,6 +46,8 @@ use std::env;
 
 // TODO: do we need an init for RFC? What would it include? init should at least create .doctavious
 
+// TODO: add option for ADR and RFC to determine if you want just file or a directory structure
+// to support this we would have to alter how ADR init works as that currently hard codes number
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -287,10 +289,11 @@ struct InitAdr {
     directory: Option<String>,
 }
 
+// TODO: should number just be a string and allow people to add their own conventions like leading zeros?
 #[derive(StructOpt, Debug)]
 #[structopt(name = "new", about = "New ADR")]
 struct NewAdr {
-    #[structopt(long, short, help = "title of ADR")]
+    #[structopt(long, short, help = "ADR Number")]
     number: Option<i32>,
     
     #[structopt(long, short, help = "title of ADR")]
@@ -489,6 +492,7 @@ fn is_number_reserved(dir: &str, number: i32) -> bool {
             // to file_name and then doing the rest. I'm probably doing this wrong and
             // should review later
             let ss = s.to_str().unwrap();
+            // TODO: find "-" instead of " "
             let first_space_index = ss.find(" ").expect("didnt find a space");
             let num:String = ss.chars().take(first_space_index).collect();
             return num.parse::<i32>().unwrap();
@@ -514,6 +518,61 @@ fn get_output(opt_output: Option<Output>) -> Output {
             }
         }
     }
+}
+
+
+fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>>{
+    let dir = SETTINGS.get_adr_dir();
+    let custom_template = Path::new(dir).join("template.md");
+    
+    println!("custom template {:?}", custom_template);
+
+    // TODO: fallback to /usr/local/... or whatever the installation dir is
+    // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
+    let template = if custom_template.exists() { custom_template } else { Path::new("templates/adr/template.md").to_path_buf() };
+    
+    let reserve_number;
+    if let Some(i) = number {
+        if is_number_reserved(dir, i) {
+            // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
+            eprintln!("ADR {} has already been reserved", i);
+            return Ok(());
+        }
+        reserve_number = i;
+    } else {
+        reserve_number = get_next_number(dir);
+    }
+
+    println!("reserving number: {}", reserve_number);
+
+    // TODO: convert title to slug
+    // to_lower_case vs to_ascii_lowercase
+    let slug = title.to_lowercase();
+
+    // TODO: replace following in template - number, title, date, status
+    println!("template {:?}", template);
+    let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
+    contents = contents.replace("NUMBER", &reserve_number.to_string());
+    contents = contents.replace("TITLE", &title);
+    contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
+    contents = contents.replace("STATUS", "Accepted");
+
+    // TODO: supersceded
+    // TODO: reverse links
+    
+
+    let mut file = File::create(Path::new(dir).join(slug + ".md"))?;
+    file.write_all(contents.as_bytes())?;
+
+    // TODO:
+    // If the ADR directory contains a template.md file it will be used as the template for the new ADR
+    // Otherwise the following file is used:
+    // <path to eventfully>/<version>/template.md
+    // /usr/local/Cellar/adr-tools/3.0.0/template.md
+    // This template follows the style described by Michael Nygard in this article.
+    // http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions
+
+    return Ok(())
 }
 
 
@@ -617,67 +676,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         return Err(e.into());
                     }   
                 }
-
-                // TODO: call ADRCommand::new to create first ADR with record-architecture-decisions
-                let copy_result = fs::copy(Path::new("templates/adr/init.md"), PathBuf::from(dir).join("file.md"));
-                match copy_result {
-                    Ok(_) => println!("TODO: show initial file path to first adr"),
-                    Err(e) => println!("Error creating initial ADR: {:?}", e)
-                }
+                
+                return new_adr(Some(1), "0001-record-architecture-decisions".to_string());
 
             }
 
             // TODO: should be able to call new even if you dont init 
             AdrCommand::New(params) => {
-
-                let dir = SETTINGS.get_adr_dir();
-
-                let custom_template = Path::new(dir).join("template.md");
-                
-                // TODO: fallback to /usr/local/... or whatever the installation dir is
-                let template = if custom_template.exists() { custom_template } else { Path::new("./template.md").to_path_buf() };
-
-                
-                let reserve_number;
-                if let Some(i) = params.number {
-                    if is_number_reserved(dir, i) {
-                        // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
-                        eprintln!("ADR {} has already been reserved", i);
-                        return Ok(());
-                    }
-                    reserve_number = i;
-                } else {
-                    reserve_number = get_next_number(dir);
-                }
-
-                println!("reserving number: {}", reserve_number);
-
-                // TODO: convert title to slug
-                // to_lower_case vs to_ascii_lowercase
-                let slug = params.title.to_lowercase();
-
-                // TODO: replace following in template - number, title, date, status
-                println!("{:?}", template);
-                let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
-                contents = contents.replace("NUMBER", &reserve_number.to_string());
-                contents = contents.replace("TITLE", &params.title);
-                contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
-                contents = contents.replace("STATUS", "Accepted");
-
-                // TODO: supersceded
-                // TODO: reverse links
-                
-
-                let mut file = File::create(slug + ".md")?;
-                file.write_all(contents.as_bytes())?;
-
-                // TODO:
-                // If the ADR directory contains a template.md file it will be used as the template for the new ADR
-                // Otherwise the following file is used:
-                // <path to eventfully>/<version>/template.md
-                // /usr/local/Cellar/adr-tools/3.0.0/template.md
-                // This template follows the style described by Michael Nygard in this article.
-                // http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions
+                return new_adr(params.number, params.title);
             }
 
             AdrCommand::List(_) => {

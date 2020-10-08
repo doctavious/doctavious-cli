@@ -1,6 +1,7 @@
 use std::{env, fs};
 use std::path::{Path, PathBuf};
 
+// TODO: move into src/main?
 const TEMPLATES_DIR: &str = "templates";
 fn main() {
     let target_dir_path = env::var("OUT_DIR").unwrap();
