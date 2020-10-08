@@ -27,7 +27,6 @@ use chrono::prelude::*;
 
 use std::env;
 
-
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
 // Update CVS file? From Oxide - we automatically update a CSV file of all the RFDs along with their state, links, and other information in the repo for easy parsing.
@@ -56,8 +55,8 @@ pub struct Opt {
     #[structopt(long, help = "Prints a verbose output during the program execution", global = true)]
     debug: bool,
 
-    #[structopt(long, short, default_value = "json", parse(try_from_str = parse_output), help = "How a command output should be rendered", global = true)]
-    output: Output,
+    #[structopt(long, short, parse(try_from_str = parse_output), help = "How a command output should be rendered", global = true)]
+    output: Option<Output>,
 
     #[structopt(subcommand)]
     cmd: Command,
@@ -481,10 +480,10 @@ fn get_max_id(dir: &str) -> i32 {
 }
 
 /// get output based on following order of precednece
-/// Output default
+/// output argument (--output)
+/// env var DOCTAVIOUS_DEFAULT_OUTPUT
 /// config file overrides output default -- TOOD: implement
-/// env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
-/// --output  - overrides env var and config
+/// Output default
 fn get_output(opt_output: Option<Output>) -> Output {
     match opt_output {
         Some(o) => o,
@@ -535,7 +534,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
                             .collect();
     
-                        print_output(opt.output, List(paths))?;
+                        print_output(get_output(opt.output), List(paths))?;
                     },
                     Err(e) => match e.kind() {
                         ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
@@ -580,38 +579,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // TODO: create the first ADR in that subdirectory, recording the decision to record architectural decisions with ADRs.
                 // TODO: would like to avoid the .to_string
 
-                let dir = SETTINGS.get_adr_dir();
-
-                // TODO: create_dir_all doesnt appear to throw AlreadyExists.
-                // I think this is fine just need to make sure that we dont overwrite initial file
-                match fs::read_dir(dir) {
-                    Ok(files) => {
-                        let paths: Vec<_> = files
-                            .filter_map(Result::ok)
-                            .filter(|f| is_valid_file(&f.path()))
-                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                            .collect();
-    
-                        print_output(opt.output, List(paths))?;
-                    },
-                    Err(_) => eprintln!("Directory should exist"),
+                let dir = match params.directory {
+                    None => SETTINGS.get_adr_dir(),
+                    Some(ref x) => x,
                 };
 
-                // TODO: variables for the following
-                // adr_bin_dir "/usr/local/Cellar/adr-tools/3.0.0/bin"'
-                // adr_template_dir "/usr/local/Cellar/adr-tools/3.0.0"'
-
+                // TODO: create_dir_all doesnt appear to throw AlreadyExists. Confirm this
+                // I think this is fine just need to make sure that we dont overwrite initial file
+                let create_dir_result = fs::create_dir_all(dir);
+                match create_dir_result {
+                    Ok(_) => (),
+                    Err(e) if e.kind() == ErrorKind::AlreadyExists => {
+                        eprintln!("the directory {} already exists", dir);
+                        return Err(e.into());
+                    }
+                    Err(e) => {
+                        eprintln!("Error occurred creating directory {}: {}", dir, e);
+                        return Err(e.into());
+                    }   
+                }
 
                 // TODO: call ADRCommand::new to create first ADR with record-architecture-decisions
-
-                fs::copy(Path::new("./init.md"), PathBuf::from(dir).join("file.md"))?;
-
-                // let file_path = path::PathBuf::from(dir).join("file.md");
-                // let write_result = fs::write(file_path, "lets us ADRs");
-                // match write_result {
-                //     Ok(_) => println!("RFC init successful"),
-                //     Err(e) => println!("error parsing header: {:?}", e)
-                // }
+                let copy_result = fs::copy(Path::new("templates/adr/init.md"), PathBuf::from(dir).join("file.md"));
+                match copy_result {
+                    Ok(_) => println!("TODO: show initial file path to first adr"),
+                    Err(e) => println!("Error creating initial ADR: {:?}", e)
+                }
 
             }
 
@@ -680,7 +673,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
                             .collect();
     
-                        print_output(opt.output, List(paths))?;
+                        print_output(get_output(opt.output), List(paths))?;
                     },
                     Err(e) => match e.kind() {
                         ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
