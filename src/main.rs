@@ -458,9 +458,8 @@ fn is_valid_file(path: &Path) -> bool {
     return TEMPLATE_EXTENSIONS.contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
-// TODO: terrible name
-///
-fn get_max_id(dir: &str) -> i32 {
+// TODO: share more between get_next_number and is_number_reserved
+fn get_next_number(dir: &str) -> i32 {
     let files = fs::read_dir(dir).expect("Directory should exist");
     return files
         .filter_map(Result::ok)
@@ -478,6 +477,26 @@ fn get_max_id(dir: &str) -> i32 {
         .max()
         .unwrap();
 }
+
+fn is_number_reserved(dir: &str, number: i32) -> bool {
+    let files = fs::read_dir(dir).expect("Directory should exist");
+    return files
+        .filter_map(Result::ok)
+        .filter(|f| is_valid_file(&f.path()))
+        .map(|f| f.file_name())
+        .map(|s| {
+            // The only way I can get this to pass the borrow checker is first mapping 
+            // to file_name and then doing the rest. I'm probably doing this wrong and
+            // should review later
+            let ss = s.to_str().unwrap();
+            let first_space_index = ss.find(" ").expect("didnt find a space");
+            let num:String = ss.chars().take(first_space_index).collect();
+            return num.parse::<i32>().unwrap();
+        })
+        .collect::<Vec<i32>>()
+        .contains(&number);
+}
+
 
 /// get output based on following order of precednece
 /// output argument (--output)
@@ -619,15 +638,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let template = if custom_template.exists() { custom_template } else { Path::new("./template.md").to_path_buf() };
 
                 
-                let maxid;
+                let reserve_number;
                 if let Some(i) = params.number {
-                    // TODO: see if its already taken
-                    maxid = i;
+                    if is_number_reserved(dir, i) {
+                        // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
+                        eprintln!("ADR {} has already been reserved", i);
+                        return Ok(());
+                    }
+                    reserve_number = i;
                 } else {
-                    maxid = get_max_id(dir);
+                    reserve_number = get_next_number(dir);
                 }
 
-                println!("found max id: {}", maxid);
+                println!("reserving number: {}", reserve_number);
 
                 // TODO: convert title to slug
                 // to_lower_case vs to_ascii_lowercase
@@ -636,7 +659,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // TODO: replace following in template - number, title, date, status
                 println!("{:?}", template);
                 let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
-                contents = contents.replace("NUMBER", &maxid.to_string());
+                contents = contents.replace("NUMBER", &reserve_number.to_string());
                 contents = contents.replace("TITLE", &params.title);
                 contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
                 contents = contents.replace("STATUS", "Accepted");
