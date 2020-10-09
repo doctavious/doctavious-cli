@@ -8,24 +8,25 @@ extern crate lazy_static;
 extern crate serde_derive;
 
 use serde::ser::SerializeSeq;
-use serde::{Serialize, Serializer};
-
+use serde::{Deserialize, Serialize, Serializer};
 use serde_derive::Serialize;
 use serde_derive::Deserialize;
 
 use structopt::StructOpt;
 use std::collections::HashMap;
+use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-
 use std::io::ErrorKind;
+use std::iter;
 use std::path::{Path, PathBuf};
-use std::ffi::OsStr;
+
 
 use chrono::prelude::*;
 
-use std::env;
+
 
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
@@ -48,6 +49,8 @@ use std::env;
 
 // TODO: add option for ADR and RFC to determine if you want just file or a directory structure
 // to support this we would have to alter how ADR init works as that currently hard codes number
+
+// Create ADR from RFC - essentially a link similar to linking ADRs to one another
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -117,6 +120,12 @@ pub struct Settings {
 
 impl Settings {
 
+    fn persist(self) -> Result<(), Box<dyn std::error::Error>> {
+        let content = toml::to_string(&self)?;
+        fs::write(SETTINGS_FILE.as_path(), content)?;
+        Ok(())
+    }
+
     fn get_adr_dir(&self) -> &str {
         // an alternative to the below is 
         // return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
@@ -149,6 +158,7 @@ lazy_static! {
     // do we also want a default settings file
     pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(".doctavious");
 
+    // TODO: does this need to be an Option so we know if settings exist?
     pub static ref SETTINGS: Settings = {
         match load_settings() {
             Ok(settings) => settings,
@@ -296,6 +306,7 @@ struct NewAdr {
     #[structopt(long, short, help = "ADR Number")]
     number: Option<i32>,
     
+    // TODO: can we give title index so we dont have to specify --title or -t?
     #[structopt(long, short, help = "title of ADR")]
     title: String,
 }
@@ -327,7 +338,7 @@ struct AdrToc {
 
     #[structopt(
         long,
-        help = "Set this parameter if you don't want to give your password safely (non-interactive)"
+        help = ""
     )]
     outro: Option<String>,
 
@@ -344,7 +355,7 @@ struct AdrGraph {
 
     #[structopt(
         long,
-        help = "Set this parameter if you don't want to give your password safely (non-interactive)"
+        help = ""
     )]
     outro: Option<String>,
 
@@ -463,44 +474,58 @@ fn is_valid_file(path: &Path) -> bool {
 
 // TODO: share more between get_next_number and is_number_reserved
 fn get_next_number(dir: &str) -> i32 {
-    let files = fs::read_dir(dir).expect("Directory should exist");
-    return files
-        .filter_map(Result::ok)
-        .filter(|f| is_valid_file(&f.path()))
-        .map(|f| f.file_name())
-        .map(|s| {
-            // The only way I can get this to pass the borrow checker is first mapping 
-            // to file_name and then doing the rest. I'm probably doing this wrong and
-            // should review later
-            let ss = s.to_str().unwrap();
-            let first_space_index = ss.find(" ").expect("didnt find a space");
-            let num:String = ss.chars().take(first_space_index).collect();
-            return num.parse::<i32>().unwrap();
-        })
-        .max()
-        .unwrap();
+    if let Some(max) = get_allocated_numbers(dir).iter().max() {
+        return max + 1;
+    } else {
+        return 1;
+    }
+        
+    // TODO: revisit iterator
+    // return get_allocated_numbers(dir)
+    //     .max()
+    //     .unwrap() + 1;
 }
 
 fn is_number_reserved(dir: &str, number: i32) -> bool {
-    let files = fs::read_dir(dir).expect("Directory should exist");
-    return files
-        .filter_map(Result::ok)
-        .filter(|f| is_valid_file(&f.path()))
-        .map(|f| f.file_name())
-        .map(|s| {
-            // The only way I can get this to pass the borrow checker is first mapping 
-            // to file_name and then doing the rest. I'm probably doing this wrong and
-            // should review later
-            let ss = s.to_str().unwrap();
-            // TODO: find "-" instead of " "
-            let first_space_index = ss.find(" ").expect("didnt find a space");
-            let num:String = ss.chars().take(first_space_index).collect();
-            return num.parse::<i32>().unwrap();
-        })
-        .collect::<Vec<i32>>()
-        .contains(&number);
+    return get_allocated_numbers(dir).contains(&number);
+    
+    // TODO: revisit iterator
+    // return get_allocated_numbers(dir)
+    //     .find(|n| n == &number)
+    //     .is_some();
 }
 
+// TODO: would be nice to do this via an Iterator but having trouble with empty
+// expected struct `std::iter::Map`, found struct `std::iter::Empty`
+// using vec for now
+fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
+    // TODO: dont expect this. should be allowed to do adr new and it should work as expected
+    match fs::read_dir(dir) {
+        Ok(files) => {
+            return files
+                .filter_map(Result::ok)
+                .filter(|f| is_valid_file(&f.path()))
+                .map(|f| f.file_name())
+                .map(|s| {
+                    // The only way I can get this to pass the borrow checker is first mapping 
+                    // to file_name and then doing the rest. I'm probably doing this wrong and
+                    // should review later
+                    let ss = s.to_str().unwrap();
+                    let first_space_index = ss.find("-").expect("didnt find a hyphen");
+                    let num:String = ss.chars().take(first_space_index).collect();
+                    return num.parse::<i32>().unwrap();
+                })
+                .collect();
+        }
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            // return std::iter::empty();
+            return Vec::new();
+        }
+        Err(e) => {
+            panic!("Error reading directory {}", dir);
+        }  
+    }
+}
 
 /// get output based on following order of precednece
 /// output argument (--output)
@@ -511,8 +536,7 @@ fn get_output(opt_output: Option<Output>) -> Output {
     match opt_output {
         Some(o) => o,
         None => {
-            let key = "DOCTAVIOUS_DEFAULT_OUTPUT";
-            match env::var(key) {
+            match env::var("DOCTAVIOUS_DEFAULT_OUTPUT") {
                 Ok(val) => parse_output(&val).unwrap(), // TODO: is unwrap ok here?
                 Err(_) => Output::default() // TODO: implement output via settings/config file
             }
@@ -520,9 +544,28 @@ fn get_output(opt_output: Option<Output>) -> Output {
     }
 }
 
+fn init_dir(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: create_dir_all doesnt appear to throw AlreadyExists. Confirm this
+    // I think this is fine just need to make sure that we dont overwrite initial file
+    let create_dir_result = fs::create_dir_all(dir);
+    match create_dir_result {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::AlreadyExists => {
+            eprintln!("the directory {} already exists", dir);
+            return Err(e.into());
+        }
+        Err(e) => {
+            eprintln!("Error occurred creating directory {}: {}", dir, e);
+            return Err(e.into());
+        }   
+    }
+}
 
-fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>>{
+// TODO: this should create appropriate directory even if it doesnt exist
+// which is to say, users shouldnt have to call init to create a new adr for the first time 
+fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
+
     let custom_template = Path::new(dir).join("template.md");
     
     println!("custom template {:?}", custom_template);
@@ -547,6 +590,7 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     // TODO: convert title to slug
     // to_lower_case vs to_ascii_lowercase
+    // swap spaces with hyphens
     let slug = title.to_lowercase();
 
     // TODO: replace following in template - number, title, date, status
@@ -560,8 +604,9 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     // TODO: supersceded
     // TODO: reverse links
     
+    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, "md");
 
-    let mut file = File::create(Path::new(dir).join(slug + ".md"))?;
+    let mut file = File::create(Path::new(dir).join(file_name))?;
     file.write_all(contents.as_bytes())?;
 
     // TODO:
@@ -575,6 +620,23 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     return Ok(())
 }
 
+fn list(dir: &str, opt_output: Option<Output>) {
+    match fs::read_dir(dir) {
+        Ok(files) => {
+            let mut paths: Vec<_> = files
+                .filter_map(Result::ok)
+                .filter(|f| is_valid_file(&f.path()))
+                .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
+                .collect();
+            paths.sort();
+            print_output(get_output(opt_output), List(paths)).unwrap();
+        },
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
+            _ => eprintln!("Error occurred: {:?}", e)
+        }
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -598,36 +660,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             RfcCommand::List(_) => {
-                 let dir = SETTINGS.get_rfc_dir();
-                 
-                 // TODO: do we want to order?
-                 // read_dir does not guarantee any specific order
-                 // in order to sort would need to read into a Vec and sort there
- 
-                 match fs::read_dir(dir) {
-                    Ok(files) => {
-                        let paths: Vec<_> = files
-                            .filter_map(Result::ok)
-                            .filter(|f| is_valid_file(&f.path()))
-                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                            .collect();
-    
-                        print_output(get_output(opt.output), List(paths))?;
-                    },
-                    Err(e) => match e.kind() {
-                        ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
-                        _ => eprintln!("Error occurred: {:?}", e)
-                    }
-                };
-
-
-                //  let paths: Vec<_> = files
-                //      .filter_map(Result::ok)
-                //      .filter(|f| is_valid_file(&f.path()))
-                //      .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                //      .collect();
- 
-                //  print_output(opt.output, List(paths))?;
+                list(SETTINGS.get_rfc_dir(), opt.output);
             }
             
             RfcCommand::Generate(generate) => match generate.generate_rfc_command {
@@ -650,65 +683,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 //       record architectural decisions with ADRs.
                 //    If the DIRECTORY is not given, the ADRs are stored in the directory `doc/adr`.
 
-
-                // TODO: if directory is provided use it otherwise default
-                // TODO: see if adr directory aleady exists
-                // if it does prompt user
-                // TODO: create the first ADR in that subdirectory, recording the decision to record architectural decisions with ADRs.
-                // TODO: would like to avoid the .to_string
-
+                let mut init_adr_setting = false;
                 let dir = match params.directory {
                     None => SETTINGS.get_adr_dir(),
-                    Some(ref x) => x,
+                    Some(ref x) => {
+                        init_adr_setting = true;
+                        x
+                    },
                 };
 
-                // TODO: create_dir_all doesnt appear to throw AlreadyExists. Confirm this
-                // I think this is fine just need to make sure that we dont overwrite initial file
-                let create_dir_result = fs::create_dir_all(dir);
-                match create_dir_result {
-                    Ok(_) => (),
-                    Err(e) if e.kind() == ErrorKind::AlreadyExists => {
-                        eprintln!("the directory {} already exists", dir);
-                        return Err(e.into());
-                    }
-                    Err(e) => {
-                        eprintln!("Error occurred creating directory {}: {}", dir, e);
-                        return Err(e.into());
-                    }   
-                }
-                
-                return new_adr(Some(1), "0001-record-architecture-decisions".to_string());
+                // TODO: handle error result
+                init_dir(dir)?;
 
+                // TODO: create .doctavious file if not present
+                // otherwise need to update adr settings
+                if init_adr_setting {
+                    let mut settings = SETTINGS.clone();
+                    settings.adr_dir = Some(dir.to_string());
+                    settings.persist()?;
+                }                
+
+                return new_adr(Some(1), "Record Architecture Decisions".to_string());
             }
 
-            // TODO: should be able to call new even if you dont init 
             AdrCommand::New(params) => {
+                init_dir(SETTINGS.get_adr_dir())?;
                 return new_adr(params.number, params.title);
             }
 
             AdrCommand::List(_) => {
-
-                let dir = SETTINGS.get_adr_dir();
-
-                // TODO: do we want to order?
-                // read_dir does not guarantee any specific order
-                // in order to sort would need to read into a Vec and sort there
-
-                match fs::read_dir(dir) {
-                    Ok(files) => {
-                        let paths: Vec<_> = files
-                            .filter_map(Result::ok)
-                            .filter(|f| is_valid_file(&f.path()))
-                            .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
-                            .collect();
-    
-                        print_output(get_output(opt.output), List(paths))?;
-                    },
-                    Err(e) => match e.kind() {
-                        ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
-                        _ => eprintln!("Error occurred: {:?}", e)
-                    }
-                }
+                list(SETTINGS.get_adr_dir(), opt.output);
             }
 
             AdrCommand::Generate(generate) => match generate.generate_adr_command {
