@@ -62,6 +62,20 @@ use chrono::prelude::*;
 // TODO: we can prompt user if they try to init multiple times
 // https://github.com/sharkdp/bat/blob/5ef35a10cf880c56b0e1c1ca7598ec742030eee1/src/bin/bat/config.rs#L17
 
+// executable path
+// https://github.com/rust-lang/rust-clippy/blob/master/src/main.rs#L120
+
+// clippy dogfood
+// https://github.com/rust-lang/rust-clippy/blob/master/src/main.rs#L132
+
+// TODO: review https://github.com/simeg/eureka
+// some good ideas here
+
+// TODO: review https://github.com/jakedeichert/mask
+
+// TODO: architecture diagrams as code
+// If we do some sort of desktop app we should have preview function to see as you code
+
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "eventfully",
@@ -130,13 +144,6 @@ pub struct Settings {
 
 impl Settings {
 
-    fn persist(self) -> Result<(), Box<dyn std::error::Error>> {
-        let content = toml::to_string(&self)?;
-        fs::write(SETTINGS_FILE.as_path(), content)?;
-
-        Ok(())
-    }
-
     fn get_adr_dir(&self) -> &str {
         // an alternative to the below is 
         // return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
@@ -193,6 +200,14 @@ fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
     let settings: Settings = toml::from_slice(&bytes)?;
 
     Ok(settings)
+}
+
+// outside of Settings because we dont want to initialize load given we are using lazy_static
+fn persist_settings(settings: Settings) -> Result<(), Box<dyn std::error::Error>> {
+    let content = toml::to_string(&settings)?;
+    fs::write(SETTINGS_FILE.as_path(), content)?;
+
+    Ok(())
 }
 
 #[derive(StructOpt, Debug)]
@@ -715,22 +730,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match opt.cmd {
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
-                let mut init_rfc_setting = false;
+                let mut settings = load_settings()?;
                 let dir = match params.directory {
                     None => SETTINGS.get_rfc_dir(),
-                    Some(ref x) => {
-                        init_rfc_setting = true;
-                        x
+                    Some(ref d) => {
+                        settings.rfc_dir = Some(d.to_string());
+                        persist_settings(settings)?;
+                        d
                     },
                 };
 
                 init_dir(dir)?;
-
-                if init_rfc_setting {
-                    let mut settings = SETTINGS.clone();
-                    settings.rfc_dir = Some(dir.to_string());
-                    settings.persist()?;
-                }
 
                 return new_rfc(Some(1), "Use RFCs ...".to_string());
             }
@@ -761,25 +771,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // TODO: add option for file format
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-                let mut init_adr_setting = false;
+                let mut settings = load_settings()?;
                 let dir = match params.directory {
-                    None => SETTINGS.get_adr_dir(),
-                    Some(ref x) => {
-                        init_adr_setting = true;
-                        x
+                    None => settings.get_adr_dir(),
+                    Some(ref d) => {
+                        settings.adr_dir = Some(d.to_string());
+                        persist_settings(settings)?;
+                        d
                     },
                 };
 
                 init_dir(dir)?;
-
-                if init_adr_setting {
-                    // TODO: cloning doesnt work here as I want a reference to the actual settings to modify
-                    let mut settings = SETTINGS.clone();
-                    settings.adr_dir = Some(dir.to_string());
-                    settings.persist()?;
-                    // SETTINGS.adr_dir = Some(dir.to_string());
-                    // SETTINGS.persist();
-                }
 
                 return new_adr(Some(1), "Record Architecture Decisions".to_string());
             }
