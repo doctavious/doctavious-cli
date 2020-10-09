@@ -23,9 +23,14 @@ use std::io::ErrorKind;
 use std::iter;
 use std::path::{Path, PathBuf};
 
+use std::sync::RwLock;
+use std::sync::Mutex;
 
 use chrono::prelude::*;
 
+
+// https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
+// https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
 
 
 // TODO: for ADR and RFC make sure template can be either markdown or asciidoc
@@ -51,6 +56,11 @@ use chrono::prelude::*;
 // to support this we would have to alter how ADR init works as that currently hard codes number
 
 // Create ADR from RFC - essentially a link similar to linking ADRs to one another
+
+// TODO: automatically update README(s) / CSVs
+
+// TODO: we can prompt user if they try to init multiple times
+// https://github.com/sharkdp/bat/blob/5ef35a10cf880c56b0e1c1ca7598ec742030eee1/src/bin/bat/config.rs#L17
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -123,6 +133,7 @@ impl Settings {
     fn persist(self) -> Result<(), Box<dyn std::error::Error>> {
         let content = toml::to_string(&self)?;
         fs::write(SETTINGS_FILE.as_path(), content)?;
+
         Ok(())
     }
 
@@ -221,6 +232,8 @@ struct NewRfc {
     #[structopt(long, short, help = "RFC number")]
     number: Option<i32>,
     
+    // TODO: make option and default to README? 
+    // this could also be a setting
     #[structopt(long, short, help = "title of RFC")]
     title: String,
 }
@@ -561,8 +574,60 @@ fn init_dir(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-// TODO: this should create appropriate directory even if it doesnt exist
-// which is to say, users shouldnt have to call init to create a new adr for the first time 
+fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
+
+    let dir = SETTINGS.get_rfc_dir();
+    println!("{:?}", dir);
+    let custom_template = Path::new(dir).join("template.md");
+    
+    // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
+    // TODO: move path to rfc template to a constant
+    let template = if custom_template.exists() { custom_template } else { Path::new("templates/rfc/template.md").to_path_buf() };
+
+    let reserve_number;
+    if let Some(i) = number {
+        if is_number_reserved(dir, i) {
+            // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
+            eprintln!("ADR {} has already been reserved", i);
+            return Ok(());
+        }
+        reserve_number = i;
+    } else {
+        reserve_number = get_next_number(dir);
+    }
+
+    let contents = fs::read_to_string(template).expect("Something went wrong reading the file");
+
+    // TODO: replace values in template
+    // TODO: supersceded
+    // TODO: reverse links
+
+    let mut rfc_dir = Path::new(dir).join(format!("{:0>4}", reserve_number));
+    fs::create_dir(&rfc_dir)?;
+    println!("hello?");
+    rfc_dir.push("README.md");
+    println!("{:?}", rfc_dir);
+    let mut file = File::create(rfc_dir.as_path())?;
+    file.write_all(contents.as_bytes())?;
+
+
+    // let config_dir = config_file.parent();
+    // match config_dir {
+    //     Some(path) => fs::create_dir_all(path)?,
+    //     None => {
+    //         return Err(format!(
+    //             "Unable to write config file to: {}",
+    //             config_file.to_string_lossy()
+    //         )
+    //         .into());
+    //     }
+    // }
+
+
+    return Ok(());
+}
+
+// TODO: file format
 fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
 
@@ -572,6 +637,7 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     // TODO: fallback to /usr/local/... or whatever the installation dir is
     // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
+    // TODO: move path to adr template to a constant
     let template = if custom_template.exists() { custom_template } else { Path::new("templates/adr/template.md").to_path_buf() };
     
     let reserve_number;
@@ -649,14 +715,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match opt.cmd {
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
-                
+                let mut init_rfc_setting = false;
+                let dir = match params.directory {
+                    None => SETTINGS.get_rfc_dir(),
+                    Some(ref x) => {
+                        init_rfc_setting = true;
+                        x
+                    },
+                };
+
+                init_dir(dir)?;
+
+                if init_rfc_setting {
+                    let mut settings = SETTINGS.clone();
+                    settings.rfc_dir = Some(dir.to_string());
+                    settings.persist()?;
+                }
+
+                return new_rfc(Some(1), "Use RFCs ...".to_string());
             }
 
             RfcCommand::New(params) => {
                 // allocate new RFC number
                 // create directory with rfc number (left pad 2 zeros)
                 // create readme file within directory via template
-
+                init_dir(SETTINGS.get_rfc_dir())?;
+                return new_rfc(params.number, params.title);
             }
 
             RfcCommand::List(_) => {
@@ -674,15 +758,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
 
+        // TODO: add option for file format
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-
-                //     Initialises the directory of architecture decision records:
-                //     * creates a subdirectory of the current working directory
-                //     * creates the first ADR in that subdirectory, recording the decision to
-                //       record architectural decisions with ADRs.
-                //    If the DIRECTORY is not given, the ADRs are stored in the directory `doc/adr`.
-
                 let mut init_adr_setting = false;
                 let dir = match params.directory {
                     None => SETTINGS.get_adr_dir(),
@@ -692,16 +770,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     },
                 };
 
-                // TODO: handle error result
                 init_dir(dir)?;
 
-                // TODO: create .doctavious file if not present
-                // otherwise need to update adr settings
                 if init_adr_setting {
+                    // TODO: cloning doesnt work here as I want a reference to the actual settings to modify
                     let mut settings = SETTINGS.clone();
                     settings.adr_dir = Some(dir.to_string());
                     settings.persist()?;
-                }                
+                    // SETTINGS.adr_dir = Some(dir.to_string());
+                    // SETTINGS.persist();
+                }
 
                 return new_adr(Some(1), "Record Architecture Decisions".to_string());
             }
