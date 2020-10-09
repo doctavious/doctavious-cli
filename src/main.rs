@@ -18,6 +18,7 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
+use std::io::{self, Write};
 use std::io::prelude::*;
 use std::io::ErrorKind;
 use std::iter;
@@ -527,7 +528,6 @@ fn is_number_reserved(dir: &str, number: i32) -> bool {
 // expected struct `std::iter::Map`, found struct `std::iter::Empty`
 // using vec for now
 fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
-    // TODO: dont expect this. should be allowed to do adr new and it should work as expected
     match fs::read_dir(dir) {
         Ok(files) => {
             return files
@@ -550,7 +550,7 @@ fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
             return Vec::new();
         }
         Err(e) => {
-            panic!("Error reading directory {}", dir);
+            panic!("Error reading directory {}. Error: {}", dir, e);
         }  
     }
 }
@@ -602,6 +602,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     let reserve_number;
     if let Some(i) = number {
         if is_number_reserved(dir, i) {
+            // TODO: the prompt to overwrite be here?
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
             eprintln!("ADR {} has already been reserved", i);
             return Ok(());
@@ -611,35 +612,41 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
         reserve_number = get_next_number(dir);
     }
 
-    let contents = fs::read_to_string(template).expect("Something went wrong reading the file");
+    let formatted_reserved_number = format!("{:0>4}", reserve_number);
+    let rfc_file = Path::new(dir).join(&formatted_reserved_number).join("README.md");
+    if rfc_file.exists() {
+        println!("A RFC file already exists at: {}", rfc_file.to_string_lossy());
+        print!("Overwrite? (y/N): ");
+        io::stdout().flush()?;
+        let mut decision = String::new();
+        io::stdin().read_line(&mut decision)?;
+        if !decision.trim().eq_ignore_ascii_case("Y") {
+            return Ok(());
+        }
+    } else {
+        let rfc_dir = rfc_file.parent();
+        match rfc_dir {
+            Some(path) => fs::create_dir_all(path)?,
+            None => {
+                return Err(format!("Unable to write config file to: {}", rfc_file.to_string_lossy()).into());
+            }
+        }
+    }
 
-    // TODO: replace values in template
     // TODO: supersceded
     // TODO: reverse links
+    
+    match fs::read_to_string(&template) {
+        Err(e) => panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e),
+        Ok(mut contents) => {
+            contents = contents.replace("<Number>", &formatted_reserved_number);
+            contents = contents.replace("<Title>", &title);
+        
+            fs::write(&rfc_file, contents)?;
+            return Ok(());
+        }
+    }
 
-    let mut rfc_dir = Path::new(dir).join(format!("{:0>4}", reserve_number));
-    fs::create_dir(&rfc_dir)?;
-    println!("hello?");
-    rfc_dir.push("README.md");
-    println!("{:?}", rfc_dir);
-    let mut file = File::create(rfc_dir.as_path())?;
-    file.write_all(contents.as_bytes())?;
-
-
-    // let config_dir = config_file.parent();
-    // match config_dir {
-    //     Some(path) => fs::create_dir_all(path)?,
-    //     None => {
-    //         return Err(format!(
-    //             "Unable to write config file to: {}",
-    //             config_file.to_string_lossy()
-    //         )
-    //         .into());
-    //     }
-    // }
-
-
-    return Ok(());
 }
 
 // TODO: file format
