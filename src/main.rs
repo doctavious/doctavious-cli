@@ -49,8 +49,6 @@ use chrono::prelude::*;
 // TODO: add configuration option for whether to use md or adoc
 // probably makes sense to make enum. default to md
 
-// TODO: review https://github.com/joyent/rfd/blob/master/tools/rfdlint
-
 // TODO: do we need an init for RFC? What would it include? init should at least create .doctavious
 
 // TODO: add option for ADR and RFC to determine if you want just file or a directory structure
@@ -59,6 +57,10 @@ use chrono::prelude::*;
 // Create ADR from RFC - essentially a link similar to linking ADRs to one another
 
 // TODO: automatically update README(s) / CSVs
+// or at the very least lint 
+// - pass over readme to verify that the links are properly formed and ADR/RFD numbers appropriately used in the RFD table.
+// - iterate over every RFD and make sure that it's in the table in README.md and in a matching state and with sane metadata.
+// - https://github.com/joyent/rfd/blob/master/tools/rfdlint
 
 // TODO: we can prompt user if they try to init multiple times
 // https://github.com/sharkdp/bat/blob/5ef35a10cf880c56b0e1c1ca7598ec742030eee1/src/bin/bat/config.rs#L17
@@ -126,7 +128,7 @@ lazy_static! {
     static ref TEMPLATE_EXTENSIONS: HashMap<&'static str, TemplateExtension> = {
         let mut map = HashMap::new();
         map.insert("md", TemplateExtension::Markdown);
-        map.insert("asciidoc", TemplateExtension::Asciidoc);
+        map.insert("adoc", TemplateExtension::Asciidoc);
         map
     };
 }
@@ -215,6 +217,7 @@ fn persist_settings(settings: Settings) -> Result<(), Box<dyn std::error::Error>
 enum Command {
     Rfc(Rfc),
     Adr(Adr),
+    Til(Til),
 }
 
 #[derive(StructOpt, Debug)]
@@ -391,6 +394,47 @@ struct AdrGraph {
     #[structopt(long, short, help = "")]
     link_prefix: Option<String>,
 }
+
+#[derive(StructOpt, Debug)]
+#[structopt(
+    about = "Gathers Today I Learned (TIL) management commands"
+)]
+struct Til {
+    #[structopt(subcommand)]
+    til_command: TilCommand,
+}
+
+#[derive(StructOpt, Debug)]
+enum TilCommand {
+    Init(InitTil),
+    New(NewTil),
+    List(ListTils),
+}
+
+
+#[derive(StructOpt, Debug)]
+#[structopt(about = "Init TIL")]
+struct InitTil {
+    #[structopt(long, short, help = "Directory to store TILs")]
+    directory: Option<String>,
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(about = "New TIL")]
+struct NewTil {
+    // TODO: category? dir? tags?
+    
+    // TODO: make option and default to README? 
+    // this could also be a setting
+    #[structopt(long, short, help = "title of TIL")]
+    title: String,
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(about = "List TILs")]
+struct ListTils {
+}
+
 
 lazy_static! {
     static ref OUTPUT_TYPES: HashMap<&'static str, Output> = {
