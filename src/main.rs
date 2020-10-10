@@ -76,6 +76,8 @@ use chrono::prelude::*;
 
 // TODO: review https://github.com/jakedeichert/mask
 
+// TODO: review https://github.com/sharkdp/bat/tree/master/src
+
 // TODO: architecture diagrams as code
 // If we do some sort of desktop app we should have preview function to see as you code
 
@@ -136,6 +138,7 @@ lazy_static! {
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
 pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
+pub static DEFAULT_TIL_DIR: &str = "til";
 
 // TODO: should this include output?
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
@@ -143,6 +146,7 @@ pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
 pub struct Settings {
     adr_dir: Option<String>,
     rfc_dir: Option<String>,
+    til_dir: Option<String>,
 }
 
 impl Settings {
@@ -164,6 +168,14 @@ impl Settings {
             return rfc_dir;
         } else {
             return DEFAULT_RFC_DIR;
+        }
+    }
+
+    fn get_til_dir(&self) -> &str {
+        if let Some(til_dir) = &self.til_dir {
+            return til_dir;
+        } else {
+            return DEFAULT_TIL_DIR;
         }
     }
 
@@ -854,6 +866,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 GenerateAdrsCommand::AdrGraph(params) => {
 
                 }
+            }
+        },
+
+        Command::Til(til) => match til.til_command {
+            TilCommand::Init(params) => {
+                // let mut settings = load_settings()?;
+                // let dir = match params.directory {
+                //     None => settings.get_adr_dir(),
+                //     Some(ref d) => {
+                //         settings.adr_dir = Some(d.to_string());
+                //         persist_settings(settings)?;
+                //         d
+                //     },
+                // };
+
+                // init_dir(dir)?;
+
+                // return new_adr(Some(1), "Record Architecture Decisions".to_string());
+            }
+
+            TilCommand::New(params) => {
+                // init_dir(SETTINGS.get_adr_dir())?;
+                // return new_adr(params.number, params.title);
+            }
+
+            TilCommand::List(_) => {
+                list(SETTINGS.get_til_dir(), opt.output);
             }
         }
 
