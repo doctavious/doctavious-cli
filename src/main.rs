@@ -21,13 +21,11 @@ use std::fs::File;
 use std::io::{self, Write};
 use std::io::prelude::*;
 use std::io::ErrorKind;
-use std::iter;
 use std::path::{Path, PathBuf};
 
-use std::sync::RwLock;
-use std::sync::Mutex;
-
 use chrono::prelude::*;
+
+use walkdir::WalkDir;
 
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
@@ -80,6 +78,10 @@ use chrono::prelude::*;
 
 // TODO: architecture diagrams as code
 // If we do some sort of desktop app we should have preview function to see as you code
+
+// TODO: Today I learned CLI 
+// https://github.com/danielecook/til-tool
+// https://github.com/danielecook/til
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -434,12 +436,16 @@ struct InitTil {
 #[derive(StructOpt, Debug)]
 #[structopt(about = "New TIL")]
 struct NewTil {
-    // TODO: category? dir? tags?
+    // TODO: what should the short be? We cant use the default 't' as it conflicts with title
+    #[structopt(long, help = "TIL Topic. Represents the directory to place TIL under")]
+    topic: Option<String>,
+
+    // TODO: what should the short be? We cant use the default 't' as it conflicts with title
+    #[structopt(long, help = "Additional tags associated with TIL")]
+    tags: Option<Vec<String>>,
     
-    // TODO: make option and default to README? 
-    // this could also be a setting
     #[structopt(long, short, help = "title of TIL")]
-    title: String,
+    title: Option<String>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -583,21 +589,19 @@ fn is_number_reserved(dir: &str, number: i32) -> bool {
 // TODO: would be nice to do this via an Iterator but having trouble with empty
 // expected struct `std::iter::Map`, found struct `std::iter::Empty`
 // using vec for now
-fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
+fn get_allocated_numbers_dir(dir: &str) -> Vec<i32> {
     match fs::read_dir(dir) {
         Ok(files) => {
             return files
                 .filter_map(Result::ok)
-                .filter(|f| is_valid_file(&f.path()))
-                .map(|f| f.file_name())
-                .map(|s| {
-                    // The only way I can get this to pass the borrow checker is first mapping 
-                    // to file_name and then doing the rest. I'm probably doing this wrong and
-                    // should review later
-                    let ss = s.to_str().unwrap();
-                    let first_space_index = ss.find("-").expect("didnt find a hyphen");
-                    let num:String = ss.chars().take(first_space_index).collect();
-                    return num.parse::<i32>().unwrap();
+                .filter_map(|e| {
+                    // TODO: is there a better way to do this?
+                    if e.file_type().is_ok() && e.file_type().unwrap().is_dir() {
+                        println!("DirEntry: {:?}", e.file_name());
+                        return Some(e.file_name().to_string_lossy().parse::<i32>().unwrap());
+                    } else {
+                        None
+                    }
                 })
                 .collect();
         }
@@ -609,6 +613,31 @@ fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
             panic!("Error reading directory {}. Error: {}", dir, e);
         }  
     }
+}
+
+// TODO: would be nice to do this via an Iterator but having trouble with empty
+// expected struct `std::iter::Map`, found struct `std::iter::Empty`
+// using vec for now
+fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
+    
+    let mut allocated_numbers = Vec::new();
+    for entry in WalkDir::new(&dir)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+            .filter(|e| is_valid_file(&e.path())) {
+        // The only way I can get this to pass the borrow checker is first mapping 
+        // to file_name and then doing the rest. I'm probably doing this wrong and
+        // should review later
+        let file_name = entry.file_name();
+        let ss = file_name.to_str().unwrap();
+        let first_space_index = ss.find("-").expect("didnt find a hyphen");
+        let num: String = ss.chars().take(first_space_index).collect();
+        allocated_numbers.push(num.parse::<i32>().unwrap());
+        
+    }
+
+    return allocated_numbers;
 }
 
 /// get output based on following order of precednece
@@ -665,6 +694,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
         }
         reserve_number = i;
     } else {
+        get_allocated_numbers_dir(dir);
         reserve_number = get_next_number(dir);
     }
 
@@ -765,15 +795,19 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 }
 
 fn list(dir: &str, opt_output: Option<Output>) {
-    match fs::read_dir(dir) {
-        Ok(files) => {
-            let mut paths: Vec<_> = files
+
+    match fs::metadata(&dir) {
+        Ok(_) => {
+            let mut f: Vec<_> = WalkDir::new(&dir)
+                .into_iter()
                 .filter_map(Result::ok)
+                .filter(|e| e.file_type().is_file())
                 .filter(|f| is_valid_file(&f.path()))
                 .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
                 .collect();
-            paths.sort();
-            print_output(get_output(opt_output), List(paths)).unwrap();
+
+            f.sort();
+            print_output(get_output(opt_output), List(f)).unwrap();
         },
         Err(e) => match e.kind() {
             ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
@@ -781,6 +815,7 @@ fn list(dir: &str, opt_output: Option<Output>) {
         }
     }
 }
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -871,27 +906,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::Til(til) => match til.til_command {
             TilCommand::Init(params) => {
-                // let mut settings = load_settings()?;
-                // let dir = match params.directory {
-                //     None => settings.get_adr_dir(),
-                //     Some(ref d) => {
-                //         settings.adr_dir = Some(d.to_string());
-                //         persist_settings(settings)?;
-                //         d
-                //     },
-                // };
+                let mut settings = load_settings()?;
+                let dir = match params.directory {
+                    None => settings.get_til_dir(),
+                    Some(ref d) => {
+                        settings.adr_dir = Some(d.to_string());
+                        persist_settings(settings)?;
+                        d
+                    },
+                };
 
-                // init_dir(dir)?;
-
-                // return new_adr(Some(1), "Record Architecture Decisions".to_string());
+                init_dir(dir)?;
             }
 
             TilCommand::New(params) => {
-                // init_dir(SETTINGS.get_adr_dir())?;
-                // return new_adr(params.number, params.title);
+                let dir = SETTINGS.get_adr_dir();
+                init_dir(&dir)?;
+
+                // let edited = edit::edit("")?;
+                // println!("after editing: {}", edited);
+
+                // TODO: build readme
             }
 
             TilCommand::List(_) => {
+                // TODO: this likely doesnt work because we need to do a recursive list
                 list(SETTINGS.get_til_dir(), opt.output);
             }
         }
