@@ -118,6 +118,7 @@ impl Default for Output {
     fn default() -> Self { Output::Json }
 }
 
+// TODO: is there a better name for this?
 #[derive(Debug, Copy, Clone)]
 pub enum TemplateExtension {
     Markdown,
@@ -137,6 +138,25 @@ lazy_static! {
     };
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum FileStructure {
+    Flat,
+    Subdirectory,
+}
+
+impl Default for FileStructure {
+    fn default() -> Self { FileStructure::Flat }
+}
+
+lazy_static! {
+    static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
+        let mut map = HashMap::new();
+        map.insert("flat", FileStructure::Flat);
+        map.insert("sd", FileStructure::Subdirectory);
+        map
+    };
+}
+
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
 pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
@@ -147,7 +167,9 @@ pub static DEFAULT_TIL_DIR: &str = "til";
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
     adr_dir: Option<String>,
+    // adr_structure
     rfc_dir: Option<String>,
+    // rfc_structure
     til_dir: Option<String>,
 }
 
@@ -257,6 +279,9 @@ enum RfcCommand {
 struct InitRfc {
     #[structopt(long, short, help = "Directory to store RFCs")]
     directory: Option<String>,
+
+    #[structopt(long, short, parse(try_from_str = parse_file_structure), default_value = "flat", help = "How RFCs should be structured")]
+    structure: FileStructure,
 }
 
 #[derive(StructOpt, Debug)]
@@ -343,6 +368,9 @@ enum AdrCommand {
 struct InitAdr {
     #[structopt(long, short, help = "Directory to store ADRs")]
     directory: Option<String>,
+
+    #[structopt(long, short, parse(try_from_str = parse_file_structure), default_value = "flat", help = "How ADRs should be structured")]
+    structure: FileStructure,
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -465,6 +493,10 @@ lazy_static! {
 
 fn parse_output(src: &str) -> Result<Output, String> {
     parse_enum(&OUTPUT_TYPES, src)
+}
+
+fn parse_file_structure(src: &str) -> Result<FileStructure, String> {
+    parse_enum(&FILE_STRUCTURES, src)
 }
 
 fn parse_enum<A: Copy>(env: &'static HashMap<&'static str, A>, src: &str) -> Result<A, String> {
