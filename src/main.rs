@@ -138,7 +138,8 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Copy, Clone)]
+// TODO: check serialize and deserialize
+#[derive(Debug, Copy, Deserialize, Clone, Serialize)]
 pub enum FileStructure {
     Flat,
     Subdirectory,
@@ -163,13 +164,14 @@ pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
 pub static DEFAULT_TIL_DIR: &str = "til";
 
 // TODO: should this include output?
+// TODO: include file extension
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
     adr_dir: Option<String>,
-    // adr_structure
+    adr_structure: Option<FileStructure>,
     rfc_dir: Option<String>,
-    // rfc_structure
+    rfc_structure: Option<FileStructure>,
     til_dir: Option<String>,
 }
 
@@ -185,13 +187,30 @@ impl Settings {
         }
     }
 
+    fn get_adr_structure(&self) -> FileStructure {
+        if let Some(adr_structure) = self.adr_structure {
+            return adr_structure;
+        } else {
+            return FileStructure::default();
+        }
+    }
+
     fn get_rfc_dir(&self) -> &str {
+        println!("get rfc dir...");
         // an alternative to the below is 
         // return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
         if let Some(rfc_dir) = &self.rfc_dir {
             return rfc_dir;
         } else {
             return DEFAULT_RFC_DIR;
+        }
+    }
+
+    fn get_rfc_structure(&self) -> FileStructure {
+        if let Some(rfc_structure) = self.rfc_structure {
+            return rfc_structure;
+        } else {
+            return FileStructure::default();
         }
     }
 
@@ -220,6 +239,7 @@ lazy_static! {
         match load_settings() {
             Ok(settings) => settings,
             Err(e) => {
+                println!("static settings...");
                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
                     eprintln!(
                         "Error when parsing {}, fallback to default settings. Error: {}\n",
@@ -227,7 +247,7 @@ lazy_static! {
                         e
                     );
                 }
-
+                println!("default settings");
                 Default::default()
             }
         }
@@ -237,7 +257,6 @@ lazy_static! {
 fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
     let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
     let settings: Settings = toml::from_slice(&bytes)?;
-
     Ok(settings)
 }
 
@@ -280,8 +299,9 @@ struct InitRfc {
     #[structopt(long, short, help = "Directory to store RFCs")]
     directory: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_file_structure), default_value = "flat", help = "How RFCs should be structured")]
-    structure: FileStructure,
+    // TODO: should we default here?
+    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How RFCs should be structured")]
+    structure: Option<FileStructure>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -369,8 +389,9 @@ struct InitAdr {
     #[structopt(long, short, help = "Directory to store ADRs")]
     directory: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_file_structure), default_value = "flat", help = "How ADRs should be structured")]
-    structure: FileStructure,
+    // TODO: should we default here?
+    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
+    structure: Option<FileStructure>,
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -596,8 +617,8 @@ fn is_valid_file(path: &Path) -> bool {
 }
 
 // TODO: share more between get_next_number and is_number_reserved
-fn get_next_number(dir: &str) -> i32 {
-    if let Some(max) = get_allocated_numbers(dir).iter().max() {
+fn get_next_number(dir: &str, file_structure: FileStructure) -> i32 {
+    if let Some(max) = get_allocated_numbers(dir, file_structure).iter().max() {
         return max + 1;
     } else {
         return 1;
@@ -609,8 +630,9 @@ fn get_next_number(dir: &str) -> i32 {
     //     .unwrap() + 1;
 }
 
-fn is_number_reserved(dir: &str, number: i32) -> bool {
-    return get_allocated_numbers(dir).contains(&number);
+fn is_number_reserved(dir: &str, number: i32, file_structure: FileStructure) -> bool {
+    return get_allocated_numbers(dir, file_structure).contains(&number);
+    
     
     // TODO: revisit iterator
     // return get_allocated_numbers(dir)
@@ -618,10 +640,23 @@ fn is_number_reserved(dir: &str, number: i32) -> bool {
     //     .is_some();
 }
 
+fn get_allocated_numbers(dir: &str, file_structure: FileStructure) -> Vec<i32> {
+    match file_structure {
+        Flat => {
+            get_allocated_numbers_via_flat_files(dir)
+        },
+
+        Subdirectory => {
+            get_allocated_numbers_via_subdirectory(dir)
+        }
+    }
+}
+
+// TODO: do we want a ReservedNumber type?
 // TODO: would be nice to do this via an Iterator but having trouble with empty
 // expected struct `std::iter::Map`, found struct `std::iter::Empty`
 // using vec for now
-fn get_allocated_numbers_dir(dir: &str) -> Vec<i32> {
+fn get_allocated_numbers_via_subdirectory(dir: &str) -> Vec<i32> {
     match fs::read_dir(dir) {
         Ok(files) => {
             return files
@@ -629,7 +664,6 @@ fn get_allocated_numbers_dir(dir: &str) -> Vec<i32> {
                 .filter_map(|e| {
                     // TODO: is there a better way to do this?
                     if e.file_type().is_ok() && e.file_type().unwrap().is_dir() {
-                        println!("DirEntry: {:?}", e.file_name());
                         return Some(e.file_name().to_string_lossy().parse::<i32>().unwrap());
                     } else {
                         None
@@ -650,7 +684,7 @@ fn get_allocated_numbers_dir(dir: &str) -> Vec<i32> {
 // TODO: would be nice to do this via an Iterator but having trouble with empty
 // expected struct `std::iter::Map`, found struct `std::iter::Empty`
 // using vec for now
-fn get_allocated_numbers(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
+fn get_allocated_numbers_via_flat_files(dir: &str) -> Vec<i32> { //impl Iterator<Item = i32> {
     
     let mut allocated_numbers = Vec::new();
     for entry in WalkDir::new(&dir)
@@ -718,7 +752,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     let reserve_number;
     if let Some(i) = number {
-        if is_number_reserved(dir, i) {
+        if is_number_reserved(dir, i, SETTINGS.get_adr_structure()) {
             // TODO: the prompt to overwrite be here?
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
             eprintln!("ADR {} has already been reserved", i);
@@ -726,8 +760,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
         }
         reserve_number = i;
     } else {
-        get_allocated_numbers_dir(dir);
-        reserve_number = get_next_number(dir);
+        reserve_number = get_next_number(dir, SETTINGS.get_adr_structure());
     }
 
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
@@ -773,8 +806,6 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     let custom_template = Path::new(dir).join("template.md");
     
-    println!("custom template {:?}", custom_template);
-
     // TODO: fallback to /usr/local/... or whatever the installation dir is
     // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
     // TODO: move path to adr template to a constant
@@ -782,14 +813,14 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     
     let reserve_number;
     if let Some(i) = number {
-        if is_number_reserved(dir, i) {
+        if is_number_reserved(dir, i, SETTINGS.get_adr_structure()) {
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
             eprintln!("ADR {} has already been reserved", i);
             return Ok(());
         }
         reserve_number = i;
     } else {
-        reserve_number = get_next_number(dir);
+        reserve_number = get_next_number(dir, SETTINGS.get_adr_structure());
     }
 
     println!("reserving number: {}", reserve_number);
@@ -860,10 +891,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match opt.cmd {
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
-                let mut settings = load_settings()?;
                 let dir = match params.directory {
-                    None => SETTINGS.get_rfc_dir(),
+                    None => {
+                        SETTINGS.get_rfc_dir()
+                    },
                     Some(ref d) => {
+                        let mut settings = match load_settings() {
+                            Ok(settings) => settings,
+                            Err(_) => Default::default()
+                        };
+
                         settings.rfc_dir = Some(d.to_string());
                         persist_settings(settings)?;
                         d
@@ -901,10 +938,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // TODO: add option for file format
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-                let mut settings = load_settings()?;
                 let dir = match params.directory {
-                    None => settings.get_adr_dir(),
+                    None => {
+                        SETTINGS.get_adr_dir()
+                    },
                     Some(ref d) => {
+                        let mut settings = match load_settings() {
+                            Ok(settings) => settings,
+                            Err(_) => Default::default()
+                        };
+
                         settings.adr_dir = Some(d.to_string());
                         persist_settings(settings)?;
                         d
