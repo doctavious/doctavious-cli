@@ -16,14 +16,22 @@ use structopt::StructOpt;
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsStr;
-use std::fs;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::io::prelude::*;
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::io::BufReader;
+use std::io::prelude::*;
 
-use chrono::prelude::*;
+use std::io::LineWriter;
+
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
+
+use chrono:: {
+    DateTime,
+    prelude::*,
+};
 
 use walkdir::WalkDir;
 
@@ -196,7 +204,6 @@ impl Settings {
     }
 
     fn get_rfc_dir(&self) -> &str {
-        println!("get rfc dir...");
         // an alternative to the below is 
         // return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
         if let Some(rfc_dir) = &self.rfc_dir {
@@ -487,19 +494,29 @@ struct InitTil {
 struct NewTil {
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     #[structopt(long, help = "TIL Topic. Represents the directory to place TIL under")]
-    topic: Option<String>,
+    topic: String,
+
+    #[structopt(long, short, help = "title of TIL")]
+    title: String,
 
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     #[structopt(long, help = "Additional tags associated with TIL")]
-    tags: Option<Vec<String>>,
-    
-    #[structopt(long, short, help = "title of TIL")]
-    title: Option<String>,
+    tags: Option<Vec<String>>,  
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "List TILs")]
 struct ListTils {
+}
+
+#[derive(Debug)]
+struct TilEntry<'a> {
+    topic: String,
+    title: String,
+    file_name: String,
+    base_name: &'a str,
+    description: &'a str,
+    date: SystemTime,
 }
 
 
@@ -879,6 +896,24 @@ fn list(dir: &str, opt_output: Option<Output>) {
     }
 }
 
+fn title_string<R>(mut rdr: R) -> String
+    where R: BufRead,
+{
+    let mut first_line = String::new();
+
+    rdr.read_line(&mut first_line).expect("Unable to read line");
+
+    // Where do the leading hashes stop?
+    let last_hash = first_line
+        .char_indices()
+        .skip_while(|&(_, c)| c == '#')
+        .next()
+        .map_or(0, |(idx, _)| idx);
+
+    // Trim the leading hashes and any whitespace
+    first_line[last_hash..].trim().into()
+}
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 
@@ -889,6 +924,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match opt.cmd {
+        // TODO: add option for file format
+        Command::Adr(adr) => match adr.adr_command {
+            AdrCommand::Init(params) => {
+                let dir = match params.directory {
+                    None => {
+                        SETTINGS.get_adr_dir()
+                    },
+                    Some(ref d) => {
+                        let mut settings = match load_settings() {
+                            Ok(settings) => settings,
+                            Err(_) => Default::default()
+                        };
+
+                        settings.adr_dir = Some(d.to_string());
+                        persist_settings(settings)?;
+                        d
+                    },
+                };
+
+                init_dir(dir)?;
+
+                return new_adr(Some(1), "Record Architecture Decisions".to_string());
+            }
+
+            AdrCommand::New(params) => {
+                init_dir(SETTINGS.get_adr_dir())?;
+                return new_adr(params.number, params.title);
+            }
+
+            AdrCommand::List(_) => {
+                list(SETTINGS.get_adr_dir(), opt.output);
+            }
+
+            AdrCommand::Generate(generate) => match generate.generate_adr_command {
+                GenerateAdrsCommand::AdrToc(params) => {
+
+                }
+
+                GenerateAdrsCommand::AdrGraph(params) => {
+
+                }
+            }
+        },
+
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
                 let dir = match params.directory {
@@ -935,12 +1014,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
 
-        // TODO: add option for file format
-        Command::Adr(adr) => match adr.adr_command {
-            AdrCommand::Init(params) => {
+        Command::Til(til) => match til.til_command {
+            TilCommand::Init(params) => {
                 let dir = match params.directory {
                     None => {
-                        SETTINGS.get_adr_dir()
+                        SETTINGS.get_til_dir()
                     },
                     Some(ref d) => {
                         let mut settings = match load_settings() {
@@ -948,44 +1026,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Err(_) => Default::default()
                         };
 
-                        settings.adr_dir = Some(d.to_string());
-                        persist_settings(settings)?;
-                        d
-                    },
-                };
-
-                init_dir(dir)?;
-
-                return new_adr(Some(1), "Record Architecture Decisions".to_string());
-            }
-
-            AdrCommand::New(params) => {
-                init_dir(SETTINGS.get_adr_dir())?;
-                return new_adr(params.number, params.title);
-            }
-
-            AdrCommand::List(_) => {
-                list(SETTINGS.get_adr_dir(), opt.output);
-            }
-
-            AdrCommand::Generate(generate) => match generate.generate_adr_command {
-                GenerateAdrsCommand::AdrToc(params) => {
-
-                }
-
-                GenerateAdrsCommand::AdrGraph(params) => {
-
-                }
-            }
-        },
-
-        Command::Til(til) => match til.til_command {
-            TilCommand::Init(params) => {
-                let mut settings = load_settings()?;
-                let dir = match params.directory {
-                    None => settings.get_til_dir(),
-                    Some(ref d) => {
-                        settings.adr_dir = Some(d.to_string());
+                        settings.til_dir = Some(d.to_string());
                         persist_settings(settings)?;
                         d
                     },
@@ -995,17 +1036,193 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             TilCommand::New(params) => {
-                let dir = SETTINGS.get_adr_dir();
+                let dir = SETTINGS.get_til_dir();
                 init_dir(&dir)?;
 
-                // let edited = edit::edit("")?;
-                // println!("after editing: {}", edited);
+                let file_name = params.title.to_lowercase();
+                // TODO: support both md and adoc
+                let path = Path::new(dir).join(params.topic).join(file_name).with_extension("md");
+                if path.exists() {
+                    eprintln!("File {} already exists", path.to_string_lossy());
+                } else {
+                    // TODO: better way to do newline?
+                    let mut content = format!("# {}\n", params.title);
+                    if params.tags.is_some() {
+                        content.push_str("\ntags: ");
+                        content.push_str(params.tags.unwrap().join(" ").as_str());
+                    }
+    
+                    // let edited = edit::edit(&content)?;
+                    // println!("after editing: {}", edited);
 
-                // TODO: build readme
+
+                    println!("create dir {:?}", path.parent().unwrap());
+                    fs::create_dir_all(path.parent().unwrap())?;
+
+                    match fs::write(&path, content) {
+                        Ok(v) => {
+                            // TODO: build readme
+                            let mut current_topic = String::new();
+                            let mut all_tils: HashMap<String, Vec<TilEntry>> = HashMap::new();
+                            for entry in WalkDir::new(&dir)
+                                    .into_iter()
+                                    .filter_map(Result::ok)
+                                    .filter(|e| e.file_type().is_file()) {
+                                
+                                // let f_name = String::from(entry.file_name().to_string_lossy());
+                                // // let f_name = entry.file_name().to_string_lossy();
+                                // if entry.file_type().is_dir() {
+                                //     // current_topic = entry.path().file_name().unwrap().to_string_lossy().into_owned();
+                                //     current_topic = entry.file_name().to_string_lossy().into_owned();
+                                //     // current_topic = entry.file_name().to_str().unwrap().to_string();
+                                //     if !all_tils.contains_key(current_topic.as_str()) {
+                                //         all_tils.insert(current_topic.as_str(), Vec::new());
+                                //     }
+                                // } else {
+
+                                //     // file_name returns an OsString and .to_str return Option<&str>
+                                //     // This indicates that the method will return a borrowed reference to a &str. 
+                                //     // The DirEntry struct is the owner of the string.
+                                //     // This means that any references into the DirEntry will no longer be valid.
+                                //     // String owns the string inside of it
+                                //     let file_name = entry.file_name().to_str().unwrap().into();
+                                //     let file = match fs::File::open(entry.path()) {
+                                //         Ok(file) => file,
+                                //         Err(_) => panic!("Unable to read title from {:?}", entry.path()),
+                                //     };
+                                //     let buffer = BufReader::new(file);
+                                //     let title = title_string(buffer);
+
+                                //     let tilEntry = TilEntry {
+                                //         topic: current_topic.to_string(),
+                                //         title: title,
+                                //         description: "",
+                                //         file_name: file_name,
+                                //         base_name: "",
+                                //         date: SystemTime::now() //entry.metadata()?.created()?
+                                //     };
+
+                                //     all_tils.get_mut(current_topic.as_str()).unwrap().push(tilEntry);
+                                // }
+                            
+                                // skip files that are under til dir
+                                if Path::new(dir) == entry.path().parent().unwrap() {
+                                    continue;
+                                }
+
+                                // TODO: handle unwraps better
+                                let topic = entry.path().parent().unwrap().file_name().unwrap().to_string_lossy().into_owned();
+                                //let parent = entry.path().parent().unwrap();
+                                //let parent_file_name = parent.file_name().unwrap();
+                                //let topic = parent_file_name.to_str().unwrap();
+                                if !all_tils.contains_key(&topic) {
+                                    // TODO: is there a way to avoid this clone?
+                                    all_tils.insert(topic.clone(), Vec::new());
+                                }
+
+                                let file_name = entry.path().file_name().unwrap().to_str().unwrap().to_string();
+
+                                let file = match fs::File::open(&entry.path()) {
+                                    Ok(file) => file,
+                                    Err(_) => panic!("Unable to read title from {:?}", entry.path()),
+                                };
+                                let buffer = BufReader::new(file);
+                                let title = title_string(buffer);
+
+                                all_tils.get_mut(&topic).unwrap().push(TilEntry {
+                                    topic: topic,
+                                    title: title,
+                                    description: "",
+                                    file_name: file_name,
+                                    base_name: "",
+                                    date: SystemTime::now() //entry.metadata()?.created()?
+                                });
+
+                            }
+
+                            // proc list_tils(): Table[string, seq[til_object]] =
+                            // var all_tils = initTable[string, newSeq[til_object]()]()
+                            // for full_path in walkDirs(TIL_DIR.joinPath("/*")):
+                            //     let topic = full_path.lastPathPart()
+                            //     for til_fname in walkFiles(TIL_DIR.joinPath(topic & "/*")):
+                            //         if topic in all_tils == false:
+                            //             all_tils[topic] = @[]
+                            //         var til = til_object(fname: til_fname,
+                            //                        topic: topic,
+                            //                        title: til_fname.lastPathPart()[0..^4],
+                            //                        description: get_description(til_fname),
+                            //                        date: til_fname.getCreationTime())
+                            //         all_tils[topic].add(til)
+                            // return all_tils
+
+
+
+                            let mut til_count = 0;
+                            for topic_tils in all_tils.values() {
+                                til_count += topic_tils.len();
+                            }
+
+
+                            // TODO: support md and adoc
+                            // TODO: this should be README but for now 
+                            let readme_path = Path::new(dir).join("TIL_README.md");
+                            let file = File::create(readme_path)?;
+                            let mut lw = LineWriter::new(file);
+                        
+                            lw.write_all(b"# TIL\n\n> Today I Learned\n\n")?;
+                            lw.write_all(format!("* TILs: {}\n", til_count).as_bytes())?;
+                            lw.write_all(format!("* Topics: {}\n", all_tils.keys().len()).as_bytes())?;
+                            lw.write_all(b"\n")?;
+
+                            // TODO: sort 
+                            for (topic, tils) in all_tils.into_iter() {
+                                lw.write_all(format!("## {}\n\n", &topic).as_bytes())?;
+                                
+                                for til in tils {
+                                    lw.write_all(format!("* [{}]({}/{})", til.title, topic, til.file_name).as_bytes())?;
+                                    lw.write_all(b"\n")?;
+                                }
+
+                                lw.write_all(b"\n")?;
+                            }
+
+                            lw.flush();
+
+                            // proc build_readme() =
+                            // var til_set = list_tils()
+                        
+                            // # Count number of tils
+                            // var til_count = 0
+                            // for topic_tils in til_set.values():
+                            //     til_count += topic_tils.len
+                        
+                            // var f: File
+                            // var topic_set = new_seq[string]()
+                            // if open(f, README_PATH, fmWrite):
+                            //     try:
+                            //         f.writeLine("# TIL" & '\n' & "> Today I Learned" & '\n')
+                            //         f.writeLine(fmt"* TILs: {til_count}")
+                            //         f.writeLine(fmt"* Topics: {til_set.len()}" & '\n')
+                            //         for key in til_set.keys():
+                            //             topic_set.add(key)
+                            //         topic_set.sort(case_insensitive_sort)
+                            //         for topic in topic_set:
+                            //             f.writeLine(fmt"## {topic}" & '\n')
+                            //             for til in til_set[topic]:
+                            //                 f.writeLine(fmt"""* [`{til.title}`]({til.topic}/{til.title}.md) {til.description} ({til.date.format("yyyy-MM-dd")})""")
+                            //             f.writeLine("")
+                            //     finally:
+                            //         close(f)
+
+
+                        },
+                        Err(e) => eprintln!("Error occured writing file {}. Error: {}", &path.to_string_lossy(), e)
+                    }
+                }
+                
             }
 
             TilCommand::List(_) => {
-                // TODO: this likely doesnt work because we need to do a recursive list
                 list(SETTINGS.get_til_dir(), opt.output);
             }
         }
