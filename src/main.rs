@@ -128,7 +128,7 @@ impl Default for Output {
 }
 
 // TODO: is there a better name for this?
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum TemplateExtension {
     Markdown,
     Asciidoc,
@@ -148,7 +148,7 @@ lazy_static! {
 }
 
 // TODO: check serialize and deserialize
-#[derive(Debug, Copy, Deserialize, Clone, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum FileStructure {
     Flat,
     Subdirectory,
@@ -179,9 +179,12 @@ pub static DEFAULT_TIL_DIR: &str = "til";
 pub struct Settings {
     adr_dir: Option<String>,
     adr_structure: Option<FileStructure>,
+    adr_template_extension: Option<TemplateExtension>,
     rfc_dir: Option<String>,
     rfc_structure: Option<FileStructure>,
+    rfc_template_extension: Option<TemplateExtension>,
     til_dir: Option<String>,
+    til_template_extension: Option<TemplateExtension>,
 }
 
 impl Settings {
@@ -204,6 +207,14 @@ impl Settings {
         }
     }
 
+    fn get_adr_template_extension(&self) -> TemplateExtension {
+        if let Some(adr_template_extension) = self.adr_template_extension {
+            return adr_template_extension;
+        } else {
+            return TemplateExtension::default();
+        }
+    }
+
     fn get_rfc_dir(&self) -> &str {
         // an alternative to the below is 
         // return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
@@ -219,6 +230,14 @@ impl Settings {
             return rfc_structure;
         } else {
             return FileStructure::default();
+        }
+    }
+
+    fn get_rfc_template_extension(&self) -> TemplateExtension {
+        if let Some(rfc_template_extension) = self.rfc_template_extension {
+            return rfc_template_extension;
+        } else {
+            return TemplateExtension::default();
         }
     }
 
@@ -770,15 +789,15 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     let reserve_number;
     if let Some(i) = number {
-        if is_number_reserved(dir, i, SETTINGS.get_adr_structure()) {
+        if is_number_reserved(dir, i, SETTINGS.get_rfc_structure()) {
             // TODO: the prompt to overwrite be here?
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
-            eprintln!("ADR {} has already been reserved", i);
+            eprintln!("RFC {} has already been reserved", i);
             return Ok(());
         }
         reserve_number = i;
     } else {
-        reserve_number = get_next_number(dir, SETTINGS.get_adr_structure());
+        reserve_number = get_next_number(dir, SETTINGS.get_rfc_structure());
     }
 
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
@@ -1056,8 +1075,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // let edited = edit::edit(&content)?;
                     // println!("after editing: {}", edited);
 
-
-                    println!("create dir {:?}", path.parent().unwrap());
                     fs::create_dir_all(path.parent().unwrap())?;
 
                     // TODO: make generating readme optional
