@@ -1059,10 +1059,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("create dir {:?}", path.parent().unwrap());
                     fs::create_dir_all(path.parent().unwrap())?;
 
+                    // TODO: make generating readme optional
+                    // we should make it a configuration setting as well as an optional arg
+                    // we should also make re-generating readme a subcommand
                     match fs::write(&path, content) {
                         Ok(v) => {
                             // TODO: build readme
-                            let mut current_topic = String::new();
+                            // let mut current_topic = String::new();
                             let mut all_tils: HashMap<String, Vec<TilEntry>> = HashMap::new();
                             for entry in WalkDir::new(&dir)
                                     .into_iter()
@@ -1111,10 +1114,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }
 
                                 // TODO: handle unwraps better
-                                let topic = entry.path().parent().unwrap().file_name().unwrap().to_string_lossy().into_owned();
-                                //let parent = entry.path().parent().unwrap();
-                                //let parent_file_name = parent.file_name().unwrap();
-                                //let topic = parent_file_name.to_str().unwrap();
+                                let topic = entry.path()
+                                        .parent().unwrap()
+                                        .file_name().unwrap().to_string_lossy().into_owned();
                                 if !all_tils.contains_key(&topic) {
                                     // TODO: is there a way to avoid this clone?
                                     all_tils.insert(topic.clone(), Vec::new());
@@ -1135,27 +1137,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     description: "",
                                     file_name: file_name,
                                     base_name: "",
-                                    date: SystemTime::now() //entry.metadata()?.created()?
+                                    date: entry.metadata()?.created()?
                                 });
 
                             }
-
-                            // proc list_tils(): Table[string, seq[til_object]] =
-                            // var all_tils = initTable[string, newSeq[til_object]()]()
-                            // for full_path in walkDirs(TIL_DIR.joinPath("/*")):
-                            //     let topic = full_path.lastPathPart()
-                            //     for til_fname in walkFiles(TIL_DIR.joinPath(topic & "/*")):
-                            //         if topic in all_tils == false:
-                            //             all_tils[topic] = @[]
-                            //         var til = til_object(fname: til_fname,
-                            //                        topic: topic,
-                            //                        title: til_fname.lastPathPart()[0..^4],
-                            //                        description: get_description(til_fname),
-                            //                        date: til_fname.getCreationTime())
-                            //         all_tils[topic].add(til)
-                            // return all_tils
-
-
 
                             let mut til_count = 0;
                             for topic_tils in all_tils.values() {
@@ -1167,6 +1152,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // TODO: this should be README but for now 
                             let readme_path = Path::new(dir).join("TIL_README.md");
                             let file = File::create(readme_path)?;
+
+                            // TODO: better alternative than LineWriter?
                             let mut lw = LineWriter::new(file);
                         
                             lw.write_all(b"# TIL\n\n> Today I Learned\n\n")?;
@@ -1174,47 +1161,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             lw.write_all(format!("* Topics: {}\n", all_tils.keys().len()).as_bytes())?;
                             lw.write_all(b"\n")?;
 
+                            // TODO: do we want to list categories?
+
                             // TODO: sort 
                             for (topic, tils) in all_tils.into_iter() {
                                 lw.write_all(format!("## {}\n\n", &topic).as_bytes())?;
                                 
                                 for til in tils {
-                                    lw.write_all(format!("* [{}]({}/{})", til.title, topic, til.file_name).as_bytes())?;
+                                    // TODO: update TilEntry to use chrono date
+                                    let datetime: DateTime<Utc> = til.date.into();
+                                    lw.write_all(format!("* [{}]({}/{}) {} ({})", til.title, topic, til.file_name, til.description, datetime.format("%Y-%m-%d")).as_bytes())?;
                                     lw.write_all(b"\n")?;
                                 }
 
                                 lw.write_all(b"\n")?;
                             }
 
-                            lw.flush();
-
-                            // proc build_readme() =
-                            // var til_set = list_tils()
-                        
-                            // # Count number of tils
-                            // var til_count = 0
-                            // for topic_tils in til_set.values():
-                            //     til_count += topic_tils.len
-                        
-                            // var f: File
-                            // var topic_set = new_seq[string]()
-                            // if open(f, README_PATH, fmWrite):
-                            //     try:
-                            //         f.writeLine("# TIL" & '\n' & "> Today I Learned" & '\n')
-                            //         f.writeLine(fmt"* TILs: {til_count}")
-                            //         f.writeLine(fmt"* Topics: {til_set.len()}" & '\n')
-                            //         for key in til_set.keys():
-                            //             topic_set.add(key)
-                            //         topic_set.sort(case_insensitive_sort)
-                            //         for topic in topic_set:
-                            //             f.writeLine(fmt"## {topic}" & '\n')
-                            //             for til in til_set[topic]:
-                            //                 f.writeLine(fmt"""* [`{til.title}`]({til.topic}/{til.title}.md) {til.description} ({til.date.format("yyyy-MM-dd")})""")
-                            //             f.writeLine("")
-                            //     finally:
-                            //         close(f)
-
-
+                            // TODO: handle this
+                            lw.flush()?;
                         },
                         Err(e) => eprintln!("Error occured writing file {}. Error: {}", &path.to_string_lossy(), e)
                     }
