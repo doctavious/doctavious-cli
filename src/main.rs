@@ -516,7 +516,7 @@ struct TilEntry<'a> {
     file_name: String,
     base_name: &'a str,
     description: &'a str,
-    date: SystemTime,
+    date: DateTime<Utc>,
 }
 
 
@@ -1137,7 +1137,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     description: "",
                                     file_name: file_name,
                                     base_name: "",
-                                    date: entry.metadata()?.created()?
+                                    date: DateTime::from(entry.metadata()?.created()?)
                                 });
 
                             }
@@ -1168,9 +1168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 lw.write_all(format!("## {}\n\n", &topic).as_bytes())?;
                                 
                                 for til in tils {
-                                    // TODO: update TilEntry to use chrono date
-                                    let datetime: DateTime<Utc> = til.date.into();
-                                    lw.write_all(format!("* [{}]({}/{}) {} ({})", til.title, topic, til.file_name, til.description, datetime.format("%Y-%m-%d")).as_bytes())?;
+                                    lw.write_all(format!("* [{}]({}/{}) {} ({})", til.title, topic, til.file_name, til.description, til.date.format("%Y-%m-%d")).as_bytes())?;
                                     lw.write_all(b"\n")?;
                                 }
 
