@@ -14,6 +14,7 @@ use serde_derive::Deserialize;
 
 use structopt::StructOpt;
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsStr;
 use std::fs::{self, File};
@@ -509,7 +510,7 @@ struct NewTil {
 struct ListTils {
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct TilEntry<'a> {
     topic: String,
     title: String,
@@ -1066,7 +1067,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Ok(v) => {
                             // TODO: build readme
                             // let mut current_topic = String::new();
-                            let mut all_tils: HashMap<String, Vec<TilEntry>> = HashMap::new();
+                            let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
                             for entry in WalkDir::new(&dir)
                                     .into_iter()
                                     .filter_map(Result::ok)
@@ -1163,10 +1164,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                             // TODO: do we want to list categories?
 
-                            // TODO: sort 
-                            for (topic, tils) in all_tils.into_iter() {
+                            for topic in all_tils.keys().cloned() {
                                 lw.write_all(format!("## {}\n\n", &topic).as_bytes())?;
-                                
+                                let mut tils = all_tils.get(&topic).unwrap().to_vec();
+                                tils.sort_by_key(|e| e.title.clone());
                                 for til in tils {
                                     lw.write_all(format!("* [{}]({}/{}) {} ({})", til.title, topic, til.file_name, til.description, til.date.format("%Y-%m-%d")).as_bytes())?;
                                     lw.write_all(b"\n")?;
