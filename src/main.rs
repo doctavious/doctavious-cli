@@ -8,9 +8,8 @@ extern crate lazy_static;
 extern crate serde_derive;
 
 use serde::ser::SerializeSeq;
-use serde::{Deserialize, Serialize, Serializer};
-use serde_derive::Serialize;
-use serde_derive::Deserialize;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 use structopt::StructOpt;
 use std::collections::HashMap;
@@ -129,7 +128,7 @@ impl Default for Output {
 }
 
 // TODO: is there a better name for this?
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug)]
 pub enum TemplateExtension {
     Markdown,
     Asciidoc,
@@ -146,6 +145,32 @@ impl Display for TemplateExtension {
             TemplateExtension::Markdown => write!(f, "md"),
             TemplateExtension::Asciidoc => write!(f, "adoc"),
         }
+    }
+}
+
+impl Serialize for TemplateExtension {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = match *self {
+            TemplateExtension::Markdown => "md",
+            TemplateExtension::Asciidoc => "adoc",
+        };
+
+        s.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for TemplateExtension {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        // TODO: how do we want to handle unwrap?
+        let extension = parse_template_extension(&s).unwrap();
+        Ok(extension)
     }
 }
 
@@ -862,7 +887,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     // TODO: move path to rfc template to a constant
     let template = if custom_template.exists() { 
         custom_template 
-    } else { 
+    } else {
         Path::new("templates/rfc/template")
             .with_extension(SETTINGS.get_adr_template_extension().to_string())
             .to_path_buf() 
