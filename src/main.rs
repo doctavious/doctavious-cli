@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::ffi::OsStr;
 use std::fs::{self, File};
+use std::fmt::{Debug, Display, Formatter};
 use std::io::{self, Write};
 use std::io::prelude::*;
 use std::io::ErrorKind;
@@ -138,6 +139,16 @@ impl Default for TemplateExtension {
     fn default() -> Self { TemplateExtension::Markdown }
 }
 
+// TODO: to_string doesnt appear to be using this
+impl Display for TemplateExtension {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match *self {
+            TemplateExtension::Markdown => write!(f, "md"),
+            TemplateExtension::Asciidoc => write!(f, "adoc"),
+        }
+    }
+}
+
 lazy_static! {
     static ref TEMPLATE_EXTENSIONS: HashMap<&'static str, TemplateExtension> = {
         let mut map = HashMap::new();
@@ -145,6 +156,7 @@ lazy_static! {
         map.insert("adoc", TemplateExtension::Asciidoc);
         map
     };
+
 }
 
 // TODO: check serialize and deserialize
@@ -173,80 +185,127 @@ pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
 pub static DEFAULT_TIL_DIR: &str = "til";
 
 // TODO: should this include output?
-// TODO: include file extension
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
-    adr_dir: Option<String>,
-    adr_structure: Option<FileStructure>,
-    adr_template_extension: Option<TemplateExtension>,
-    rfc_dir: Option<String>,
-    rfc_structure: Option<FileStructure>,
-    rfc_template_extension: Option<TemplateExtension>,
-    til_dir: Option<String>,
-    til_template_extension: Option<TemplateExtension>,
+    template_extension: Option<TemplateExtension>,
+    adr_settings: Option<AdrSettings>,
+    rfc_settings: Option<RfcSettings>,
+    til_settings: Option<TilSettings>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct AdrSettings {
+    dir: Option<String>,
+    structure: Option<FileStructure>,
+    template_extension: Option<TemplateExtension>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RfcSettings {
+    dir: Option<String>,
+    structure: Option<FileStructure>,
+    template_extension: Option<TemplateExtension>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct TilSettings {
+    dir: Option<String>,
+    template_extension: Option<TemplateExtension>,
 }
 
 impl Settings {
 
     fn get_adr_dir(&self) -> &str {
-        // an alternative to the below is 
-        // return self.adr_dir.as_deref().or(Some(DEFAULT_ADR_DIR)).unwrap();
-        if let Some(adr_dir) = &self.adr_dir {
-            return adr_dir;
-        } else {
-            return DEFAULT_ADR_DIR;
+        if let Some(settings) = &self.adr_settings {
+            if let Some(dir) = &settings.dir {
+                return dir;
+            }
         }
+        
+        return DEFAULT_ADR_DIR;
     }
 
     fn get_adr_structure(&self) -> FileStructure {
-        if let Some(adr_structure) = self.adr_structure {
-            return adr_structure;
-        } else {
-            return FileStructure::default();
+        if let Some(settings) = &self.adr_settings {
+            if let Some(structure) = settings.structure {
+                return structure;
+            }
         }
+        
+        return FileStructure::default();
     }
 
     fn get_adr_template_extension(&self) -> TemplateExtension {
-        if let Some(adr_template_extension) = self.adr_template_extension {
-            return adr_template_extension;
-        } else {
-            return TemplateExtension::default();
+        if let Some(settings) = &self.adr_settings {
+            if let Some(template_extension) = settings.template_extension {
+                return template_extension;
+            }
         }
+
+        if let Some(template_extension) = self.template_extension {
+            return template_extension;
+        }
+        
+        return TemplateExtension::default();
     }
 
     fn get_rfc_dir(&self) -> &str {
-        // an alternative to the below is 
-        // return self.rfc_dir.as_deref().or(Some(DEFAULT_RFC_DIR)).unwrap();
-        if let Some(rfc_dir) = &self.rfc_dir {
-            return rfc_dir;
-        } else {
-            return DEFAULT_RFC_DIR;
+        if let Some(settings) = &self.rfc_settings {
+            if let Some(dir) = &settings.dir {
+                return dir;
+            }
         }
+        
+        return DEFAULT_ADR_DIR;
     }
 
     fn get_rfc_structure(&self) -> FileStructure {
-        if let Some(rfc_structure) = self.rfc_structure {
-            return rfc_structure;
-        } else {
-            return FileStructure::default();
+        if let Some(settings) = &self.rfc_settings {
+            if let Some(structure) = settings.structure {
+                return structure;
+            }
         }
+        
+        return FileStructure::default();
     }
 
     fn get_rfc_template_extension(&self) -> TemplateExtension {
-        if let Some(rfc_template_extension) = self.rfc_template_extension {
-            return rfc_template_extension;
-        } else {
-            return TemplateExtension::default();
+        if let Some(settings) = &self.rfc_settings {
+            if let Some(template_extension) = settings.template_extension {
+                return template_extension;
+            }
         }
+
+        if let Some(template_extension) = self.template_extension {
+            return template_extension;
+        }
+        
+        return TemplateExtension::default();
     }
 
     fn get_til_dir(&self) -> &str {
-        if let Some(til_dir) = &self.til_dir {
-            return til_dir;
-        } else {
-            return DEFAULT_TIL_DIR;
+        if let Some(settings) = &self.til_settings {
+            if let Some(dir) = &settings.dir {
+                return dir;
+            }
         }
+        
+        return DEFAULT_ADR_DIR;
+    }
+
+    fn get_til_template_extension(&self) -> TemplateExtension {
+        if let Some(settings) = &self.til_settings {
+            if let Some(template_extension) = settings.template_extension {
+                return template_extension;
+            }
+        }
+
+        if let Some(template_extension) = self.template_extension {
+            return template_extension;
+        }
+        
+        return TemplateExtension::default();
     }
 
  }
@@ -266,7 +325,6 @@ lazy_static! {
         match load_settings() {
             Ok(settings) => settings,
             Err(e) => {
-                println!("static settings...");
                 if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
                     eprintln!(
                         "Error when parsing {}, fallback to default settings. Error: {}\n",
@@ -274,7 +332,6 @@ lazy_static! {
                         e
                     );
                 }
-                println!("default settings");
                 Default::default()
             }
         }
@@ -329,6 +386,9 @@ struct InitRfc {
     // TODO: should we default here?
     #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How RFCs should be structured")]
     structure: Option<FileStructure>,
+
+    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    extension: Option<TemplateExtension>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -419,6 +479,15 @@ struct InitAdr {
     // TODO: should we default here?
     #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
     structure: Option<FileStructure>,
+
+    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    extension: Option<TemplateExtension>,
+}
+
+impl InitAdr {
+    pub fn should_persist_settings(&self) -> bool {
+        return self.directory.is_some() || self.extension.is_some();
+    }
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -557,6 +626,10 @@ fn parse_file_structure(src: &str) -> Result<FileStructure, String> {
     parse_enum(&FILE_STRUCTURES, src)
 }
 
+fn parse_template_extension(src: &str) -> Result<TemplateExtension, String> {
+    parse_enum(&TEMPLATE_EXTENSIONS, src)
+}
+
 fn parse_enum<A: Copy>(env: &'static HashMap<&'static str, A>, src: &str) -> Result<A, String> {
     match env.get(src) {
         Some(p) => Ok(*p),
@@ -592,11 +665,11 @@ fn print_output<A: std::fmt::Display + Serialize>(
 
 struct List<A>(Vec<A>);
 
-impl<A> std::fmt::Debug for List<A>
+impl<A> Debug for List<A>
 where
-    A: std::fmt::Debug,
+    A: Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         for value in self.0.iter() {
             writeln!(f, "{:?}", value)?;
         }
@@ -605,11 +678,11 @@ where
     }
 }
 
-impl<A> std::fmt::Display for List<A>
+impl<A> Display for List<A>
 where
-    A: std::fmt::Display,
+    A: Display,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         for value in self.0.iter() {
             writeln!(f, "{}", value)?;
         }
@@ -781,11 +854,19 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
     let dir = SETTINGS.get_rfc_dir();
     println!("{:?}", dir);
-    let custom_template = Path::new(dir).join("template.md");
+    let custom_template = Path::new(dir)
+        .join("template")
+        .with_extension(SETTINGS.get_adr_template_extension().to_string());
     
     // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
     // TODO: move path to rfc template to a constant
-    let template = if custom_template.exists() { custom_template } else { Path::new("templates/rfc/template.md").to_path_buf() };
+    let template = if custom_template.exists() { 
+        custom_template 
+    } else { 
+        Path::new("templates/rfc/template")
+            .with_extension(SETTINGS.get_adr_template_extension().to_string())
+            .to_path_buf() 
+    };
 
     let reserve_number;
     if let Some(i) = number {
@@ -801,7 +882,11 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     }
 
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
-    let rfc_file = Path::new(dir).join(&formatted_reserved_number).join("README.md");
+    let rfc_file = Path::new(dir)
+            .join(&formatted_reserved_number)
+            .join("README.")
+            .with_extension(SETTINGS.get_rfc_template_extension().to_string());
+
     if rfc_file.exists() {
         println!("A RFC file already exists at: {}", rfc_file.to_string_lossy());
         print!("Overwrite? (y/N): ");
@@ -841,12 +926,18 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
 
-    let custom_template = Path::new(dir).join("template.md");
+    let custom_template = Path::new(dir)
+        .join("template")
+        .with_extension(SETTINGS.get_adr_template_extension().to_string());
     
-    // TODO: fallback to /usr/local/... or whatever the installation dir is
-    // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
     // TODO: move path to adr template to a constant
-    let template = if custom_template.exists() { custom_template } else { Path::new("templates/adr/template.md").to_path_buf() };
+    let template = if custom_template.exists() { 
+        custom_template 
+    } else {
+         Path::new("templates/adr/template")
+            .with_extension(SETTINGS.get_adr_template_extension().to_string())
+            .to_path_buf() 
+    };
     
     let reserve_number;
     if let Some(i) = number {
@@ -878,7 +969,7 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     // TODO: supersceded
     // TODO: reverse links
     
-    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, "md");
+    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, SETTINGS.get_adr_template_extension());
 
     let mut file = File::create(Path::new(dir).join(file_name))?;
     file.write_all(contents.as_bytes())?;
@@ -947,21 +1038,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // TODO: add option for file format
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-                let dir = match params.directory {
-                    None => {
-                        SETTINGS.get_adr_dir()
-                    },
-                    Some(ref d) => {
-                        let mut settings = match load_settings() {
-                            Ok(settings) => settings,
-                            Err(_) => Default::default()
-                        };
 
-                        settings.adr_dir = Some(d.to_string());
-                        persist_settings(settings)?;
-                        d
-                    },
+                // TODO: need to handle initing multiple times better
+
+                let dir = match params.directory {
+                    None => DEFAULT_ADR_DIR,
+                    Some(ref d) => d,
                 };
+
+                if params.should_persist_settings() {
+                    let mut settings = match load_settings() {
+                        Ok(settings) => settings,
+                        Err(_) => Default::default()
+                    };
+
+                    let adr_settings = AdrSettings {
+                        dir: params.directory.clone(),
+                        structure: None, // TODO: set 
+                        template_extension: params.extension,
+                    };
+                    settings.adr_settings = Some(adr_settings);
+                    persist_settings(settings)?;
+
+                }
 
                 init_dir(dir)?;
 
@@ -1000,7 +1099,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Err(_) => Default::default()
                         };
 
-                        settings.rfc_dir = Some(d.to_string());
+                        let rfc_settings = RfcSettings {
+                            dir: Some(d.to_string()),
+                            structure: None,
+                            template_extension: None,
+                        };
+                        settings.rfc_settings = Some(rfc_settings);
                         persist_settings(settings)?;
                         d
                     },
@@ -1046,7 +1150,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Err(_) => Default::default()
                         };
 
-                        settings.til_dir = Some(d.to_string());
+                        let til_settings = TilSettings {
+                            dir: Some(d.to_string()),
+                            template_extension: None,
+                        };
+                        settings.til_settings = Some(til_settings);
                         persist_settings(settings)?;
                         d
                     },
@@ -1060,8 +1168,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 init_dir(&dir)?;
 
                 let file_name = params.title.to_lowercase();
-                // TODO: support both md and adoc
-                let path = Path::new(dir).join(params.topic).join(file_name).with_extension("md");
+                let path = Path::new(dir)
+                        .join(params.topic)
+                        .join(file_name)
+                        .with_extension(SETTINGS.get_til_template_extension().to_string());
+
                 if path.exists() {
                     eprintln!("File {} already exists", path.to_string_lossy());
                 } else {
@@ -1165,10 +1276,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 til_count += topic_tils.len();
                             }
 
-
-                            // TODO: support md and adoc
                             // TODO: this should be README but for now 
-                            let readme_path = Path::new(dir).join("TIL_README.md");
+                            let readme_path = Path::new(dir)
+                                .join("TIL_README")
+                                .with_extension(SETTINGS.get_adr_template_extension().to_string());
                             let file = File::create(readme_path)?;
 
                             // TODO: better alternative than LineWriter?
