@@ -27,7 +27,6 @@ use std::io::prelude::*;
 use std::io::LineWriter;
 
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use chrono:: {
     DateTime,
@@ -414,6 +413,12 @@ struct InitRfc {
 
     #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     extension: Option<TemplateExtension>,
+}
+
+impl InitRfc {
+    pub fn should_persist_settings(&self) -> bool {
+        return self.directory.is_some() || self.extension.is_some();
+    }
 }
 
 #[derive(StructOpt, Debug)]
@@ -947,7 +952,6 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
 }
 
-// TODO: file format
 fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
 
@@ -1084,7 +1088,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
                     settings.adr_settings = Some(adr_settings);
                     persist_settings(settings)?;
-
                 }
 
                 init_dir(dir)?;
@@ -1114,26 +1117,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
-                let dir = match params.directory {
-                    None => {
-                        SETTINGS.get_rfc_dir()
-                    },
-                    Some(ref d) => {
-                        let mut settings = match load_settings() {
-                            Ok(settings) => settings,
-                            Err(_) => Default::default()
-                        };
 
-                        let rfc_settings = RfcSettings {
-                            dir: Some(d.to_string()),
-                            structure: None,
-                            template_extension: None,
-                        };
-                        settings.rfc_settings = Some(rfc_settings);
-                        persist_settings(settings)?;
-                        d
-                    },
+                let dir = match params.directory {
+                    None => DEFAULT_RFC_DIR,
+                    Some(ref d) => d,
                 };
+
+                if params.should_persist_settings() {
+                    let mut settings = match load_settings() {
+                        Ok(settings) => settings,
+                        Err(_) => Default::default()
+                    };
+
+                    let rfc_settings = RfcSettings {
+                        dir: params.directory.clone(),
+                        structure: None, // TODO: set 
+                        template_extension: params.extension,
+                    };
+                    settings.rfc_settings = Some(rfc_settings);
+                    persist_settings(settings)?;
+                }
 
                 init_dir(dir)?;
 
@@ -1188,6 +1191,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 init_dir(dir)?;
             }
 
+            // TODO: add bool arg to build readme.
             TilCommand::New(params) => {
                 let dir = SETTINGS.get_til_dir();
                 init_dir(&dir)?;
