@@ -859,8 +859,8 @@ fn get_allocated_numbers_via_flat_files(dir: &str) -> Vec<i32> { //impl Iterator
             .filter(|e| e.file_type().is_file())
             .filter(|e| is_valid_file(&e.path())) {
         // The only way I can get this to pass the borrow checker is first mapping 
-        // to file_name and then doing the rest. I'm probably doing this wrong and
-        // should review later
+        // to file_name and then doing the rest. 
+        // I'm probably doing this wrong and should review later
         let file_name = entry.file_name();
         let ss = file_name.to_str().unwrap();
         let first_space_index = ss.find("-").expect("didnt find a hyphen");
@@ -1204,16 +1204,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match opt.cmd {
-        // TODO: add option for file format
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
 
                 // TODO: need to handle initing multiple times better
-
-                let dir = match params.directory {
-                    None => DEFAULT_ADR_DIR,
-                    Some(ref d) => d,
-                };
 
                 if params.should_persist_settings() {
                     let mut settings = match load_settings() {
@@ -1229,6 +1223,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     settings.adr_settings = Some(adr_settings);
                     persist_settings(settings)?;
                 }
+
+                let dir = match params.directory {
+                    None => DEFAULT_ADR_DIR,
+                    Some(ref d) => d,
+                };
 
                 init_dir(dir)?;
 
@@ -1264,11 +1263,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
 
-                let dir = match params.directory {
-                    None => DEFAULT_RFC_DIR,
-                    Some(ref d) => d,
-                };
-
                 if params.should_persist_settings() {
                     let mut settings = match load_settings() {
                         Ok(settings) => settings,
@@ -1284,15 +1278,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     persist_settings(settings)?;
                 }
 
+                let dir = match params.directory {
+                    None => DEFAULT_RFC_DIR,
+                    Some(ref d) => d,
+                };
+
                 init_dir(dir)?;
 
                 return new_rfc(Some(1), "Use RFCs ...".to_string(), SETTINGS.get_rfc_template_extension());
             }
 
             RfcCommand::New(params) => {
-                // allocate new RFC number
-                // create directory with rfc number (left pad 2 zeros)
-                // create readme file within directory via template
                 init_dir(SETTINGS.get_rfc_dir())?;
 
                 let extension = match params.extension {
