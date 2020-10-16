@@ -206,6 +206,7 @@ lazy_static! {
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
 pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
+// TODO: do we want this to defautl to the current directory?
 pub static DEFAULT_TIL_DIR: &str = "til";
 
 // TODO: should this include output?
@@ -604,7 +605,7 @@ enum TilCommand {
     Init(InitTil),
     New(NewTil),
     List(ListTils),
-    BuildReadMe(BuildTilReadMe),
+    Readme(BuildTilReadMe),
 }
 
 
@@ -799,7 +800,6 @@ fn get_next_number(dir: &str, file_structure: FileStructure) -> i32 {
 fn is_number_reserved(dir: &str, number: i32, file_structure: FileStructure) -> bool {
     return get_allocated_numbers(dir, file_structure).contains(&number);
     
-    
     // TODO: revisit iterator
     // return get_allocated_numbers(dir)
     //     .find(|n| n == &number)
@@ -808,11 +808,11 @@ fn is_number_reserved(dir: &str, number: i32, file_structure: FileStructure) -> 
 
 fn get_allocated_numbers(dir: &str, file_structure: FileStructure) -> Vec<i32> {
     match file_structure {
-        Flat => {
+        FileStructure::Flat => {
             get_allocated_numbers_via_flat_files(dir)
         },
 
-        Subdirectory => {
+        FileStructure::Subdirectory => {
             get_allocated_numbers_via_subdirectory(dir)
         }
     }
@@ -906,13 +906,12 @@ fn init_dir(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
+fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
 
     let dir = SETTINGS.get_rfc_dir();
-    println!("{:?}", dir);
     let custom_template = Path::new(dir)
         .join("template")
-        .with_extension(SETTINGS.get_adr_template_extension().to_string());
+        .with_extension(extension.to_string());
     
     // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
     // TODO: move path to rfc template to a constant
@@ -920,7 +919,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
         custom_template 
     } else {
         Path::new("templates/rfc/template")
-            .with_extension(SETTINGS.get_adr_template_extension().to_string())
+            .with_extension(extension.to_string())
             .to_path_buf() 
     };
 
@@ -941,7 +940,7 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     let rfc_file = Path::new(dir)
             .join(&formatted_reserved_number)
             .join("README.")
-            .with_extension(SETTINGS.get_rfc_template_extension().to_string());
+            .with_extension(extension.to_string());
 
     if rfc_file.exists() {
         println!("A RFC file already exists at: {}", rfc_file.to_string_lossy());
@@ -978,19 +977,19 @@ fn new_rfc(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
 
 }
 
-fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error::Error>> {
+fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
 
     let custom_template = Path::new(dir)
         .join("template")
-        .with_extension(SETTINGS.get_adr_template_extension().to_string());
+        .with_extension(extension.to_string());
     
     // TODO: move path to adr template to a constant
     let template = if custom_template.exists() { 
         custom_template 
     } else {
          Path::new("templates/adr/template")
-            .with_extension(SETTINGS.get_adr_template_extension().to_string())
+            .with_extension(extension.to_string())
             .to_path_buf() 
     };
     
@@ -1014,7 +1013,6 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     let slug = title.to_lowercase();
 
     // TODO: replace following in template - number, title, date, status
-    println!("template {:?}", template);
     let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
     contents = contents.replace("NUMBER", &reserve_number.to_string());
     contents = contents.replace("TITLE", &title);
@@ -1024,7 +1022,7 @@ fn new_adr(number: Option<i32>, title: String) -> Result<(), Box<dyn std::error:
     // TODO: supersceded
     // TODO: reverse links
     
-    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, SETTINGS.get_adr_template_extension());
+    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, extension);
 
     let mut file = File::create(Path::new(dir).join(file_name))?;
     file.write_all(contents.as_bytes())?;
@@ -1234,12 +1232,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 init_dir(dir)?;
 
-                return new_adr(Some(1), "Record Architecture Decisions".to_string());
+                return new_adr(Some(1), "Record Architecture Decisions".to_string(), SETTINGS.get_adr_template_extension());
             }
 
             AdrCommand::New(params) => {
                 init_dir(SETTINGS.get_adr_dir())?;
-                return new_adr(params.number, params.title);
+
+                let extension = match params.extension {
+                    Some(v) => v,
+                    None => SETTINGS.get_adr_template_extension()
+                };
+
+                return new_adr(params.number, params.title, extension);
             }
 
             AdrCommand::List(_) => {
@@ -1282,7 +1286,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 init_dir(dir)?;
 
-                return new_rfc(Some(1), "Use RFCs ...".to_string());
+                return new_rfc(Some(1), "Use RFCs ...".to_string(), SETTINGS.get_rfc_template_extension());
             }
 
             RfcCommand::New(params) => {
@@ -1290,7 +1294,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // create directory with rfc number (left pad 2 zeros)
                 // create readme file within directory via template
                 init_dir(SETTINGS.get_rfc_dir())?;
-                return new_rfc(params.number, params.title);
+
+                let extension = match params.extension {
+                    Some(v) => v,
+                    None => SETTINGS.get_rfc_template_extension()
+                };
+
+                return new_rfc(params.number, params.title, extension);
             }
 
             RfcCommand::List(_) => {
@@ -1375,7 +1385,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 list(SETTINGS.get_til_dir(), opt.output);
             }
 
-            TilCommand::BuildReadMe(_) => {
+            TilCommand::Readme(_) => {
                 build_til_readme(SETTINGS.get_til_dir())?;
             }
         }
