@@ -49,13 +49,10 @@ use walkdir::WalkDir;
 // env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
 // --output  - overrides env var and config
 // TODO: RFC / ADR meta frontmatter
-
 // TODO: why do I get a % at the end when using json output
 
 // TODO: add configuration option for whether to use md or adoc
 // probably makes sense to make enum. default to md
-
-// TODO: do we need an init for RFC? What would it include? init should at least create .doctavious
 
 // TODO: add option for ADR and RFC to determine if you want just file or a directory structure
 // to support this we would have to alter how ADR init works as that currently hard codes number
@@ -81,7 +78,6 @@ use walkdir::WalkDir;
 // some good ideas here
 
 // TODO: review https://github.com/jakedeichert/mask
-
 // TODO: review https://github.com/sharkdp/bat/tree/master/src
 
 // TODO: architecture diagrams as code
@@ -183,8 +179,7 @@ lazy_static! {
 
 }
 
-// TODO: check serialize and deserialize
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug)]
 pub enum FileStructure {
     Flat,
     Nested,
@@ -193,6 +188,33 @@ pub enum FileStructure {
 impl Default for FileStructure {
     fn default() -> Self { FileStructure::Flat }
 }
+
+impl Serialize for FileStructure {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = match *self {
+            FileStructure::Flat => "flat",
+            FileStructure::Nested => "nested",
+        };
+
+        s.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for FileStructure {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        // TODO: how do we want to handle unwrap?
+        let extension = parse_file_structure(&s).unwrap();
+        Ok(extension)
+    }
+}
+
 
 lazy_static! {
     static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
@@ -1027,7 +1049,7 @@ fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> 
 
     // TODO: supersceded
     // TODO: reverse links
-    // TODO: replace following in template - number, title, date, status
+
     let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
     contents = contents.replace("NUMBER", &reserve_number.to_string());
     contents = contents.replace("TITLE", &title);
@@ -1135,6 +1157,7 @@ fn build_til_readme(dir: &str) -> io::Result<()> {
         let topic = entry.path()
                 .parent().unwrap()
                 .file_name().unwrap().to_string_lossy().into_owned();
+        
         if !all_tils.contains_key(&topic) {
             // TODO: is there a way to avoid this clone?
             all_tils.insert(topic.clone(), Vec::new());
@@ -1253,17 +1276,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             AdrCommand::Generate(generate) => match generate.generate_adr_command {
                 GenerateAdrsCommand::AdrToc(params) => {
+                    // -i INTRO  precede the table of contents with the given INTRO text.
+                    // -o OUTRO  follow the table of contents with the given OUTRO text.
+                    // -p LINK_PREFIX
+                    //           prefix each decision file link with LINK_PREFIX.
+                    
+                    // Both INTRO and OUTRO must be in Markdown format.
 
+                    // Generates a table of contents in Markdown format to stdout.
                 }
 
                 GenerateAdrsCommand::AdrGraph(params) => {
-
+                    // Generates a visualisation of the links between decision records in
+                    // Graphviz format.  This can be piped into the graphviz tools to
+                    // generate a an image file.
+                    
+                    // Each node in the graph represents a decision record and is linked to
+                    // the decision record document.
+                    
+                    // Options:
+                    
+                    // -e LINK-EXTENSION
+                    //         the file extension of the documents to which generated links refer.
+                    //         Defaults to `.html`.
+                    
+                    // -p LINK_PREFIX
+                    //         prefix each decision file link with LINK_PREFIX.
+                    
+                    // E.g. to generate a graph visualisation of decision records in SVG format:
+                    
+                    //     adr generate graph | dot -Tsvg > graph.svg
+                    
+                    // E.g. to generate a graph visualisation in PDF format, in which all links
+                    // are to .pdf files:
+                    
+                    //    adr generate graph -e .pdf | dot -Tpdf > graph.pdf
                 }
             }
         },
 
         Command::Rfc(rfc) => match rfc.rfc_command {
             RfcCommand::Init(params) => {
+
+                // TODO: need to handle initing multiple times better
 
                 if params.should_persist_settings() {
                     let mut settings = match load_settings() {
