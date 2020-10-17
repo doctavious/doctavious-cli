@@ -133,7 +133,6 @@ impl Default for TemplateExtension {
     fn default() -> Self { TemplateExtension::Markdown }
 }
 
-// TODO: to_string doesnt appear to be using this
 impl Display for TemplateExtension {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match *self {
@@ -163,8 +162,13 @@ impl<'de> Deserialize<'de> for TemplateExtension {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        // TODO: how do we want to handle unwrap?
-        let extension = parse_template_extension(&s).unwrap();
+        let extension = match parse_template_extension(&s) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
+                TemplateExtension::default()
+            }
+        };
         Ok(extension)
     }
 }
@@ -189,6 +193,15 @@ impl Default for FileStructure {
     fn default() -> Self { FileStructure::Flat }
 }
 
+impl Display for FileStructure {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match *self {
+            FileStructure::Flat => write!(f, "flat"),
+            FileStructure::Nested => write!(f, "nested"),
+        }
+    }
+}
+
 impl Serialize for FileStructure {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -209,12 +222,16 @@ impl<'de> Deserialize<'de> for FileStructure {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        // TODO: how do we want to handle unwrap?
-        let extension = parse_file_structure(&s).unwrap();
-        Ok(extension)
+        let structure = match parse_file_structure(&s) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
+                FileStructure::default()
+            }
+        };
+        Ok(structure)
     }
 }
-
 
 lazy_static! {
     static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
