@@ -187,7 +187,7 @@ lazy_static! {
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum FileStructure {
     Flat,
-    Subdirectory,
+    Nested,
 }
 
 impl Default for FileStructure {
@@ -198,7 +198,7 @@ lazy_static! {
     static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
         let mut map = HashMap::new();
         map.insert("flat", FileStructure::Flat);
-        map.insert("sd", FileStructure::Subdirectory);
+        map.insert("nested", FileStructure::Nested);
         map
     };
 }
@@ -623,6 +623,7 @@ struct InitTil {
 #[structopt(about = "New TIL")]
 struct NewTil {
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
+    // TODO: change to category
     #[structopt(long, help = "TIL Topic. Represents the directory to place TIL under")]
     topic: String,
 
@@ -812,8 +813,8 @@ fn get_allocated_numbers(dir: &str, file_structure: FileStructure) -> Vec<i32> {
             get_allocated_numbers_via_flat_files(dir)
         },
 
-        FileStructure::Subdirectory => {
-            get_allocated_numbers_via_subdirectory(dir)
+        FileStructure::Nested => {
+            get_allocated_numbers_via_nested(dir)
         }
     }
 }
@@ -822,7 +823,7 @@ fn get_allocated_numbers(dir: &str, file_structure: FileStructure) -> Vec<i32> {
 // TODO: would be nice to do this via an Iterator but having trouble with empty
 // expected struct `std::iter::Map`, found struct `std::iter::Empty`
 // using vec for now
-fn get_allocated_numbers_via_subdirectory(dir: &str) -> Vec<i32> {
+fn get_allocated_numbers_via_nested(dir: &str) -> Vec<i32> {
     match fs::read_dir(dir) {
         Ok(files) => {
             return files
@@ -906,60 +907,98 @@ fn init_dir(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
-
-    let dir = SETTINGS.get_rfc_dir();
-    let custom_template = Path::new(dir)
-        .join("template")
-        .with_extension(extension.to_string());
-    
-    // TODO: need to get appriopriate template (md vs adoc) based on configuration (settings vs arg)
-    // TODO: move path to rfc template to a constant
-    let template = if custom_template.exists() { 
-        custom_template 
-    } else {
-        Path::new("templates/rfc/template")
-            .with_extension(extension.to_string())
-            .to_path_buf() 
-    };
-
-    let reserve_number;
-    if let Some(i) = number {
-        if is_number_reserved(dir, i, SETTINGS.get_rfc_structure()) {
-            // TODO: the prompt to overwrite be here?
-            // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
-            eprintln!("RFC {} has already been reserved", i);
-            return Ok(());
+// TODO: is there a more concise way to do this?
+fn build_path(
+    dir: &str, 
+    title: &str, 
+    reserved_number: &str, 
+    extension: TemplateExtension, 
+    file_structure: FileStructure
+) -> PathBuf {
+    match file_structure {
+        FileStructure::Flat => {
+            // TODO: convert title to slug
+            // to_lower_case vs to_ascii_lowercase
+            // swap spaces with hyphens
+            let slug = title.to_lowercase();
+            let file_name = format!("{}-{}", reserved_number, slug);
+            return Path::new(dir)
+                .join(file_name)
+                .with_extension(extension.to_string());
         }
-        reserve_number = i;
-    } else {
-        reserve_number = get_next_number(dir, SETTINGS.get_rfc_structure());
-    }
 
-    let formatted_reserved_number = format!("{:0>4}", reserve_number);
-    let rfc_file = Path::new(dir)
-            .join(&formatted_reserved_number)
-            .join("README.")
-            .with_extension(extension.to_string());
+        FileStructure::Nested => {
+            return Path::new(dir)
+                .join(&reserved_number)
+                .join("README.")
+                .with_extension(extension.to_string());
+        }
+    };
+}
 
-    if rfc_file.exists() {
-        println!("A RFC file already exists at: {}", rfc_file.to_string_lossy());
+fn ensure_path(path: &PathBuf)-> Result<(), Box<dyn std::error::Error>> {
+    if path.exists() {
+        println!("File already exists at: {}", path.to_string_lossy());
         print!("Overwrite? (y/N): ");
         io::stdout().flush()?;
         let mut decision = String::new();
         io::stdin().read_line(&mut decision)?;
-        if !decision.trim().eq_ignore_ascii_case("Y") {
+        if decision.trim().eq_ignore_ascii_case("Y") {
             return Ok(());
+        } else {
+            return Err(format!("Unable to write config file to: {}", path.to_string_lossy()).into());
         }
     } else {
-        let rfc_dir = rfc_file.parent();
+        let rfc_dir = path.parent();
         match rfc_dir {
-            Some(path) => fs::create_dir_all(path)?,
-            None => {
-                return Err(format!("Unable to write config file to: {}", rfc_file.to_string_lossy()).into());
-            }
+            Some(path) => {
+                fs::create_dir_all(path)?;
+                Ok(())
+            },
+            None => Err(format!("Unable to write file to: {}", path.to_string_lossy()).into())
         }
     }
+}
+
+fn reserve_number(dir: &str, number: Option<i32>, file_structure: FileStructure) -> Result<i32, Box<dyn std::error::Error>> {
+    if let Some(i) = number {
+        if is_number_reserved(dir, i, file_structure) {
+            // TODO: the prompt to overwrite be here?
+            // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
+            eprintln!("{} has already been reserved", i);
+            return Err(format!("{} has already been reserved", i).into());
+        }
+        return Ok(i);
+    } else {
+        return Ok(get_next_number(dir, file_structure));
+    }
+}
+
+fn get_template(dir: &str, extension: TemplateExtension, default_template_path: &str) -> PathBuf {
+    let custom_template = Path::new(dir)
+        .join("template")
+        .with_extension(extension.to_string());
+
+    let template = if custom_template.exists() { 
+        custom_template 
+    } else {
+        Path::new(default_template_path)
+            .with_extension(extension.to_string())
+            .to_path_buf() 
+    };
+
+    return template;
+}
+
+fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
+
+    let dir = SETTINGS.get_rfc_dir();
+    // TODO: move path to rfc template to a constant
+    let template = get_template(&dir, extension, "templates/rfc/template");
+    let reserve_number = reserve_number(&dir, number, SETTINGS.get_rfc_structure())?;
+    let formatted_reserved_number = format!("{:0>4}", reserve_number);
+    let rfc_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_rfc_structure());
+    ensure_path(&rfc_path)?;
 
     // TODO: supersceded
     // TODO: reverse links
@@ -970,7 +1009,7 @@ fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> 
             contents = contents.replace("<Number>", &formatted_reserved_number);
             contents = contents.replace("<Title>", &title);
         
-            fs::write(&rfc_file, contents)?;
+            fs::write(&rfc_path, contents)?;
             return Ok(());
         }
     }
@@ -979,39 +1018,15 @@ fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> 
 
 fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
+    // TODO: move path to rfc template to a constant
+    let template = get_template(&dir, extension, "templates/adr/template");
+    let reserve_number = reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
+    let formatted_reserved_number = format!("{:0>4}", reserve_number);
+    let adr_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_adr_structure());
+    ensure_path(&adr_path)?;
 
-    let custom_template = Path::new(dir)
-        .join("template")
-        .with_extension(extension.to_string());
-    
-    // TODO: move path to adr template to a constant
-    let template = if custom_template.exists() { 
-        custom_template 
-    } else {
-         Path::new("templates/adr/template")
-            .with_extension(extension.to_string())
-            .to_path_buf() 
-    };
-    
-    let reserve_number;
-    if let Some(i) = number {
-        if is_number_reserved(dir, i, SETTINGS.get_adr_structure()) {
-            // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
-            eprintln!("ADR {} has already been reserved", i);
-            return Ok(());
-        }
-        reserve_number = i;
-    } else {
-        reserve_number = get_next_number(dir, SETTINGS.get_adr_structure());
-    }
-
-    println!("reserving number: {}", reserve_number);
-
-    // TODO: convert title to slug
-    // to_lower_case vs to_ascii_lowercase
-    // swap spaces with hyphens
-    let slug = title.to_lowercase();
-
+    // TODO: supersceded
+    // TODO: reverse links
     // TODO: replace following in template - number, title, date, status
     let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
     contents = contents.replace("NUMBER", &reserve_number.to_string());
@@ -1019,21 +1034,8 @@ fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
     contents = contents.replace("STATUS", "Accepted");
 
-    // TODO: supersceded
-    // TODO: reverse links
-    
-    let file_name = format!("{:0>4}-{}.{}", reserve_number, slug, extension);
-
-    let mut file = File::create(Path::new(dir).join(file_name))?;
+    let mut file = File::create(adr_path)?;
     file.write_all(contents.as_bytes())?;
-
-    // TODO:
-    // If the ADR directory contains a template.md file it will be used as the template for the new ADR
-    // Otherwise the following file is used:
-    // <path to eventfully>/<version>/template.md
-    // /usr/local/Cellar/adr-tools/3.0.0/template.md
-    // This template follows the style described by Michael Nygard in this article.
-    // http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions
 
     return Ok(())
 }
@@ -1217,7 +1219,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let adr_settings = AdrSettings {
                         dir: params.directory.clone(),
-                        structure: None, // TODO: set 
+                        structure: params.structure,
                         template_extension: params.extension,
                     };
                     settings.adr_settings = Some(adr_settings);
@@ -1271,7 +1273,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let rfc_settings = RfcSettings {
                         dir: params.directory.clone(),
-                        structure: None, // TODO: set 
+                        structure: params.structure,
                         template_extension: params.extension,
                     };
                     settings.rfc_settings = Some(rfc_settings);
