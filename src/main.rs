@@ -1,12 +1,4 @@
-#[macro_use]
-extern crate log;
-
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate serde_derive;
-
+use lazy_static::lazy_static;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
@@ -15,24 +7,18 @@ use structopt::StructOpt;
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 use std::env;
-use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::fmt::{Debug, Display, Formatter};
 use std::io::{self, Write};
 use std::io::prelude::*;
 use std::io::ErrorKind;
 use std::io::BufReader;
-use std::io::prelude::*;
-
 use std::io::LineWriter;
-
 use std::path::{Path, PathBuf};
-
 use chrono:: {
     DateTime,
     prelude::*,
 };
-
 use walkdir::WalkDir;
 
 
@@ -502,7 +488,7 @@ struct RfcToc {
 
     #[structopt(
         long,
-        help = "Set this parameter if you don't want to give your password safely (non-interactive)"
+        help = ""
     )]
     outro: Option<String>,
 
@@ -518,7 +504,7 @@ struct RfcGraph {
 
     #[structopt(
         long,
-        help = "Set this parameter if you don't want to give your password safely (non-interactive)"
+        help = ""
     )]
     outro: Option<String>,
 
@@ -804,13 +790,6 @@ where
         seq.end()
     }
 }
-
-fn get_extension_from_filename(filename: &str) -> Option<&str> {
-    Path::new(filename)
-        .extension()
-        .and_then(OsStr::to_str)
-}
-
 
 /// Remove the `./` prefix from a path.
 fn strip_current_dir(path: &Path) -> &Path {
