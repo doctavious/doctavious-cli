@@ -26,7 +26,7 @@ use walkdir::WalkDir;
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
 
 
-// TODO: for ADR and RFC make sure template can be either markdown or asciidoc
+// TODO: for ADR and RFD make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
 // Update CVS file? From Oxide - we automatically update a CSV file of all the RFDs along with their state, links, and other information in the repo for easy parsing.
 // TODO: configuration
@@ -34,16 +34,16 @@ use walkdir::WalkDir;
 // config file
 // env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
 // --output  - overrides env var and config
-// TODO: RFC / ADR meta frontmatter
+// TODO: RFD / ADR meta frontmatter
 // TODO: why do I get a % at the end when using json output
 
 // TODO: add configuration option for whether to use md or adoc
 // probably makes sense to make enum. default to md
 
-// TODO: add option for ADR and RFC to determine if you want just file or a directory structure
+// TODO: add option for ADR and RFD to determine if you want just file or a directory structure
 // to support this we would have to alter how ADR init works as that currently hard codes number
 
-// Create ADR from RFC - essentially a link similar to linking ADRs to one another
+// Create ADR from RFD - essentially a link similar to linking ADRs to one another
 
 // TODO: automatically update README(s) / CSVs
 // or at the very least lint 
@@ -230,7 +230,7 @@ lazy_static! {
 
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
-pub static DEFAULT_RFC_DIR: &str = "docs/rfc";
+pub static DEFAULT_RFD_DIR: &str = "docs/rfd";
 // TODO: do we want this to defautl to the current directory?
 pub static DEFAULT_TIL_DIR: &str = "til";
 
@@ -240,7 +240,7 @@ pub static DEFAULT_TIL_DIR: &str = "til";
 pub struct Settings {
     template_extension: Option<TemplateExtension>,
     adr_settings: Option<AdrSettings>,
-    rfc_settings: Option<RfcSettings>,
+    rfd_settings: Option<RFDSettings>,
     til_settings: Option<TilSettings>,
 }
 
@@ -252,7 +252,7 @@ pub struct AdrSettings {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct RfcSettings {
+pub struct RFDSettings {
     dir: Option<String>,
     structure: Option<FileStructure>,
     template_extension: Option<TemplateExtension>,
@@ -300,8 +300,8 @@ impl Settings {
         return TemplateExtension::default();
     }
 
-    fn get_rfc_dir(&self) -> &str {
-        if let Some(settings) = &self.rfc_settings {
+    fn get_rfd_dir(&self) -> &str {
+        if let Some(settings) = &self.rfd_settings {
             if let Some(dir) = &settings.dir {
                 return dir;
             }
@@ -310,8 +310,8 @@ impl Settings {
         return DEFAULT_ADR_DIR;
     }
 
-    fn get_rfc_structure(&self) -> FileStructure {
-        if let Some(settings) = &self.rfc_settings {
+    fn get_rfd_structure(&self) -> FileStructure {
+        if let Some(settings) = &self.rfd_settings {
             if let Some(structure) = settings.structure {
                 return structure;
             }
@@ -320,8 +320,8 @@ impl Settings {
         return FileStructure::default();
     }
 
-    fn get_rfc_template_extension(&self) -> TemplateExtension {
-        if let Some(settings) = &self.rfc_settings {
+    fn get_rfd_template_extension(&self) -> TemplateExtension {
+        if let Some(settings) = &self.rfd_settings {
             if let Some(template_extension) = settings.template_extension {
                 return template_extension;
             }
@@ -370,7 +370,6 @@ lazy_static! {
     // do we also want a default settings file
     pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(".doctavious");
 
-    // TODO: does this need to be an Option so we know if settings exist?
     pub static ref SETTINGS: Settings = {
         match load_settings() {
             Ok(settings) => settings,
@@ -404,58 +403,58 @@ fn persist_settings(settings: Settings) -> Result<(), Box<dyn std::error::Error>
 
 #[derive(StructOpt, Debug)]
 enum Command {
-    Rfc(Rfc),
+    RFD(RFD),
     Adr(Adr),
     Til(Til),
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    about = "Gathers RFC management commands"
+    about = "Gathers RFD management commands"
 )]
-struct Rfc {
+struct RFD {
     #[structopt(subcommand)]
-    rfc_command: RfcCommand,
+    rfd_command: RFDCommand,
 }
 
 #[derive(StructOpt, Debug)]
-enum RfcCommand {
-    Init(InitRfc),
-    New(NewRfc),
-    List(ListRfcs),
-    Generate(GenerateRfcs),
+enum RFDCommand {
+    Init(InitRFD),
+    New(NewRFD),
+    List(ListRFDs),
+    Generate(GenerateRFDs),
 }
 
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Init RFC")]
-struct InitRfc {
-    #[structopt(long, short, help = "Directory to store RFCs")]
+#[structopt(about = "Init RFD")]
+struct InitRFD {
+    #[structopt(long, short, help = "Directory to store RFDs")]
     directory: Option<String>,
 
     // TODO: should we default here?
-    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How RFCs should be structured")]
+    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How RFDs should be structured")]
     structure: Option<FileStructure>,
 
     #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     extension: Option<TemplateExtension>,
 }
 
-impl InitRfc {
+impl InitRFD {
     pub fn should_persist_settings(&self) -> bool {
         return self.directory.is_some() || self.extension.is_some();
     }
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "New RFC")]
-struct NewRfc {
-    #[structopt(long, short, help = "RFC number")]
+#[structopt(about = "New RFD")]
+struct NewRFD {
+    #[structopt(long, short, help = "RFD number")]
     number: Option<i32>,
     
     // TODO: make option and default to README? 
     // this could also be a setting
-    #[structopt(long, short, help = "title of RFC")]
+    #[structopt(long, short, help = "title of RFD")]
     title: String,
 
     #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
@@ -463,26 +462,26 @@ struct NewRfc {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "List RFCs")]
-struct ListRfcs {
+#[structopt(about = "List RFDs")]
+struct ListRFDs {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers generate RFC commands")]
-struct GenerateRfcs {
+#[structopt(about = "Gathers generate RFD commands")]
+struct GenerateRFDs {
     #[structopt(subcommand)]
-    generate_rfc_command: GenerateRfcsCommand,
+    generate_rfd_command: GenerateRFDsCommand,
 }
 
 #[derive(StructOpt, Debug)]
-enum GenerateRfcsCommand {
-    RfcToc(RfcToc),
-    RfcGraph(RfcGraph)
+enum GenerateRFDsCommand {
+    RFDToc(RFDToc),
+    RFDGraph(RFDGraph)
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Create RFC ToC")]
-struct RfcToc {
+#[structopt(about = "Create RFD ToC")]
+struct RFDToc {
     #[structopt(long, short, help = "")]
     intro: Option<String>,
 
@@ -497,8 +496,8 @@ struct RfcToc {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Create RFC Graph")]
-struct RfcGraph {
+#[structopt(about = "Create RFD Graph")]
+struct RFDGraph {
     #[structopt(long, short, help = "")]
     intro: Option<String>,
 
@@ -967,8 +966,8 @@ fn ensure_path(path: &PathBuf)-> Result<(), Box<dyn std::error::Error>> {
             return Err(format!("Unable to write config file to: {}", path.to_string_lossy()).into());
         }
     } else {
-        let rfc_dir = path.parent();
-        match rfc_dir {
+        let parent_dir = path.parent();
+        match parent_dir {
             Some(path) => {
                 fs::create_dir_all(path)?;
                 Ok(())
@@ -1008,15 +1007,15 @@ fn get_template(dir: &str, extension: TemplateExtension, default_template_path: 
     return template;
 }
 
-fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
+fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
 
-    let dir = SETTINGS.get_rfc_dir();
-    // TODO: move path to rfc template to a constant
-    let template = get_template(&dir, extension, "templates/rfc/template");
-    let reserve_number = reserve_number(&dir, number, SETTINGS.get_rfc_structure())?;
+    let dir = SETTINGS.get_rfd_dir();
+    // TODO: move path to rfd template to a constant
+    let template = get_template(&dir, extension, "templates/rfd/template");
+    let reserve_number = reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
-    let rfc_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_rfc_structure());
-    ensure_path(&rfc_path)?;
+    let rfd_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_rfd_structure());
+    ensure_path(&rfd_path)?;
 
     // TODO: supersceded
     // TODO: reverse links
@@ -1027,7 +1026,7 @@ fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> 
             contents = contents.replace("<Number>", &formatted_reserved_number);
             contents = contents.replace("<Title>", &title);
         
-            fs::write(&rfc_path, contents)?;
+            fs::write(&rfd_path, contents)?;
             return Ok(());
         }
     }
@@ -1036,7 +1035,7 @@ fn new_rfc(number: Option<i32>, title: String, extension: TemplateExtension) -> 
 
 fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
-    // TODO: move path to rfc template to a constant
+    // TODO: move path to adr template to a constant
     let template = get_template(&dir, extension, "templates/adr/template");
     let reserve_number = reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
@@ -1311,8 +1310,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
 
-        Command::Rfc(rfc) => match rfc.rfc_command {
-            RfcCommand::Init(params) => {
+        Command::RFD(rfd) => match rfd.rfd_command {
+            RFDCommand::Init(params) => {
 
                 // TODO: need to handle initing multiple times better
 
@@ -1322,46 +1321,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Err(_) => Default::default()
                     };
 
-                    let rfc_settings = RfcSettings {
+                    let rfd_settings = RFDSettings {
                         dir: params.directory.clone(),
                         structure: params.structure,
                         template_extension: params.extension,
                     };
-                    settings.rfc_settings = Some(rfc_settings);
+                    settings.rfd_settings = Some(rfd_settings);
                     persist_settings(settings)?;
                 }
 
                 let dir = match params.directory {
-                    None => DEFAULT_RFC_DIR,
+                    None => DEFAULT_RFD_DIR,
                     Some(ref d) => d,
                 };
 
                 init_dir(dir)?;
 
-                return new_rfc(Some(1), "Use RFCs ...".to_string(), SETTINGS.get_rfc_template_extension());
+                return new_rfd(Some(1), "Use RFDs ...".to_string(), SETTINGS.get_rfd_template_extension());
             }
 
-            RfcCommand::New(params) => {
-                init_dir(SETTINGS.get_rfc_dir())?;
+            RFDCommand::New(params) => {
+                init_dir(SETTINGS.get_rfd_dir())?;
 
                 let extension = match params.extension {
                     Some(v) => v,
-                    None => SETTINGS.get_rfc_template_extension()
+                    None => SETTINGS.get_rfd_template_extension()
                 };
 
-                return new_rfc(params.number, params.title, extension);
+                return new_rfd(params.number, params.title, extension);
             }
 
-            RfcCommand::List(_) => {
-                list(SETTINGS.get_rfc_dir(), opt.output);
+            RFDCommand::List(_) => {
+                list(SETTINGS.get_rfd_dir(), opt.output);
             }
             
-            RfcCommand::Generate(generate) => match generate.generate_rfc_command {
-                GenerateRfcsCommand::RfcToc(params) => {
+            RFDCommand::Generate(generate) => match generate.generate_rfd_command {
+                GenerateRFDsCommand::RFDToc(params) => {
 
                 }
 
-                GenerateRfcsCommand::RfcGraph(params) => {
+                GenerateRFDsCommand::RFDGraph(params) => {
 
                 }
             }
