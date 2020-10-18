@@ -73,6 +73,12 @@ use walkdir::WalkDir;
 // https://github.com/danielecook/til-tool
 // https://github.com/danielecook/til
 
+// ADR: build ToC / readme / graph (dot/graphviz)
+// RFC: build ToC / readme / graph
+// Til: build ToC / readme
+
+// serial number
+
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "eventfully",
@@ -1079,17 +1085,21 @@ fn list(dir: &str, opt_output: Option<Output>) {
     }
 }
 
-fn title_string<R>(mut rdr: R) -> String
+fn title_string<R>(mut rdr: R, extension: TemplateExtension) -> String
     where R: BufRead,
 {
     let mut first_line = String::new();
 
     rdr.read_line(&mut first_line).expect("Unable to read line");
 
-    // Where do the leading hashes stop?
+    let leading_char = match extension {
+        TemplateExtension::Markdown => '#',
+        TemplateExtension::Asciidoc => '='
+    };
+
     let last_hash = first_line
         .char_indices()
-        .skip_while(|&(_, c)| c == '#')
+        .skip_while(|&(_, c)| c == leading_char)
         .next()
         .map_or(0, |(idx, _)| idx);
 
@@ -1159,13 +1169,14 @@ fn build_til_readme(dir: &str) -> io::Result<()> {
         }
 
         let file_name = entry.path().file_name().unwrap().to_str().unwrap().to_string();
-
+        let extension = parse_template_extension(entry.path().extension().unwrap().to_str().unwrap()).unwrap();
         let file = match fs::File::open(&entry.path()) {
             Ok(file) => file,
             Err(_) => panic!("Unable to read title from {:?}", entry.path()),
         };
+
         let buffer = BufReader::new(file);
-        let title = title_string(buffer);
+        let title = title_string(buffer, extension);
 
         all_tils.get_mut(&topic).unwrap().push(TilEntry {
             topic: topic,
@@ -1409,8 +1420,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if path.exists() {
                     eprintln!("File {} already exists", path.to_string_lossy());
                 } else {
-                    // TODO: better way to do newline?
-                    let mut content = format!("# {}\n", params.title);
+
+                    let leading_char = match extension {
+                        TemplateExtension::Markdown => '#',
+                        TemplateExtension::Asciidoc => '='
+                    };
+
+                    let mut content = format!("{} {}\n", leading_char, params.title);
                     if params.tags.is_some() {
                         content.push_str("\ntags: ");
                         content.push_str(params.tags.unwrap().join(" ").as_str());
