@@ -20,13 +20,12 @@ use chrono:: {
     prelude::*,
 };
 use walkdir::WalkDir;
-
+use unidecode::unidecode;
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
 
 
-// TODO: for ADR and RFD make sure template can be either markdown or asciidoc
 // TODO: Automatically update readme TOC
 // Update CVS file? From Oxide - we automatically update a CSV file of all the RFDs along with their state, links, and other information in the repo for easy parsing.
 // TODO: configuration
@@ -36,13 +35,6 @@ use walkdir::WalkDir;
 // --output  - overrides env var and config
 // TODO: RFD / ADR meta frontmatter
 // TODO: why do I get a % at the end when using json output
-
-// TODO: add configuration option for whether to use md or adoc
-// probably makes sense to make enum. default to md
-
-// TODO: add option for ADR and RFD to determine if you want just file or a directory structure
-// to support this we would have to alter how ADR init works as that currently hard codes number
-
 // Create ADR from RFD - essentially a link similar to linking ADRs to one another
 
 // TODO: automatically update README(s) / CSVs
@@ -115,6 +107,7 @@ impl Default for Output {
 }
 
 // TODO: is there a better name for this?
+// TODO: can these enums hold other attributes? extension value (adoc / md), leading char (= / #), etc
 #[derive(Clone, Copy, Debug)]
 pub enum TemplateExtension {
     Markdown,
@@ -567,6 +560,18 @@ struct NewAdr {
 
     #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     extension: Option<TemplateExtension>,
+
+    #[structopt(long, short, help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR.")]
+    supercede: Option<Vec<String>>,
+
+    // Links the new ADR to a previous ADR.
+    // TARGET is a reference (number or partial filename) of a
+    // previous decision.
+    // LINK is the description of the link created in the new ADR.
+    // REVERSE-LINK is the description of the link created in the
+    // existing ADR that will refer to the new ADR.
+    #[structopt(long, short, help = "")]
+    link: Option<Vec<String>>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -940,10 +945,8 @@ fn build_path(
 ) -> PathBuf {
     match file_structure {
         FileStructure::Flat => {
-            // TODO: convert title to slug
-            // to_lower_case vs to_ascii_lowercase
-            // swap spaces with hyphens
-            let slug = title.to_lowercase();
+
+            let slug = slugify(&title);
             let file_name = format!("{}-{}", reserved_number, slug);
             return Path::new(dir)
                 .join(file_name)
@@ -1013,6 +1016,42 @@ fn get_template(dir: &str, extension: TemplateExtension, default_template_path: 
     return template;
 }
 
+fn slugify(string: &str) -> String {
+    let separator_char = '-';
+    let separator = separator_char.to_string();
+
+    let string: String = unidecode(string.into())
+        .to_lowercase()
+        .trim_matches(separator_char)
+        .replace(' ', &separator);
+
+    let mut slug = Vec::with_capacity(string.len());
+    let mut is_sep = true;
+
+    for x in string.chars() {
+        match x {
+            'a'..='z' | '0'..='9' => {
+                is_sep = false;
+                slug.push(x as u8);
+            }
+            _ => {
+                if !is_sep {
+                    is_sep = true;
+                    slug.push(separator_char as u8);
+                }
+            }
+        }
+    }
+
+    if slug.last() == Some(&(separator_char as u8)) {
+        slug.pop();
+    }
+
+    let s = String::from_utf8(slug).unwrap();
+    s.trim_end_matches(separator_char).to_string();
+    s
+}
+
 fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
 
     let dir = SETTINGS.get_rfd_dir();
@@ -1029,8 +1068,8 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     match fs::read_to_string(&template) {
         Err(e) => panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e),
         Ok(mut contents) => {
-            contents = contents.replace("<Number>", &formatted_reserved_number);
-            contents = contents.replace("<Title>", &title);
+            contents = contents.replace("<NUMBER>", &formatted_reserved_number);
+            contents = contents.replace("<TITLE>", &title);
         
             fs::write(&rfd_path, contents)?;
             return Ok(());
@@ -1039,7 +1078,13 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
 
 }
 
-fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
+fn new_adr(
+    number: Option<i32>, 
+    title: String, 
+    extension: TemplateExtension
+    // supercedes: Option<Vec<String>>, 
+    // links: Option<Vec<String>>
+) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
     // TODO: move path to adr template to a constant
     let template = get_template(&dir, extension, "templates/adr/template");
@@ -1049,13 +1094,31 @@ fn new_adr(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     ensure_path(&adr_path)?;
 
     // TODO: supersceded
+    // if let Some(targets) = supercedes {
+    //     for target in targets {
+    //         // "$adr_bin_dir/_adr_add_link" "$target" "Superceded by" "$dstfile"
+    //         // "$adr_bin_dir/_adr_remove_status" "Accepted" "$target"
+    //         // "$adr_bin_dir/_adr_add_link" "$dstfile" "Supercedes" "$target"
+    //     }
+    // }
+
     // TODO: reverse links
+    // if let Some(others) = links {
+    //     for other in others {
+    //         // target="$(echo $l | cut -d : -f 1)"
+    //         // forward_link="$(echo $l | cut -d : -f 2)"
+    //         // reverse_link="$(echo $l | cut -d : -f 3)"
+        
+    //         // "$adr_bin_dir/_adr_add_link" "$dstfile" "$forward_link" "$target"
+    //         // "$adr_bin_dir/_adr_add_link" "$target" "$reverse_link" "$dstfile"
+    //     }
+    // }
 
     let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
-    contents = contents.replace("NUMBER", &reserve_number.to_string());
-    contents = contents.replace("TITLE", &title);
-    contents = contents.replace("DATE", &Utc::now().format("%Y-%m-%d").to_string());
-    contents = contents.replace("STATUS", "Accepted");
+    contents = contents.replace("<NUMBER>", &reserve_number.to_string());
+    contents = contents.replace("<TITLE>", &title);
+    contents = contents.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
+    contents = contents.replace("<STATUS>", "Accepted");
 
     let mut file = File::create(adr_path)?;
     file.write_all(contents.as_bytes())?;

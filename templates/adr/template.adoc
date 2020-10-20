@@ -1,10 +1,10 @@
-= NUMBER. TITLE
+= <NUMBER>. <TITLE>
 
-Date: DATE
+Date: <DATE>
 
 == Status
 
-STATUS
+<STATUS>
 
 == Context
 
