@@ -1064,8 +1064,7 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     // TODO: supersceded
     // TODO: reverse links
     
-    // panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e)
-    let mut starting_content = fs::read_to_string(template).expect("Something went wrong reading the file");
+    let mut starting_content = fs::read_to_string(template).expect(format!("failed to read file {}.", template.to_string_lossy()));
     starting_content = starting_content.replace("<NUMBER>", &formatted_reserved_number);
     starting_content = starting_content.replace("<TITLE>", &title);
     
@@ -1073,18 +1072,6 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     fs::write(&rfd_path, edited)?;
 
     return Ok(())
-
-    // match fs::read_to_string(&template) {
-    //     Err(e) => panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e),
-    //     Ok(mut contents) => {
-    //         contents = contents.replace("<NUMBER>", &formatted_reserved_number);
-    //         contents = contents.replace("<TITLE>", &title);
-        
-    //         fs::write(&rfd_path, contents)?;
-    //         return Ok(());
-    //     }
-    // }
-
 }
 
 fn get_leading_character(extension: TemplateExtension) -> char {
@@ -1129,7 +1116,7 @@ fn new_adr(
     //     }
     // }
 
-    let mut starting_content = fs::read_to_string(template).expect("Something went wrong reading the file");
+    let mut starting_content = fs::read_to_string(template).expect(format!("failed to read file {}.", template.to_string_lossy()));
     starting_content = starting_content.replace("<NUMBER>", &reserve_number.to_string());
     starting_content = starting_content.replace("<TITLE>", &title);
     starting_content = starting_content.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
