@@ -454,8 +454,6 @@ struct NewRFD {
     #[structopt(long, short, help = "RFD number")]
     number: Option<i32>,
     
-    // TODO: make option and default to README? 
-    // this could also be a setting
     #[structopt(long, short, help = "title of RFD")]
     title: String,
 
@@ -536,7 +534,6 @@ struct InitAdr {
     #[structopt(long, short, help = "Directory to store ADRs")]
     directory: Option<String>,
 
-    // TODO: should we default here?
     #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
     structure: Option<FileStructure>,
 
@@ -695,12 +692,10 @@ struct BuildTilReadMe {
 }
 
 #[derive(Clone, Debug)]
-struct TilEntry<'a> {
+struct TilEntry {
     topic: String,
     title: String,
     file_name: String,
-    base_name: &'a str,
-    description: &'a str,
     date: DateTime<Utc>,
 }
 
@@ -815,7 +810,6 @@ fn is_valid_file(path: &Path) -> bool {
     return TEMPLATE_EXTENSIONS.contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
-// TODO: share more between get_next_number and is_number_reserved
 fn get_next_number(dir: &str, file_structure: FileStructure) -> i32 {
     if let Some(max) = get_allocated_numbers(dir, file_structure).iter().max() {
         return max + 1;
@@ -1173,49 +1167,11 @@ fn title_string<R>(mut rdr: R, extension: TemplateExtension) -> String
 
 
 fn build_til_readme(dir: &str) -> io::Result<()> {
-    // TODO: build readme
-    // let mut current_topic = String::new();
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
     for entry in WalkDir::new(&dir)
             .into_iter()
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file()) {
-        
-        // let f_name = String::from(entry.file_name().to_string_lossy());
-        // // let f_name = entry.file_name().to_string_lossy();
-        // if entry.file_type().is_dir() {
-        //     // current_topic = entry.path().file_name().unwrap().to_string_lossy().into_owned();
-        //     current_topic = entry.file_name().to_string_lossy().into_owned();
-        //     // current_topic = entry.file_name().to_str().unwrap().to_string();
-        //     if !all_tils.contains_key(current_topic.as_str()) {
-        //         all_tils.insert(current_topic.as_str(), Vec::new());
-        //     }
-        // } else {
-
-        //     // file_name returns an OsString and .to_str return Option<&str>
-        //     // This indicates that the method will return a borrowed reference to a &str. 
-        //     // The DirEntry struct is the owner of the string.
-        //     // This means that any references into the DirEntry will no longer be valid.
-        //     // String owns the string inside of it
-        //     let file_name = entry.file_name().to_str().unwrap().into();
-        //     let file = match fs::File::open(entry.path()) {
-        //         Ok(file) => file,
-        //         Err(_) => panic!("Unable to read title from {:?}", entry.path()),
-        //     };
-        //     let buffer = BufReader::new(file);
-        //     let title = title_string(buffer);
-
-        //     let tilEntry = TilEntry {
-        //         topic: current_topic.to_string(),
-        //         title: title,
-        //         description: "",
-        //         file_name: file_name,
-        //         base_name: "",
-        //         date: SystemTime::now() //entry.metadata()?.created()?
-        //     };
-
-        //     all_tils.get_mut(current_topic.as_str()).unwrap().push(tilEntry);
-        // }
     
         // skip files that are under til dir
         if Path::new(dir) == entry.path().parent().unwrap() {
@@ -1245,9 +1201,7 @@ fn build_til_readme(dir: &str) -> io::Result<()> {
         all_tils.get_mut(&topic).unwrap().push(TilEntry {
             topic: topic,
             title: title,
-            description: "",
             file_name: file_name,
-            base_name: "",
             date: DateTime::from(entry.metadata()?.created()?)
         });
 
@@ -1267,18 +1221,19 @@ fn build_til_readme(dir: &str) -> io::Result<()> {
     let mut lw = LineWriter::new(file);
 
     lw.write_all(b"# TIL\n\n> Today I Learned\n\n")?;
+    lw.write_all(format!("* Categories: {}\n", all_tils.keys().len()).as_bytes())?;
     lw.write_all(format!("* TILs: {}\n", til_count).as_bytes())?;
-    lw.write_all(format!("* Topics: {}\n", all_tils.keys().len()).as_bytes())?;
     lw.write_all(b"\n")?;
 
     // TODO: do we want to list categories?
 
-    for topic in all_tils.keys().cloned() {
-        lw.write_all(format!("## {}\n\n", &topic).as_bytes())?;
-        let mut tils = all_tils.get(&topic).unwrap().to_vec();
+    for category in all_tils.keys().cloned() {
+        lw.write_all(format!("## {}\n\n", &category).as_bytes())?;
+        let mut tils = all_tils.get(&category).unwrap().to_vec();
         tils.sort_by_key(|e| e.title.clone());
         for til in tils {
-            lw.write_all(format!("* [{}]({}/{}) {} ({})", til.title, topic, til.file_name, til.description, til.date.format("%Y-%m-%d")).as_bytes())?;
+            // TODO: should we just use title instead of file_name for link?
+            lw.write_all(format!("* [{}]({}/{}) {} ({})", til.file_name, category, til.file_name, til.title, til.date.format("%Y-%m-%d")).as_bytes())?;
             lw.write_all(b"\n")?;
         }
 
