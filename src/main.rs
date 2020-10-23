@@ -662,14 +662,14 @@ struct InitTil {
 struct NewTil {
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     // TODO: change to category
-    #[structopt(long, help = "TIL Topic. Represents the directory to place TIL under")]
-    topic: String,
+    #[structopt(short, long, help = "TIL category. Represents the directory to place TIL entry under")]
+    category: String,
 
-    #[structopt(long, short, help = "title of TIL")]
+    #[structopt(long, short, help = "title of the TIL entry")]
     title: String,
 
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
-    #[structopt(long, help = "Additional tags associated with TIL")]
+    #[structopt(short = "T", long, help = "Additional tags associated with the TIL entry")]
     tags: Option<Vec<String>>,
 
     #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
@@ -1477,7 +1477,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let file_name = params.title.to_lowercase();
                 let path = Path::new(dir)
-                        .join(params.topic)
+                        .join(params.category)
                         .join(file_name)
                         .with_extension(extension.to_string());
 
