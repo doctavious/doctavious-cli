@@ -229,9 +229,12 @@ lazy_static! {
 
 // TODO: better way to do this? Do we want to keep a default settings file in doctavious dir?
 pub static DEFAULT_ADR_DIR: &str = "docs/adr";
+pub static DEFAULT_ADR_TEMPLATE_PATH: &str = "templates/adr/template";
 pub static DEFAULT_RFD_DIR: &str = "docs/rfd";
+pub static DEFAULT_RFD_TEMPLATE_PATH: &str = "templates/rfd/template";
 // TODO: do we want this to defautl to the current directory?
 pub static DEFAULT_TIL_DIR: &str = "til";
+
 
 // TODO: should this include output?
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1055,8 +1058,7 @@ fn slugify(string: &str) -> String {
 fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> Result<(), Box<dyn std::error::Error>> {
 
     let dir = SETTINGS.get_rfd_dir();
-    // TODO: move path to rfd template to a constant
-    let template = get_template(&dir, extension, "templates/rfd/template");
+    let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number = reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
     let rfd_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_rfd_structure());
@@ -1086,8 +1088,7 @@ fn new_adr(
     // links: Option<Vec<String>>
 ) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
-    // TODO: move path to adr template to a constant
-    let template = get_template(&dir, extension, "templates/adr/template");
+    let template = get_template(&dir, extension, DEFAULT_ADR_TEMPLATE_PATH);
     let reserve_number = reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
     let formatted_reserved_number = format!("{:0>4}", reserve_number);
     let adr_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_adr_structure());
