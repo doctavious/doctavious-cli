@@ -22,6 +22,9 @@ use chrono:: {
 use walkdir::WalkDir;
 use unidecode::unidecode;
 
+mod edit;
+
+
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
 
@@ -1061,17 +1064,34 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     // TODO: supersceded
     // TODO: reverse links
     
-    match fs::read_to_string(&template) {
-        Err(e) => panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e),
-        Ok(mut contents) => {
-            contents = contents.replace("<NUMBER>", &formatted_reserved_number);
-            contents = contents.replace("<TITLE>", &title);
-        
-            fs::write(&rfd_path, contents)?;
-            return Ok(());
-        }
-    }
+    // panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e)
+    let mut starting_content = fs::read_to_string(template).expect("Something went wrong reading the file");
+    starting_content = starting_content.replace("<NUMBER>", &formatted_reserved_number);
+    starting_content = starting_content.replace("<TITLE>", &title);
+    
+    let edited = edit::edit(&starting_content)?;
+    fs::write(&rfd_path, edited)?;
 
+    return Ok(())
+
+    // match fs::read_to_string(&template) {
+    //     Err(e) => panic!("Error occurred reading template file {}. {}", template.to_string_lossy(), e),
+    //     Ok(mut contents) => {
+    //         contents = contents.replace("<NUMBER>", &formatted_reserved_number);
+    //         contents = contents.replace("<TITLE>", &title);
+        
+    //         fs::write(&rfd_path, contents)?;
+    //         return Ok(());
+    //     }
+    // }
+
+}
+
+fn get_leading_character(extension: TemplateExtension) -> char {
+    return match extension {
+        TemplateExtension::Markdown => '#',
+        TemplateExtension::Asciidoc => '='
+    };
 }
 
 fn new_adr(
@@ -1109,14 +1129,14 @@ fn new_adr(
     //     }
     // }
 
-    let mut contents = fs::read_to_string(template).expect("Something went wrong reading the file");
-    contents = contents.replace("<NUMBER>", &reserve_number.to_string());
-    contents = contents.replace("<TITLE>", &title);
-    contents = contents.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
-    contents = contents.replace("<STATUS>", "Accepted");
+    let mut starting_content = fs::read_to_string(template).expect("Something went wrong reading the file");
+    starting_content = starting_content.replace("<NUMBER>", &reserve_number.to_string());
+    starting_content = starting_content.replace("<TITLE>", &title);
+    starting_content = starting_content.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
+    starting_content = starting_content.replace("<STATUS>", "Accepted");
 
-    let mut file = File::create(adr_path)?;
-    file.write_all(contents.as_bytes())?;
+    let edited = edit::edit(&starting_content)?;
+    fs::write(&adr_path, edited)?;
 
     return Ok(())
 }
@@ -1150,10 +1170,7 @@ fn title_string<R>(mut rdr: R, extension: TemplateExtension) -> String
 
     rdr.read_line(&mut first_line).expect("Unable to read line");
 
-    let leading_char = match extension {
-        TemplateExtension::Markdown => '#',
-        TemplateExtension::Asciidoc => '='
-    };
+    let leading_char = get_leading_character(extension);
 
     let last_hash = first_line
         .char_indices()
@@ -1440,22 +1457,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("File {} already exists", path.to_string_lossy());
                 } else {
 
-                    let leading_char = match extension {
-                        TemplateExtension::Markdown => '#',
-                        TemplateExtension::Asciidoc => '='
-                    };
+                    let leading_char = get_leading_character(extension);
 
-                    let mut content = format!("{} {}\n", leading_char, params.title);
+                    let mut starting_content = format!("{} {}\n", leading_char, params.title);
                     if params.tags.is_some() {
-                        content.push_str("\ntags: ");
-                        content.push_str(params.tags.unwrap().join(" ").as_str());
+                        starting_content.push_str("\ntags: ");
+                        starting_content.push_str(params.tags.unwrap().join(" ").as_str());
                     }
     
-                    // let edited = edit::edit(&content)?;
-                    // println!("after editing: {}", edited);
+                    let edited = edit::edit(&starting_content)?;
 
                     fs::create_dir_all(path.parent().unwrap())?;
-                    fs::write(&path, content)?;
+                    fs::write(&path, edited)?;
 
                     if params.readme {
                         build_til_readme(&dir)?;
