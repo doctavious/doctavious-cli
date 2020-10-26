@@ -1067,6 +1067,7 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     let mut starting_content = fs::read_to_string(template).expect(format!("failed to read file {}.", template.to_string_lossy()));
     starting_content = starting_content.replace("<NUMBER>", &formatted_reserved_number);
     starting_content = starting_content.replace("<TITLE>", &title);
+    starting_content = starting_content.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
     
     let edited = edit::edit(&starting_content)?;
     fs::write(&rfd_path, edited)?;
