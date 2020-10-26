@@ -4,5 +4,5 @@ state: predraft
 discussion: 
 ---
 
-= RFD <Number> <Title>
+= RFD <NUMBER> <TITLE>
 

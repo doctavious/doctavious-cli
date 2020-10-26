@@ -1,3 +1,9 @@
+---
+authors: 
+date: <DATE>
+discussion: 
+---
+
 # <NUMBER>. <TITLE>
 
 Date: <DATE>
