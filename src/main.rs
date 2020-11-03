@@ -411,6 +411,7 @@ enum Command {
     RFD(RFD),
     Adr(Adr),
     Til(Til),
+    Presentation(Presentation),
 }
 
 #[derive(StructOpt, Debug)]
@@ -701,6 +702,55 @@ struct TilEntry {
     file_name: String,
     date: DateTime<Utc>,
 }
+
+
+#[derive(StructOpt, Debug)]
+#[structopt(
+    about = "Presentation commands"
+)]
+struct Presentation {
+
+    #[structopt(long, short, help = "Output file path (or directory input-dir is passed)")]
+    output: Option<String>,
+
+    #[structopt(long, short, help = "The base directory to find markdown and theme CSS")]
+    input_dir: Option<String>,
+
+// https://github.com/marp-team/marp-cli#options
+// Marp CLI can be configured options with file, such as marp.config.js, marp.config.cjs, .marprc (JSON / YAML), and marp section of package.json
+// package.json
+// {
+//     "marp": {
+//       "inputDir": "./slides",
+//       "output":" ./public",
+//       "themeSet": "./themes"
+//     }
+//   }
+
+// # .marprc.yml
+// allowLocalFiles: true
+// options:
+//   looseYAML: false
+//   markdown:
+//     breaks: false
+// pdf: true
+
+// -c, --config-file, --config        Specify path to a configuration file
+//                                            [string]
+// --no-config-file, --no-config  Prevent looking up for a configuration file
+//                                           [boolean]
+
+    #[structopt(long, short, help = "Watch input markdowns for changes")]
+    watch: bool,
+
+    #[structopt(long, short, help = "Enable server mode")]
+    server: bool,
+
+    #[structopt(long, short, help = "Open preview window")]
+    preview: bool,
+
+}
+
 
 
 lazy_static! {
@@ -1064,7 +1114,7 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     // TODO: supersceded
     // TODO: reverse links
     
-    let mut starting_content = fs::read_to_string(template).expect(format!("failed to read file {}.", template.to_string_lossy()));
+    let mut starting_content = fs::read_to_string(&template).expect(&format!("failed to read file {}.", &template.to_string_lossy()));
     starting_content = starting_content.replace("<NUMBER>", &formatted_reserved_number);
     starting_content = starting_content.replace("<TITLE>", &title);
     starting_content = starting_content.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
@@ -1117,7 +1167,7 @@ fn new_adr(
     //     }
     // }
 
-    let mut starting_content = fs::read_to_string(template).expect(format!("failed to read file {}.", template.to_string_lossy()));
+    let mut starting_content = fs::read_to_string(&template).expect(&format!("failed to read file {}.", &template.to_string_lossy()));
     starting_content = starting_content.replace("<NUMBER>", &reserve_number.to_string());
     starting_content = starting_content.replace("<TITLE>", &title);
     starting_content = starting_content.replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
@@ -1343,6 +1393,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     //    adr generate graph -e .pdf | dot -Tpdf > graph.pdf
                 }
             }
+        },
+
+        Command::Presentation(params) => {
+            // TODO: implement
+            let output_dir = match params.output {
+                None => "",
+                Some(ref o) => o,
+            };
+
+            let input_dir = match params.input_dir {
+                None => "",
+                Some(ref i) => i,
+            };
+    
         },
 
         Command::RFD(rfd) => match rfd.rfd_command {
