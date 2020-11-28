@@ -24,6 +24,14 @@ use unidecode::unidecode;
 
 mod edit;
 
+use std::cell::RefCell;
+
+use comrak::{Arena, parse_document, format_commonmark, format_html, ComrakOptions};
+use comrak::nodes::{Ast, AstNode, NodeValue};
+use comrak::arena_tree::Node;
+
+use pulldown_cmark::{Parser, Options, html, Event};
+use pulldown_cmark_to_cmark::cmark;
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
@@ -74,9 +82,12 @@ mod edit;
 
 // serial number
 
+// TODO: share structs between ADR and RFD
+
+
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "eventfully",
+    name = "Doctavious",
 )]
 pub struct Opt {
     #[structopt(long, help = "Prints a verbose output during the program execution", global = true)]
@@ -479,12 +490,12 @@ struct GenerateRFDs {
 
 #[derive(StructOpt, Debug)]
 enum GenerateRFDsCommand {
-    RFDToc(RFDToc),
-    RFDGraph(RFDGraph)
+    Toc(RFDToc),
+    Graph(RFDGraph)
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Create RFD ToC")]
+#[structopt(about = "Generates RFD table of contents (Toc) to stdout")]
 struct RFDToc {
     #[structopt(long, short, help = "")]
     intro: Option<String>,
@@ -497,6 +508,9 @@ struct RFDToc {
 
     #[structopt(long, short, help = "")]
     link_prefix: Option<String>,
+
+    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
+    format: Option<TemplateExtension>
 }
 
 #[derive(StructOpt, Debug)]
@@ -529,6 +543,7 @@ enum AdrCommand {
     Init(InitAdr),
     New(NewAdr),
     List(ListAdrs),
+    Link(LinkAdrs),
     Generate(GenerateADRs),
 }
 
@@ -585,6 +600,23 @@ struct ListAdrs {
 }
 
 #[derive(StructOpt, Debug)]
+#[structopt(name = "link", about = "Link ADRs")]
+struct LinkAdrs {
+    #[structopt(long, short, help = "Reference number of source ADR")]
+    source: i32,
+    
+    // TODO: can we give title index so we dont have to specify --title or -t?
+    #[structopt(long, short, help = "Description of the link created in the new ADR")]
+    link: String,
+
+    #[structopt(long, short, help = "Reference number of target ADR")]
+    target: i32,
+
+    #[structopt(long, short, help = "Description of the link created in the existing ADR that will refer to new ADR")]
+    reverse_link: String,
+}
+
+#[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers generate ADR commands")]
 struct GenerateADRs {
     #[structopt(subcommand)]
@@ -593,12 +625,12 @@ struct GenerateADRs {
 
 #[derive(StructOpt, Debug)]
 enum GenerateAdrsCommand {
-    AdrToc(AdrToc),
-    AdrGraph(AdrGraph)
+    Toc(AdrToc),
+    Graph(AdrGraph)
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Create ADR ToC")]
+#[structopt(about = "Generates ADR table of contents (Toc) to stdout")]
 struct AdrToc {
     #[structopt(long, short, help = "")]
     intro: Option<String>,
@@ -611,6 +643,10 @@ struct AdrToc {
 
     #[structopt(long, short, help = "")]
     link_prefix: Option<String>,
+
+    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
+    format: Option<TemplateExtension>,
+
 }
 
 
@@ -710,8 +746,8 @@ struct TilEntry {
 )]
 struct Presentation {
 
-    #[structopt(long, short, help = "Output file path (or directory input-dir is passed)")]
-    output: Option<String>,
+    #[structopt(long, help = "Output file path (or directory input-dir is passed)")]
+    output_dir: Option<String>,
 
     #[structopt(long, short, help = "The base directory to find markdown and theme CSS")]
     input_dir: Option<String>,
@@ -995,7 +1031,6 @@ fn build_path(
 ) -> PathBuf {
     match file_structure {
         FileStructure::Flat => {
-
             let slug = slugify(&title);
             let file_name = format!("{}-{}", reserved_number, slug);
             return Path::new(dir)
@@ -1008,6 +1043,54 @@ fn build_path(
                 .join(&reserved_number)
                 .join("README.")
                 .with_extension(extension.to_string());
+        }
+    };
+}
+
+fn get_content(
+    dir: &str, 
+    number: &str,
+    file_structure: FileStructure
+) -> io::Result<String> {
+    match file_structure {
+        FileStructure::Flat => {
+            for entry in fs::read_dir(dir).unwrap() {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                for key in TEMPLATE_EXTENSIONS.keys() {    
+                    let file_name = entry.file_name().to_str().unwrap().to_owned();
+                    let formatted_number = format!("{}-", number);
+                    if file_name.starts_with(&formatted_number) {
+                        return fs::read_to_string(path.as_path());
+                    }
+                    // if let Some(ref file_name) = file_name {
+                    //     if file_name.starts_with(&number) {
+                    //         return fs::read_to_string(path.as_path());
+                    //     }
+                    // }
+                    // if file_name.starts_with(format!("{}-", number)) {
+                    //     return fs::read_to_string(path.as_path());
+                    // }
+                    // if path.file_name().to_string_lossy().starts_with(format!("{}-", number)) {
+                    //     return fs::read_to_string(path.as_path());
+                    // }
+                }
+            }
+            return Err(std::io::Error::new(ErrorKind::InvalidData, "invalid file"));
+        }
+
+        FileStructure::Nested => {
+            for key in TEMPLATE_EXTENSIONS.keys() {
+                let p = Path::new(dir)
+                    .join(&number)
+                    .join("README.")
+                    .with_extension(key);
+                if p.exists() {
+                    return fs::read_to_string(p);
+                }
+            }
+
+            return Err(std::io::Error::new(ErrorKind::InvalidData, "invalid file"));
         }
     };
 }
@@ -1107,7 +1190,7 @@ fn new_rfd(number: Option<i32>, title: String, extension: TemplateExtension) -> 
     let dir = SETTINGS.get_rfd_dir();
     let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number = reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
-    let formatted_reserved_number = format!("{:0>4}", reserve_number);
+    let formatted_reserved_number = format_number(reserve_number);
     let rfd_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_rfd_structure());
     ensure_path(&rfd_path)?;
 
@@ -1132,6 +1215,10 @@ fn get_leading_character(extension: TemplateExtension) -> char {
     };
 }
 
+fn format_number(number: i32) -> String {
+    return format!("{:0>4}", number);
+}
+
 fn new_adr(
     number: Option<i32>, 
     title: String, 
@@ -1142,7 +1229,7 @@ fn new_adr(
     let dir = SETTINGS.get_adr_dir();
     let template = get_template(&dir, extension, DEFAULT_ADR_TEMPLATE_PATH);
     let reserve_number = reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
-    let formatted_reserved_number = format!("{:0>4}", reserve_number);
+    let formatted_reserved_number = format_number(reserve_number);
     let adr_path = build_path(&dir, &title, &formatted_reserved_number, extension, SETTINGS.get_adr_structure());
     ensure_path(&adr_path)?;
 
@@ -1201,25 +1288,98 @@ fn list(dir: &str, opt_output: Option<Output>) {
     }
 }
 
-fn title_string<R>(mut rdr: R, extension: TemplateExtension) -> String
+// TODO: this doesnt work with frontmatter
+fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
     where R: BufRead,
 {
-    let mut first_line = String::new();
-
-    rdr.read_line(&mut first_line).expect("Unable to read line");
-
     let leading_char = get_leading_character(extension);
+    for line in rdr.lines() {
+        let line = line.unwrap();
+        if line.starts_with(&format!("{} ", leading_char)) {
+            let last_hash = line
+            .char_indices()
+            .skip_while(|&(_, c)| c == leading_char)
+            .next()
+            .map_or(0, |(idx, _)| idx);
+    
+            // Trim the leading hashes and any whitespace
+            return line[last_hash..].trim().to_string();
+        }
+    }
 
-    let last_hash = first_line
-        .char_indices()
-        .skip_while(|&(_, c)| c == leading_char)
-        .next()
-        .map_or(0, |(idx, _)| idx);
+    // TOOD: need file name
+    panic!("Unable to find title for file");
 
-    // Trim the leading hashes and any whitespace
-    first_line[last_hash..].trim().into()
+    // let mut first_line = String::new();
+
+    // rdr.read_line(&mut first_line).expect("Unable to read line");
+
+    // let leading_char = get_leading_character(extension);
+
+    // let last_hash = first_line
+    //     .char_indices()
+    //     .skip_while(|&(_, c)| c == leading_char)
+    //     .next()
+    //     .map_or(0, |(idx, _)| idx);
+
+    // // Trim the leading hashes and any whitespace
+    // first_line[last_hash..].trim().into()
 }
 
+// TOOD: pass in header
+fn build_toc(
+    dir: &str, 
+    extension: TemplateExtension, 
+    intro: Option<String>, 
+    outro: Option<String>, 
+    link_prefix: Option<String>
+) {
+    let leading_char = get_leading_character(extension);
+    let mut content = String::new();
+    content.push_str(&format!("{} {}\n", leading_char, "Architecture Decision Records"));
+    content.push_str("\n");
+    
+    if intro.is_some() {
+        content.push_str(&intro.unwrap());
+        content.push_str("\n\n");
+    }
+
+    match fs::metadata(&dir) {
+        Ok(_) => {
+            let link_prefix = link_prefix.unwrap_or(String::new());
+            for entry in WalkDir::new(&dir)
+                .sort_by(|a,b| a.file_name().cmp(b.file_name()))
+                .into_iter()
+                .filter_map(Result::ok)
+                .filter(|e| e.file_type().is_file())
+                .filter(|f| is_valid_file(&f.path())) {
+
+                let file = match fs::File::open(&entry.path()) {
+                    Ok(file) => file,
+                    Err(_) => panic!("Unable to read file {:?}", entry.path()),
+                };
+        
+                let buffer = BufReader::new(file);
+                let title = title_string(buffer, extension);
+
+                // TODO: should this be a relative path or just the file name?
+                // adr tools has just the file name
+                content.push_str(&format!("* [{}]({}{})", title, link_prefix, entry.path().display()));
+                content.push_str("\n");
+            }
+        },
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => eprintln!("the {} directory should exist", dir),
+            _ => eprintln!("Error occurred: {:?}", e)
+        }
+    }
+
+    if outro.is_some() {
+        content.push_str(&outro.unwrap());
+    }
+
+    print!("{}", content);
+}
 
 fn build_til_readme(dir: &str) -> io::Result<()> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
@@ -1354,19 +1514,99 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 list(SETTINGS.get_adr_dir(), opt.output);
             }
 
-            AdrCommand::Generate(generate) => match generate.generate_adr_command {
-                GenerateAdrsCommand::AdrToc(params) => {
-                    // -i INTRO  precede the table of contents with the given INTRO text.
-                    // -o OUTRO  follow the table of contents with the given OUTRO text.
-                    // -p LINK_PREFIX
-                    //           prefix each decision file link with LINK_PREFIX.
-                    
-                    // Both INTRO and OUTRO must be in Markdown format.
+            AdrCommand::Link(params) => {
+                // get file. needs to support both structures and extensions
+                let source_content = get_content(
+                    SETTINGS.get_adr_dir(), 
+                    &format_number(params.source),
+                    SETTINGS.get_adr_structure()
+                );
 
-                    // Generates a table of contents in Markdown format to stdout.
+                let arena = Arena::new();
+
+                let root = parse_document(
+                    &arena,
+                    &source_content?, //"This is my input.\n\n1. Also my input.\n2. Certainly my input.\n", 
+                    &ComrakOptions::default());
+                
+                fn iter_nodes<'a, F>(node: &'a AstNode<'a>, f: &F)
+                    where F : Fn(&'a AstNode<'a>) {
+                    f(node);
+
+                    for c in node.children() {
+                        // println!("{:?}", c.data);
+                        iter_nodes(c, f);
+                    }
+                }
+                
+                iter_nodes(root, &|node| {
+                    match &mut node.data.borrow_mut().value {
+                        &mut NodeValue::Text(ref mut text) => {
+                            let orig = std::mem::replace(text, vec![]);
+                            let t = String::from_utf8(orig).unwrap();
+                            *text = t.as_bytes().to_vec();
+
+                            // flush this out to make it more robust. 
+                            // such as check parent is a header
+                            // check sibling is paragraph/text
+                            if "Status" == t {
+                                match node.parent() {
+                                    Some(parent) => {
+                                        let para = Ast::new(NodeValue::Paragraph);
+                                        let p_node = arena.alloc(Node::new(RefCell::new(para)));
+                                        
+                                        let e = Ast::new(NodeValue::Text("new entry into status".as_bytes().to_vec()));
+                                        let node = arena.alloc(Node::new(RefCell::new(e)));
+
+                                        p_node.append(node);
+                                        
+                                        parent.next_sibling().unwrap().insert_after(p_node);
+                                    },
+                                    None => {
+                                        println!("node parent was none???");
+                                    }
+                                }
+                            }
+
+                            
+                        }
+                        _ => (),
+                    }
+                });
+
+                let z = Path::new(SETTINGS.get_adr_dir())
+                    .join("temp-link")
+                    .with_extension("md");
+
+                let mut buffer = File::create(z)?;
+                // let mut markdown = vec![];
+                format_commonmark(root, &ComrakOptions::default(), &mut buffer).unwrap();
+                // fs::write(&adr_path, markdown)?;
+
+                let mut html = vec![];
+                format_html(root, &ComrakOptions::default(), &mut html).unwrap();
+
+                println!("{}", String::from_utf8(html).unwrap());
+            }
+
+            AdrCommand::Generate(generate) => match generate.generate_adr_command {
+                GenerateAdrsCommand::Toc(params) => {
+                    let dir = SETTINGS.get_adr_dir();
+
+                    // # Architecture Decision Records
+
+                    // * [1. hi](0001-hi.md)
+                    // * [2. lo](0002-lo.md)
+                    
+                    let extension = match params.format {
+                        Some(v) => v,
+                        None => SETTINGS.get_adr_template_extension()
+                    };
+
+                    build_toc(dir, extension, params.intro, params.outro, params.link_prefix);
                 }
 
-                GenerateAdrsCommand::AdrGraph(params) => {
+                GenerateAdrsCommand::Graph(params) => {
                     // Generates a visualisation of the links between decision records in
                     // Graphviz format.  This can be piped into the graphviz tools to
                     // generate a an image file.
@@ -1397,7 +1637,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::Presentation(params) => {
             // TODO: implement
-            let output_dir = match params.output {
+            let output_dir = match params.output_dir {
                 None => "",
                 Some(ref o) => o,
             };
@@ -1455,11 +1695,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             
             RFDCommand::Generate(generate) => match generate.generate_rfd_command {
-                GenerateRFDsCommand::RFDToc(params) => {
+                GenerateRFDsCommand::Toc(params) => {
+                    let dir = SETTINGS.get_adr_dir();
 
+                    // # Architecture Decision Records
+
+                    // * [1. hi](0001-hi.md)
+                    // * [2. lo](0002-lo.md)
+                    
+                    let extension = match params.format {
+                        Some(v) => v,
+                        None => SETTINGS.get_adr_template_extension()
+                    };
+
+                    build_toc(dir, extension, params.intro, params.outro, params.link_prefix);
                 }
 
-                GenerateRFDsCommand::RFDGraph(params) => {
+                GenerateRFDsCommand::Graph(params) => {
 
                 }
             }
