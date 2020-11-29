@@ -84,6 +84,18 @@ use pulldown_cmark_to_cmark::cmark;
 
 // TODO: share structs between ADR and RFD
 
+// TODO: ADR/RFD ToC vs TiL readme
+
+// TODO: Generate CSV for ADRs and RFDs?
+
+// TODO: better code organization
+// maybe we have a markup module with can contain markdown and asciidoc modules
+// common things can link in markup module
+// such as common structs and traits
+// can we move common methods into traits as default impl?
+// example would be ToC
+// what things would impl the traits?
+// Where should TiL live? markup as well? Can override default impl for example til toc/readme
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -373,7 +385,6 @@ impl Settings {
         
         return TemplateExtension::default();
     }
-
  }
 
 lazy_static! {
@@ -1288,10 +1299,10 @@ fn list(dir: &str, opt_output: Option<Output>) {
     }
 }
 
-// TODO: this doesnt work with frontmatter
 fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
     where R: BufRead,
 {
+    // TODO: swap this implementation for AST when ready
     let leading_char = get_leading_character(extension);
     for line in rdr.lines() {
         let line = line.unwrap();
@@ -1307,23 +1318,7 @@ fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
         }
     }
 
-    // TOOD: need file name
     panic!("Unable to find title for file");
-
-    // let mut first_line = String::new();
-
-    // rdr.read_line(&mut first_line).expect("Unable to read line");
-
-    // let leading_char = get_leading_character(extension);
-
-    // let last_hash = first_line
-    //     .char_indices()
-    //     .skip_while(|&(_, c)| c == leading_char)
-    //     .next()
-    //     .map_or(0, |(idx, _)| idx);
-
-    // // Trim the leading hashes and any whitespace
-    // first_line[last_hash..].trim().into()
 }
 
 // TOOD: pass in header
@@ -1336,8 +1331,7 @@ fn build_toc(
 ) {
     let leading_char = get_leading_character(extension);
     let mut content = String::new();
-    content.push_str(&format!("{} {}\n", leading_char, "Architecture Decision Records"));
-    content.push_str("\n");
+    content.push_str(&format!("{} {}\n\n", leading_char, "Architecture Decision Records"));
     
     if intro.is_some() {
         content.push_str(&intro.unwrap());
@@ -1362,10 +1356,7 @@ fn build_toc(
                 let buffer = BufReader::new(file);
                 let title = title_string(buffer, extension);
 
-                // TODO: should this be a relative path or just the file name?
-                // adr tools has just the file name
-                content.push_str(&format!("* [{}]({}{})", title, link_prefix, entry.path().display()));
-                content.push_str("\n");
+                content.push_str(&format!("* [{}]({}{})\n", title, link_prefix, entry.path().display()));
             }
         },
         Err(e) => match e.kind() {
@@ -1592,12 +1583,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AdrCommand::Generate(generate) => match generate.generate_adr_command {
                 GenerateAdrsCommand::Toc(params) => {
                     let dir = SETTINGS.get_adr_dir();
-
-                    // # Architecture Decision Records
-
-                    // * [1. hi](0001-hi.md)
-                    // * [2. lo](0002-lo.md)
-                    
                     let extension = match params.format {
                         Some(v) => v,
                         None => SETTINGS.get_adr_template_extension()
@@ -1676,6 +1661,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 init_dir(dir)?;
 
+                // TOOD: fix
                 return new_rfd(Some(1), "Use RFDs ...".to_string(), SETTINGS.get_rfd_template_extension());
             }
 
@@ -1697,12 +1683,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             RFDCommand::Generate(generate) => match generate.generate_rfd_command {
                 GenerateRFDsCommand::Toc(params) => {
                     let dir = SETTINGS.get_adr_dir();
-
-                    // # Architecture Decision Records
-
-                    // * [1. hi](0001-hi.md)
-                    // * [2. lo](0002-lo.md)
-                    
                     let extension = match params.format {
                         Some(v) => v,
                         None => SETTINGS.get_adr_template_extension()
@@ -1777,8 +1757,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if params.readme {
                         build_til_readme(&dir)?;
                     }
-                }
-                
+                } 
             }
 
             TilCommand::List(_) => {
@@ -1789,7 +1768,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 build_til_readme(SETTINGS.get_til_dir())?;
             }
         }
-
     };
 
     Ok(())
