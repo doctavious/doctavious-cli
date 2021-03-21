@@ -4,10 +4,7 @@ use crate::templates::TemplateExtension;
 use lazy_static::lazy_static;
 use std::fs;
 
-use serde::ser::SerializeSeq;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 lazy_static! {
@@ -19,7 +16,7 @@ lazy_static! {
         match load_settings() {
             Ok(settings) => settings,
             Err(e) => {
-                if std::path::Path::new(SETTINGS_FILE.as_path()).exists() {
+                if Path::new(SETTINGS_FILE.as_path()).exists() {
                     eprintln!(
                         "Error when parsing {}, fallback to default settings. Error: {}\n",
                         SETTINGS_FILE.as_path().display(),

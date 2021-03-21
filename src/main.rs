@@ -1,22 +1,15 @@
 use lazy_static::lazy_static;
 use serde::ser::SerializeSeq;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Serialize, Serializer};
 
-use chrono::{prelude::*, DateTime};
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
-use std::fs::{self, File};
-use std::io::prelude::*;
-use std::io::BufReader;
+use std::fs::{self};
 use std::io::ErrorKind;
-use std::io::LineWriter;
-use std::io::{self, Write};
+use std::io::{self};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
-use unidecode::unidecode;
 use walkdir::WalkDir;
 
 mod commands;
@@ -28,27 +21,23 @@ mod templates;
 mod utils;
 
 use crate::constants::{
-    DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_RFD_DIR,
-    DEFAULT_RFD_TEMPLATE_PATH,
+    DEFAULT_ADR_DIR, DEFAULT_RFD_DIR,
 };
 use crate::file_structure::{
-    parse_file_structure, FileStructure, FILE_STRUCTURES,
+    FileStructure,
 };
 use crate::settings::{
-    load_settings, persist_settings, AdrSettings, RFDSettings, Settings,
-    TilSettings, SETTINGS, SETTINGS_FILE,
+    load_settings, persist_settings, AdrSettings, RFDSettings,
+    TilSettings, SETTINGS,
 };
 use crate::templates::{
-    get_template, parse_template_extension, TemplateExtension,
     TEMPLATE_EXTENSIONS,
 };
 use crate::utils::{
-    build_path, ensure_path, format_number, is_valid_file, parse_enum,
-    reserve_number,
+    format_number, is_valid_file, parse_enum,
 };
-use dotavious as dot;
-use crate::commands::adr::{AdrCommand, GenerateAdrsCommand, Adr};
-use crate::commands::rfd::{RFD, new_adr, RFDCommand, new_rfd, GenerateRFDsCommand};
+use crate::commands::adr::{AdrCommand, GenerateAdrsCommand, Adr, new_adr};
+use crate::commands::rfd::{RFD, RFDCommand, new_rfd, GenerateRFDsCommand};
 use crate::commands::til::{Til, TilCommand, build_til_readme};
 use crate::commands::{build_toc, get_leading_character};
 

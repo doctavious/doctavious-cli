@@ -147,7 +147,7 @@ pub(crate) struct AdrGraph {
     pub link_prefix: Option<String>,
 }
 
-fn new_adr(
+pub(crate) fn new_adr(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,

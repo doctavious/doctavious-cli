@@ -124,7 +124,6 @@ pub(crate) fn get_allocated_numbers(
 ) -> Vec<i32> {
     match file_structure {
         FileStructure::Flat => get_allocated_numbers_via_flat_files(dir),
-
         FileStructure::Nested => get_allocated_numbers_via_nested(dir),
     }
 }

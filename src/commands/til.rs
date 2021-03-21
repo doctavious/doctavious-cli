@@ -1,13 +1,8 @@
-use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_RFD_TEMPLATE_PATH};
-use crate::edit;
 use crate::settings::SETTINGS;
-use crate::file_structure::parse_file_structure;
-use crate::templates::{get_template, parse_template_extension, TemplateExtension};
-use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::templates::{parse_template_extension, TemplateExtension};
 use chrono::{Utc, DateTime};
 use std::{fs, io};
 use structopt::StructOpt;
-use crate::file_structure::FileStructure;
 use std::path::Path;
 use std::fs::File;
 use std::io::{LineWriter, BufReader, Write};

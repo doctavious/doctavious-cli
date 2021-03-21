@@ -1,4 +1,4 @@
-use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_RFD_TEMPLATE_PATH};
+use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH};
 use crate::edit;
 use crate::settings::SETTINGS;
 use crate::file_structure::parse_file_structure;
@@ -137,64 +137,6 @@ pub(crate) fn new_rfd(
 
     let edited = edit::edit(&starting_content)?;
     fs::write(&rfd_path, edited)?;
-
-    return Ok(());
-}
-
-pub(crate) fn new_adr(
-    number: Option<i32>,
-    title: String,
-    extension: TemplateExtension, // supercedes: Option<Vec<String>>,
-    // links: Option<Vec<String>>
-) -> Result<(), Box<dyn std::error::Error>> {
-    let dir = SETTINGS.get_adr_dir();
-    let template = get_template(&dir, extension, DEFAULT_ADR_TEMPLATE_PATH);
-    let reserve_number =
-        reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
-    let formatted_reserved_number = format_number(reserve_number);
-    let adr_path = build_path(
-        &dir,
-        &title,
-        &formatted_reserved_number,
-        extension,
-        SETTINGS.get_adr_structure(),
-    );
-    ensure_path(&adr_path)?;
-
-    // TODO: supersceded
-    // if let Some(targets) = supercedes {
-    //     for target in targets {
-    //         // "$adr_bin_dir/_adr_add_link" "$target" "Superceded by" "$dstfile"
-    //         // "$adr_bin_dir/_adr_remove_status" "Accepted" "$target"
-    //         // "$adr_bin_dir/_adr_add_link" "$dstfile" "Supercedes" "$target"
-    //     }
-    // }
-
-    // TODO: reverse links
-    // if let Some(others) = links {
-    //     for other in others {
-    //         // target="$(echo $l | cut -d : -f 1)"
-    //         // forward_link="$(echo $l | cut -d : -f 2)"
-    //         // reverse_link="$(echo $l | cut -d : -f 3)"
-
-    //         // "$adr_bin_dir/_adr_add_link" "$dstfile" "$forward_link" "$target"
-    //         // "$adr_bin_dir/_adr_add_link" "$target" "$reverse_link" "$dstfile"
-    //     }
-    // }
-
-    let mut starting_content = fs::read_to_string(&template).expect(&format!(
-        "failed to read file {}.",
-        &template.to_string_lossy()
-    ));
-    starting_content =
-        starting_content.replace("<NUMBER>", &reserve_number.to_string());
-    starting_content = starting_content.replace("<TITLE>", &title);
-    starting_content = starting_content
-        .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
-    starting_content = starting_content.replace("<STATUS>", "Accepted");
-
-    let edited = edit::edit(&starting_content)?;
-    fs::write(&adr_path, edited)?;
 
     return Ok(());
 }
