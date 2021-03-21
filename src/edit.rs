@@ -54,10 +54,7 @@ fn check_editor<T: AsRef<OsStr>>(binary_name: T) -> bool {
 
 fn string_to_cmd(s: String) -> (PathBuf, Vec<String>) {
     let mut args = s.split_ascii_whitespace();
-    (
-        args.next().unwrap().into(),
-        args.map(String::from).collect(),
-    )
+    (args.next().unwrap().into(), args.map(String::from).collect())
 }
 
 fn get_editor_args() -> Result<(PathBuf, Vec<String>)> {
@@ -80,7 +77,6 @@ fn get_editor_args() -> Result<(PathBuf, Vec<String>)> {
         .ok_or_else(|| Error::from(ErrorKind::NotFound))
 }
 
-
 /// Find the system default editor, if there is one.
 ///
 /// This function checks several sources to find an editor binary (in order of precedence):
@@ -91,7 +87,7 @@ fn get_editor_args() -> Result<(PathBuf, Vec<String>)> {
 /// - hardcoded lists of GUI editors on Windows/MacOS/Unix
 /// - platform-specific generic "file openers" (e.g. `xdg-open` on Linux and `open` on MacOS)
 ///
-/// Also, it doesn't blindly return whatever is in an environment variable. 
+/// Also, it doesn't blindly return whatever is in an environment variable.
 /// If a specified editor can't be found or isn't marked as executable this function will fall back to the next one that is.
 pub fn get_editor() -> Result<PathBuf> {
     get_editor_args().map(|(x, _)| x)
@@ -105,7 +101,6 @@ pub fn edit<S: AsRef<[u8]>>(text: S) -> Result<String> {
     let builder = Builder::new();
     edit_with_builder(text, &builder)
 }
-
 
 /// Open the contents of a string or buffer in the [default editor] using a temporary file with a
 /// custom path or filename.
@@ -138,7 +133,10 @@ pub fn edit<S: AsRef<[u8]>>(text: S) -> Result<String> {
 /// [`OpenOptions::open`]: https://doc.rust-lang.org/std/fs/struct.OpenOptions.html#errors
 /// [`ErrorKind::InvalidData`]: https://doc.rust-lang.org/std/io/enum.ErrorKind.html#variant.InvalidData
 /// [`ErrorKind::NotFound`]: https://doc.rust-lang.org/std/io/enum.ErrorKind.html#variant.NotFound
-pub fn edit_with_builder<S: AsRef<[u8]>>(text: S, builder: &Builder) -> Result<String> {
+pub fn edit_with_builder<S: AsRef<[u8]>>(
+    text: S,
+    builder: &Builder,
+) -> Result<String> {
     String::from_utf8(edit_bytes_with_builder(text, builder)?)
         .map_err(|_| Error::from(ErrorKind::InvalidData))
 }
@@ -185,7 +183,10 @@ pub fn edit_bytes<B: AsRef<[u8]>>(buf: B) -> Result<Vec<u8>> {
 /// [`String`]: https://doc.rust-lang.org/std/string/struct.String.html
 /// [`Builder`]: struct.Builder.html
 /// [`edit_bytes`]: fn.edit_bytes.html
-pub fn edit_bytes_with_builder<B: AsRef<[u8]>>(buf: B, builder: &Builder) -> Result<Vec<u8>> {
+pub fn edit_bytes_with_builder<B: AsRef<[u8]>>(
+    buf: B,
+    builder: &Builder,
+) -> Result<Vec<u8>> {
     let mut file = builder.tempfile()?;
     file.write(buf.as_ref())?;
 
@@ -229,9 +230,18 @@ pub fn edit_file<P: AsRef<Path>>(file: P) -> Result<()> {
         Ok(())
     } else {
         let full_command = if args.is_empty() {
-            format!("{} {}", editor.to_string_lossy(), file.as_ref().to_string_lossy())
+            format!(
+                "{} {}",
+                editor.to_string_lossy(),
+                file.as_ref().to_string_lossy()
+            )
         } else {
-            format!("{} {} {}", editor.to_string_lossy(), args.join(" "), file.as_ref().to_string_lossy())
+            format!(
+                "{} {} {}",
+                editor.to_string_lossy(),
+                args.join(" "),
+                file.as_ref().to_string_lossy()
+            )
         };
 
         Err(Error::new(
