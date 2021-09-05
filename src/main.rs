@@ -22,7 +22,7 @@ mod templates;
 mod utils;
 mod git;
 
-use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand, init_adr};
+use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand, init_adr, reserve_adr};
 use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd};
 use crate::commands::til::{build_til_readme, Til, TilCommand, new_til, init_til};
 use crate::commands::{build_toc, get_leading_character};
@@ -412,17 +412,18 @@ fn list(dir: &str, opt_output: Option<Output>) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
     if opt.debug {
-        std::env::set_var("RUST_LOG", "eventfully=debug");
+        std::env::set_var("RUST_LOG", "doctavious=debug");
         env_logger::init();
     }
 
     match opt.cmd {
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-                 return match init_adr(params.directory, params.structure, params.extension) {
-                     Ok(_) => Ok(()),
-                     Err(err) => Err(err)
-                 };
+                // https://stackoverflow.com/questions/32788915/changing-the-return-type-of-a-function-returning-a-result
+                return match init_adr(params.directory, params.structure, params.extension) {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(err)
+                };
             }
 
             AdrCommand::List(_) => {
@@ -446,10 +447,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match generate.generate_adr_command {
                     GenerateAdrsCommand::Toc(params) => {
                         let dir = SETTINGS.get_adr_dir();
-                        let extension = match params.format {
-                            Some(v) => v,
-                            None => SETTINGS.get_adr_template_extension(),
-                        };
+                        let extension = SETTINGS.get_adr_template_extension(params.format);
 
                         build_toc(
                             dir,
@@ -492,11 +490,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             AdrCommand::New(params) => {
                 init_dir(SETTINGS.get_adr_dir())?;
 
-                let extension = match params.extension {
-                    Some(v) => v,
-                    None => SETTINGS.get_adr_template_extension(),
-                };
-
+                let extension = SETTINGS.get_adr_template_extension(params.extension);
                 return match new_adr(params.number, params.title, extension) {
                     Ok(_) => Ok(()),
                     Err(err) => Err(err)
@@ -504,7 +498,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             AdrCommand::Reserve(params) => {
-
+                let extension = SETTINGS.get_adr_template_extension(params.extension);
+                return reserve_adr(params.number, params.title, extension);
             }
         },
 
@@ -529,11 +524,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             RFDCommand::New(params) => {
                 init_dir(SETTINGS.get_rfd_dir())?;
 
-                let extension = match params.extension {
-                    Some(v) => v,
-                    None => SETTINGS.get_rfd_template_extension(),
-                };
-
+                let extension = SETTINGS.get_rfd_template_extension(params.extension);
                 return new_rfd(params.number, params.title, extension);
             }
 
@@ -545,10 +536,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match generate.generate_rfd_command {
                     GenerateRFDsCommand::Toc(params) => {
                         let dir = SETTINGS.get_adr_dir();
-                        let extension = match params.format {
-                            Some(v) => v,
-                            None => SETTINGS.get_adr_template_extension(),
-                        };
+                        let extension= SETTINGS.get_adr_template_extension(params.format);
 
                         build_toc(
                             dir,
@@ -573,10 +561,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let dir = SETTINGS.get_til_dir();
                 init_dir(&dir)?;
 
-                let extension = match params.extension {
-                    Some(v) => v,
-                    None => SETTINGS.get_til_template_extension(),
-                };
+                let extension = SETTINGS.get_til_template_extension(params.extension);
 
                 return new_til(params.title, params.category, params.tags, extension, params.readme, dir);
             }

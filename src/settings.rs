@@ -89,7 +89,11 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_adr_template_extension(&self) -> TemplateExtension {
+    pub fn get_adr_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+        if extension.is_some() {
+            return extension.unwrap();
+        }
+
         if let Some(settings) = &self.adr_settings {
             if let Some(template_extension) = settings.template_extension {
                 return template_extension;
@@ -123,7 +127,11 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_rfd_template_extension(&self) -> TemplateExtension {
+    pub fn get_rfd_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+        if extension.is_some() {
+            return extension.unwrap();
+        }
+
         if let Some(settings) = &self.rfd_settings {
             if let Some(template_extension) = settings.template_extension {
                 return template_extension;
@@ -147,7 +155,13 @@ impl Settings {
         return DEFAULT_TIL_DIR;
     }
 
-    pub fn get_til_template_extension(&self) -> TemplateExtension {
+    // TODO: I might revert having this take in an extension and rather just have a function in til
+    // that does and defers to settings
+    pub fn get_til_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+        if extension.is_some() {
+            return extension.unwrap();
+        }
+
         if let Some(settings) = &self.til_settings {
             if let Some(template_extension) = settings.template_extension {
                 return template_extension;

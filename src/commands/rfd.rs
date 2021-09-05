@@ -33,10 +33,24 @@ pub(crate) struct InitRFD {
     pub directory: Option<String>,
 
     // TODO: should we default here?
-    #[structopt(long, short, default_value, parse(try_from_str = parse_file_structure), help = "How RFDs should be structured")]
+    #[structopt(
+        long,
+        short,
+        default_value,
+        possible_values = &FileStructure::variants(),
+        parse(try_from_str = parse_file_structure),
+        help = "How RFDs should be structured"
+    )]
     pub structure: FileStructure,
 
-    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[structopt(
+        long,
+        short,
+        default_value,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: TemplateExtension,
 }
 
@@ -49,7 +63,13 @@ pub(crate) struct NewRFD {
     #[structopt(long, short, help = "title of RFD")]
     pub title: String,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[structopt(
+        long,
+        short,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: Option<TemplateExtension>,
 }
 
@@ -82,7 +102,13 @@ pub(crate) struct RFDToc {
     #[structopt(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
+    #[structopt(
+        long,
+        short,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Output format"
+    )]
     pub format: Option<TemplateExtension>,
 }
 

@@ -212,7 +212,7 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
 
     let readme_path = Path::new(dir)
         .join("README")
-        .with_extension(SETTINGS.get_til_template_extension().to_string());
+        .with_extension(SETTINGS.get_til_template_extension(None).to_string());
     let file = File::create(readme_path)?;
 
     // TODO: better alternative than LineWriter?

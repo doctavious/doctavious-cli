@@ -4,6 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
+use clap::arg_enum;
 
 lazy_static! {
     pub static ref TEMPLATE_EXTENSIONS: HashMap<&'static str, TemplateExtension> = {
@@ -20,6 +21,14 @@ lazy_static! {
 pub enum TemplateExtension {
     Markdown,
     Asciidoc,
+}
+
+impl TemplateExtension {
+
+    pub(crate) fn variants() -> [&'static str; 2] {
+        ["adoc", "md"]
+    }
+
 }
 
 impl Default for TemplateExtension {

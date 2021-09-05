@@ -40,11 +40,24 @@ pub(crate) struct InitAdr {
     #[structopt(long, short, help = "Directory to store ADRs")]
     pub directory: Option<String>,
 
-    #[structopt(long, short, default_value, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
+    #[structopt(
+        long,
+        short,
+        default_value,
+        possible_values = &FileStructure::variants(),
+        parse(try_from_str = parse_file_structure),
+        help = "How ADRs should be structured"
+    )]
     pub structure: FileStructure,
 
-    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: TemplateExtension,
+    #[structopt(
+        long,
+        short,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
+    )]
+    pub extension: Option<TemplateExtension>,
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -61,6 +74,7 @@ pub(crate) struct NewAdr {
     #[structopt(
         long,
         short,
+        possible_values = &TemplateExtension::variants(),
         parse(try_from_str = parse_template_extension),
         help = "Extension that should be used"
     )]
@@ -167,6 +181,7 @@ pub(crate) struct ReserveAdr {
     #[structopt(
     long,
     short,
+    possible_values = &TemplateExtension::variants(),
     parse(try_from_str = parse_template_extension),
     help = "Extension that should be used"
     )]
@@ -176,7 +191,7 @@ pub(crate) struct ReserveAdr {
 pub(crate) fn init_adr(
     directory: Option<String>,
     structure: FileStructure,
-    extension: TemplateExtension
+    extension: Option<TemplateExtension>
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -191,7 +206,7 @@ pub(crate) fn init_adr(
     let adr_settings = AdrSettings {
         dir: Some(dir.to_string()),
         structure: Some(structure),
-        template_extension: Some(extension),
+        template_extension: extension,
     };
 
     settings.adr_settings = Some(adr_settings);
@@ -202,7 +217,7 @@ pub(crate) fn init_adr(
     return new_adr(
         Some(1),
         "Record Architecture Decisions".to_string(),
-        extension,
+        SETTINGS.get_adr_template_extension(extension),
     );
 }
 
@@ -319,7 +334,11 @@ mod tests {
     fn init() {
         let dir = tempdir()?;
 
-        init_adr( dir.as_path().display().to_string(), FileStructure::default(), TemplateExtension::default());
+        init_adr(
+            dir.as_path().display().to_string(),
+            FileStructure::default(),
+            Some(TemplateExtension::default())
+        );
 
         dir.close()?;
     }

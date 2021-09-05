@@ -8,12 +8,6 @@ use regex::Regex;
 pub(crate) fn branch_exists(repo: &Repository, reserve_number: i32) -> bool {
     let pattern = format!("*{}", reserve_number);
     let re = Regex::new(pattern.as_str()).unwrap();
-
-    // let repo = Repository::open(".");
-    // if repo.is_err() {
-    //     println!(format!("Error opening repository: {:?}", repo.err()));
-    //     return false;
-    // }
     let c = repo.branches(Some(BranchType::Remote))
         .unwrap()
         .find(|b| re.is_match(b.as_ref().unwrap().0.name().unwrap().unwrap()));

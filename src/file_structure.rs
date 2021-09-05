@@ -19,6 +19,14 @@ pub enum FileStructure {
     Nested,
 }
 
+impl FileStructure {
+
+    pub(crate) fn variants() -> [&'static str; 2] {
+        ["flat", "nested"]
+    }
+
+}
+
 impl Default for FileStructure {
     fn default() -> Self {
         FileStructure::Flat
