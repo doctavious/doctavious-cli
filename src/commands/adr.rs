@@ -19,24 +19,24 @@ use std::path::{Path, PathBuf};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers ADR management commands")]
-pub(crate) struct Adr {
+pub(crate) struct ADR {
     #[structopt(subcommand)]
-    pub adr_command: AdrCommand,
+    pub adr_command: ADRCommand,
 }
 
 #[derive(StructOpt, Debug)]
-pub(crate) enum AdrCommand {
-    Init(InitAdr),
+pub(crate) enum ADRCommand {
+    Init(InitADR),
     Generate(GenerateADRs),
-    List(ListAdrs),
-    Link(LinkAdrs),
-    New(NewAdr),
-    Reserve(ReserveAdr),
+    List(ListADRs),
+    Link(LinkADRs),
+    New(NewADR),
+    Reserve(ReserveADR),
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "init", about = "Init ADR")]
-pub(crate) struct InitAdr {
+pub(crate) struct InitADR {
     #[structopt(long, short, help = "Directory to store ADRs")]
     pub directory: Option<String>,
 
@@ -63,7 +63,7 @@ pub(crate) struct InitAdr {
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
 #[derive(StructOpt, Debug)]
 #[structopt(name = "new", about = "New ADR")]
-pub(crate) struct NewAdr {
+pub(crate) struct NewADR {
     #[structopt(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 
@@ -99,11 +99,11 @@ pub(crate) struct NewAdr {
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "list", about = "List ADRs")]
-pub(crate) struct ListAdrs {}
+pub(crate) struct ListADRs {}
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "link", about = "Link ADRs")]
-pub(crate) struct LinkAdrs {
+pub(crate) struct LinkADRs {
     #[structopt(long, short, help = "Reference number of source ADR")]
     pub source: i32,
 
@@ -170,7 +170,7 @@ pub(crate) struct AdrGraph {
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "reserve", about = "Reserve ADR")]
-pub(crate) struct ReserveAdr {
+pub(crate) struct ReserveADR {
     #[structopt(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 

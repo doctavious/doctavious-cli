@@ -23,7 +23,7 @@ mod utils;
 mod git;
 mod output;
 
-use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand, init_adr, reserve_adr};
+use crate::commands::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr};
 use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd};
 use crate::commands::til::{build_til_readme, Til, TilCommand, new_til, init_til};
 use crate::commands::{build_toc, get_leading_character};
@@ -72,7 +72,7 @@ lazy_static! {
 #[derive(StructOpt, Debug)]
 enum Command {
     RFD(RFD),
-    Adr(Adr),
+    Adr(ADR),
     Til(Til),
     Presentation(Presentation),
 }
@@ -328,7 +328,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match opt.cmd {
         Command::Adr(adr) => match adr.adr_command {
-            AdrCommand::Init(params) => {
+            ADRCommand::Init(params) => {
                 // https://stackoverflow.com/questions/32788915/changing-the-return-type-of-a-function-returning-a-result
                 return match init_adr(params.directory, params.structure, params.extension) {
                     Ok(_) => Ok(()),
@@ -336,11 +336,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
             }
 
-            AdrCommand::List(_) => {
+            ADRCommand::List(_) => {
                 list(SETTINGS.get_adr_dir(), opt.output);
             }
 
-            AdrCommand::Link(params) => {
+            ADRCommand::Link(params) => {
                 // get file. needs to support both structures and extensions
                 let source_content = get_content(
                     SETTINGS.get_adr_dir(),
@@ -353,7 +353,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .with_extension("md");
             }
 
-            AdrCommand::Generate(generate) => {
+            ADRCommand::Generate(generate) => {
                 match generate.generate_adr_command {
                     GenerateAdrsCommand::Toc(params) => {
                         let dir = SETTINGS.get_adr_dir();
@@ -397,7 +397,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            AdrCommand::New(params) => {
+            ADRCommand::New(params) => {
                 init_dir(SETTINGS.get_adr_dir())?;
 
                 let extension = SETTINGS.get_adr_template_extension(params.extension);
@@ -407,7 +407,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
             }
 
-            AdrCommand::Reserve(params) => {
+            ADRCommand::Reserve(params) => {
                 let extension = SETTINGS.get_adr_template_extension(params.extension);
                 return reserve_adr(params.number, params.title, extension);
             }
