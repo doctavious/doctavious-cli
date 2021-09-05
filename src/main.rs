@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
+use crate::constants::DEFAULT_CONFIG_NAME;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
@@ -20,26 +21,18 @@ mod settings;
 mod templates;
 mod utils;
 
-use crate::constants::{
-    DEFAULT_ADR_DIR, DEFAULT_RFD_DIR,
-};
-use crate::file_structure::{
-    FileStructure,
-};
-use crate::settings::{
-    load_settings, persist_settings, AdrSettings, RFDSettings,
-    TilSettings, SETTINGS,
-};
-use crate::templates::{
-    TEMPLATE_EXTENSIONS,
-};
-use crate::utils::{
-    format_number, is_valid_file, parse_enum,
-};
-use crate::commands::adr::{AdrCommand, GenerateAdrsCommand, Adr, new_adr};
-use crate::commands::rfd::{RFD, RFDCommand, new_rfd, GenerateRFDsCommand};
-use crate::commands::til::{Til, TilCommand, build_til_readme};
+use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand};
+use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD};
+use crate::commands::til::{build_til_readme, Til, TilCommand};
 use crate::commands::{build_toc, get_leading_character};
+use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
+use crate::file_structure::FileStructure;
+use crate::settings::{
+    load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings,
+    SETTINGS,
+};
+use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
+use crate::utils::{format_number, is_valid_file, parse_enum};
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
@@ -146,7 +139,7 @@ lazy_static! {
     pub static ref DOCTAVIOUS_DIR: PathBuf = {
         let home_dir = dirs::home_dir()
             .expect("Unsupported platform: can't find home directory");
-        Path::new(&home_dir).join(".doctavious")
+        Path::new(&home_dir).join(DEFAULT_CONFIG_NAME)
     };
 }
 
@@ -157,7 +150,6 @@ enum Command {
     Til(Til),
     Presentation(Presentation),
 }
-
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Presentation commands")]
@@ -357,10 +349,7 @@ fn get_content(
                     // }
                 }
             }
-            Err(std::io::Error::new(
-                ErrorKind::InvalidData,
-                "invalid file",
-            ))
+            Err(std::io::Error::new(ErrorKind::InvalidData, "invalid file"))
         }
 
         FileStructure::Nested => {
@@ -374,10 +363,7 @@ fn get_content(
                 }
             }
 
-            Err(std::io::Error::new(
-                ErrorKind::InvalidData,
-                "invalid file",
-            ))
+            Err(std::io::Error::new(ErrorKind::InvalidData, "invalid file"))
         }
     };
 }
@@ -418,29 +404,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match opt.cmd {
         Command::Adr(adr) => match adr.adr_command {
+            // TODO: move to adr
             AdrCommand::Init(params) => {
-                // TODO: need to handle initing multiple times better
-
-                if params.should_persist_settings() {
-                    let mut settings = match load_settings() {
-                        Ok(settings) => settings,
-                        Err(_) => Default::default(),
-                    };
-
-                    let adr_settings = AdrSettings {
-                        dir: params.directory.clone(),
-                        structure: params.structure,
-                        template_extension: params.extension,
-                    };
-                    settings.adr_settings = Some(adr_settings);
-                    persist_settings(settings)?;
-                }
+                let mut settings = match load_settings() {
+                    Ok(settings) => settings,
+                    Err(_) => Default::default(),
+                };
 
                 let dir = match params.directory {
                     None => DEFAULT_ADR_DIR,
                     Some(ref d) => d,
                 };
 
+                let adr_settings = AdrSettings {
+                    dir: Some(dir.to_string()),
+                    structure: Some(params.structure),
+                    template_extension: Some(params.extension),
+                };
+                settings.adr_settings = Some(adr_settings);
+                persist_settings(settings)?;
                 init_dir(dir)?;
 
                 return new_adr(
@@ -541,27 +523,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::RFD(rfd) => match rfd.rfd_command {
             RFDCommand::Init(params) => {
-                // TODO: need to handle initing multiple times better
-
-                if params.should_persist_settings() {
-                    let mut settings = match load_settings() {
-                        Ok(settings) => settings,
-                        Err(_) => Default::default(),
-                    };
-
-                    let rfd_settings = RFDSettings {
-                        dir: params.directory.clone(),
-                        structure: params.structure,
-                        template_extension: params.extension,
-                    };
-                    settings.rfd_settings = Some(rfd_settings);
-                    persist_settings(settings)?;
-                }
+                let mut settings = match load_settings() {
+                    Ok(settings) => settings,
+                    Err(_) => Default::default(),
+                };
 
                 let dir = match params.directory {
-                    None => DEFAULT_RFD_DIR,
+                    None => DEFAULT_ADR_DIR,
                     Some(ref d) => d,
                 };
+
+                let rfd_settings = RFDSettings {
+                    dir: Some(dir.to_string()),
+                    structure: Some(params.structure),
+                    template_extension: Some(params.extension),
+                };
+                settings.rfd_settings = Some(rfd_settings);
+                persist_settings(settings)?;
 
                 init_dir(dir)?;
 
@@ -613,24 +591,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::Til(til) => match til.til_command {
             TilCommand::Init(params) => {
-                let dir = match params.directory {
-                    None => SETTINGS.get_til_dir(),
-                    Some(ref d) => {
-                        let mut settings = match load_settings() {
-                            Ok(settings) => settings,
-                            Err(_) => Default::default(),
-                        };
-
-                        let til_settings = TilSettings {
-                            dir: Some(d.to_string()),
-                            template_extension: None,
-                        };
-                        settings.til_settings = Some(til_settings);
-                        persist_settings(settings)?;
-                        d
-                    }
+                let mut settings = match load_settings() {
+                    Ok(settings) => settings,
+                    Err(_) => Default::default(),
                 };
 
+                let dir = match params.directory {
+                    None => SETTINGS.get_til_dir(),
+                    Some(ref d) => d,
+                };
+
+                let til_settings = TilSettings {
+                    dir: Some(dir.to_string()),
+                    template_extension: Some(params.extension),
+                };
+
+                settings.til_settings = Some(til_settings);
+                persist_settings(settings)?;
                 init_dir(dir)?;
             }
 

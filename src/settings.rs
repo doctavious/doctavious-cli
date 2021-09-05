@@ -1,8 +1,11 @@
-use crate::constants::DEFAULT_ADR_DIR;
+use crate::constants::{
+    DEFAULT_ADR_DIR, DEFAULT_CONFIG_NAME, DEFAULT_TIL_DIR,
+};
 use crate::file_structure::FileStructure;
 use crate::templates::TemplateExtension;
 use lazy_static::lazy_static;
 use std::fs;
+use std::str;
 
 use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -10,7 +13,7 @@ use std::path::{Path, PathBuf};
 lazy_static! {
     // TODO: doctavious config will live in project directory
     // do we also want a default settings file
-    pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(".doctavious");
+    pub static ref SETTINGS_FILE: PathBuf = PathBuf::from(DEFAULT_CONFIG_NAME);
 
     pub static ref SETTINGS: Settings = {
         match load_settings() {
@@ -31,11 +34,19 @@ lazy_static! {
 
 // TODO: should this include output?
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
 pub struct Settings {
     pub template_extension: Option<TemplateExtension>,
+
+    #[serde(rename(serialize = "adr"))]
+    #[serde(alias = "adr")]
     pub adr_settings: Option<AdrSettings>,
+
+    #[serde(rename(serialize = "rfd"))]
+    #[serde(alias = "rfd")]
     pub rfd_settings: Option<RFDSettings>,
+
+    #[serde(rename(serialize = "til"))]
+    #[serde(alias = "til")]
     pub til_settings: Option<TilSettings>,
 }
 
@@ -135,7 +146,7 @@ impl Settings {
             }
         }
 
-        return DEFAULT_ADR_DIR;
+        return DEFAULT_TIL_DIR;
     }
 
     pub fn get_til_template_extension(&self) -> TemplateExtension {

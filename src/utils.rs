@@ -199,12 +199,13 @@ pub(crate) fn get_next_number(
     dir: &str,
     file_structure: FileStructure,
 ) -> i32 {
-    return if let Some(max) = get_allocated_numbers(dir, file_structure).iter().max()
+    return if let Some(max) =
+        get_allocated_numbers(dir, file_structure).iter().max()
     {
         max + 1
     } else {
         1
-    }
+    };
 
     // TODO: revisit iterator
     // return get_allocated_numbers(dir)

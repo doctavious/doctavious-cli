@@ -1,13 +1,15 @@
-use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH};
+use crate::constants::DEFAULT_RFD_TEMPLATE_PATH;
 use crate::edit;
-use crate::settings::SETTINGS;
 use crate::file_structure::parse_file_structure;
-use crate::templates::{get_template, parse_template_extension, TemplateExtension};
+use crate::file_structure::FileStructure;
+use crate::settings::SETTINGS;
+use crate::templates::{
+    get_template, parse_template_extension, TemplateExtension,
+};
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use chrono::Utc;
 use std::fs;
 use structopt::StructOpt;
-use crate::file_structure::FileStructure;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers RFD management commands")]
@@ -31,17 +33,11 @@ pub(crate) struct InitRFD {
     pub directory: Option<String>,
 
     // TODO: should we default here?
-    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How RFDs should be structured")]
-    pub structure: Option<FileStructure>,
+    #[structopt(long, short, default_value, parse(try_from_str = parse_file_structure), help = "How RFDs should be structured")]
+    pub structure: FileStructure,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: Option<TemplateExtension>,
-}
-
-impl InitRFD {
-    pub fn should_persist_settings(&self) -> bool {
-        return self.directory.is_some() || self.extension.is_some();
-    }
+    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    pub extension: TemplateExtension,
 }
 
 #[derive(StructOpt, Debug)]

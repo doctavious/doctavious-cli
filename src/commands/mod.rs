@@ -1,20 +1,21 @@
 use crate::templates::TemplateExtension;
+use crate::utils::is_valid_file;
+use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
-use std::fs;
-use crate::utils::is_valid_file;
 
 pub mod adr;
+mod changelog;
+mod githooks;
 pub mod init;
 pub mod login;
 pub mod rfd;
 pub mod telemetry;
 pub mod til;
 
-
 pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
-    where
-        R: BufRead,
+where
+    R: BufRead,
 {
     // TODO: swap this implementation for AST when ready
     let leading_char = get_leading_character(extension);

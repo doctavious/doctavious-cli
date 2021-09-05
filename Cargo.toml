@@ -24,6 +24,7 @@ serde_json = "1.0"
 serde_derive = "1.0"
 structopt = "0.3"
 tempfile = "3.1.0"
+tera = "1.12.1"
 toml = "0.5"
 tokio = { version = "0.2", features = ["macros", "fs"] }
 unidecode = "0.3.0"
@@ -37,17 +38,17 @@ which = "4.0.2"
 # https://jesselawson.org/rust/getting-started-with-rust-by-building-a-tiny-markdown-compiler/
 # http://patshaughnessy.net/2019/9/4/using-rust-to-build-a-blog-site
 # markdown2html-converter = "1.1.2"
-# Pulldown-cmark vs comrak 
-# need to work on rust-asciidoctor-parser 
-# mdbook = "0.4.4" --> see how they convert markdown. they have init, build, watch, serve 
+# Pulldown-cmark vs comrak
+# need to work on rust-asciidoctor-parser
+# mdbook = "0.4.4" --> see how they convert markdown. they have init, build, watch, serve
 # Maud is an HTML template crate
 # Syntect is a color syntax highlighting crate
-# rust doesnt have a puppeteer so 
+# rust doesnt have a puppeteer so
 # fantoccini = "0.14.2" --> A high-level API for programmatically interacting with web pages through WebDriver.
 # https://github.com/atroche/rust-headless-chrome
 # https://docs.rs/pandoc/0.8.0/pandoc/
 # marpit uses https://github.com/gitbrent/PptxGenJS which creates Open Office XML (OOXML) Presentations
-# what about pptx via OpenDocument formats - we might have to build our own crate 
+# what about pptx via OpenDocument formats - we might have to build our own crate
 # what else do we need to do presentations?
 # https://github.com/FreeMasen/mdbook-presentation-preprocessor
 

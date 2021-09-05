@@ -31,8 +31,8 @@ pub(crate) struct InitTil {
     #[structopt(long, short, help = "Directory to store TILs")]
     pub directory: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: Option<TemplateExtension>,
+    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    pub extension: TemplateExtension,
 }
 
 #[derive(StructOpt, Debug)]

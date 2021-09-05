@@ -1,14 +1,15 @@
 use crate::constants::DEFAULT_ADR_TEMPLATE_PATH;
 use crate::edit;
-use crate::settings::SETTINGS;
 use crate::file_structure::parse_file_structure;
-use crate::templates::{get_template, parse_template_extension, TemplateExtension};
+use crate::file_structure::FileStructure;
+use crate::settings::SETTINGS;
+use crate::templates::{
+    get_template, parse_template_extension, TemplateExtension,
+};
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use chrono::Utc;
 use std::fs;
 use structopt::StructOpt;
-use crate::file_structure::FileStructure;
-
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers ADR management commands")]
@@ -32,17 +33,11 @@ pub(crate) struct InitAdr {
     #[structopt(long, short, help = "Directory to store ADRs")]
     pub directory: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
-    pub structure: Option<FileStructure>,
+    #[structopt(long, short, default_value, parse(try_from_str = parse_file_structure), help = "How ADRs should be structured")]
+    pub structure: FileStructure,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: Option<TemplateExtension>,
-}
-
-impl InitAdr {
-    pub fn should_persist_settings(&self) -> bool {
-        return self.directory.is_some() || self.extension.is_some();
-    }
+    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    pub extension: TemplateExtension,
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -60,9 +55,9 @@ pub(crate) struct NewAdr {
     pub extension: Option<TemplateExtension>,
 
     #[structopt(
-    long,
-    short,
-    help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
+        long,
+        short,
+        help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
     )]
     pub supercede: Option<Vec<String>>,
 
@@ -88,9 +83,9 @@ pub(crate) struct LinkAdrs {
 
     // TODO: can we give title index so we dont have to specify --title or -t?
     #[structopt(
-    long,
-    short,
-    help = "Description of the link created in the new ADR"
+        long,
+        short,
+        help = "Description of the link created in the new ADR"
     )]
     pub link: String,
 
@@ -98,9 +93,9 @@ pub(crate) struct LinkAdrs {
     pub target: i32,
 
     #[structopt(
-    long,
-    short,
-    help = "Description of the link created in the existing ADR that will refer to new ADR"
+        long,
+        short,
+        help = "Description of the link created in the existing ADR that will refer to new ADR"
     )]
     pub reverse_link: String,
 }
