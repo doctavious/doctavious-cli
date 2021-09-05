@@ -5,7 +5,6 @@ use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
 
 pub mod adr;
-mod changelog;
 mod githooks;
 pub mod init;
 pub mod login;
@@ -13,6 +12,7 @@ pub mod rfd;
 pub mod telemetry;
 pub mod til;
 mod presentation;
+mod changelog;
 
 pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
 where
