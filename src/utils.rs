@@ -90,16 +90,16 @@ pub(crate) fn reserve_number(
     number: Option<i32>,
     file_structure: FileStructure,
 ) -> Result<i32, Box<dyn std::error::Error>> {
-    if let Some(i) = number {
+    return if let Some(i) = number {
         if is_number_reserved(dir, i, file_structure) {
             // TODO: the prompt to overwrite be here?
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
             eprintln!("{} has already been reserved", i);
             return Err(format!("{} has already been reserved", i).into());
         }
-        return Ok(i);
+        Ok(i)
     } else {
-        return Ok(get_next_number(dir, file_structure));
+        Ok(get_next_number(dir, file_structure))
     }
 }
 

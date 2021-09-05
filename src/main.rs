@@ -20,6 +20,7 @@ mod file_structure;
 mod settings;
 mod templates;
 mod utils;
+mod git;
 
 use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand, init_adr};
 use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd};
@@ -33,6 +34,7 @@ use crate::settings::{
 };
 use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
 use crate::utils::{format_number, is_valid_file, parse_enum};
+use std::error::Error;
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
@@ -417,18 +419,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match opt.cmd {
         Command::Adr(adr) => match adr.adr_command {
             AdrCommand::Init(params) => {
-                return init_adr(params.directory, params.structure, params.extension);
-            }
-
-            AdrCommand::New(params) => {
-                init_dir(SETTINGS.get_adr_dir())?;
-
-                let extension = match params.extension {
-                    Some(v) => v,
-                    None => SETTINGS.get_adr_template_extension(),
-                };
-
-                return new_adr(params.number, params.title, extension);
+                 return match init_adr(params.directory, params.structure, params.extension) {
+                     Ok(_) => Ok(()),
+                     Err(err) => Err(err)
+                 };
             }
 
             AdrCommand::List(_) => {
@@ -493,6 +487,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         //    adr generate graph -e .pdf | dot -Tpdf > graph.pdf
                     }
                 }
+            }
+
+            AdrCommand::New(params) => {
+                init_dir(SETTINGS.get_adr_dir())?;
+
+                let extension = match params.extension {
+                    Some(v) => v,
+                    None => SETTINGS.get_adr_template_extension(),
+                };
+
+                return match new_adr(params.number, params.title, extension) {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(err)
+                };
+            }
+
+            AdrCommand::Reserve(params) => {
+
             }
         },
 

@@ -11,6 +11,12 @@ use chrono::Utc;
 use std::fs;
 use structopt::StructOpt;
 
+use crate::git;
+use git2::{Branches, Repository, Direction, BranchType};
+use regex::Regex;
+use std::path::{Path, PathBuf};
+
+
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers ADR management commands")]
 pub(crate) struct Adr {
@@ -21,10 +27,11 @@ pub(crate) struct Adr {
 #[derive(StructOpt, Debug)]
 pub(crate) enum AdrCommand {
     Init(InitAdr),
-    New(NewAdr),
+    Generate(GenerateADRs),
     List(ListAdrs),
     Link(LinkAdrs),
-    Generate(GenerateADRs),
+    New(NewAdr),
+    Reserve(ReserveAdr),
 }
 
 #[derive(StructOpt, Debug)]
@@ -147,11 +154,30 @@ pub(crate) struct AdrGraph {
     pub link_prefix: Option<String>,
 }
 
+#[derive(StructOpt, Debug)]
+#[structopt(name = "reserve", about = "Reserve ADR")]
+pub(crate) struct ReserveAdr {
+    #[structopt(long, short, help = "ADR Number")]
+    pub number: Option<i32>,
+
+    // TODO: can we give title index so we dont have to specify --title or -t?
+    #[structopt(long, short, help = "title of ADR")]
+    pub title: String,
+
+    #[structopt(
+    long,
+    short,
+    parse(try_from_str = parse_template_extension),
+    help = "Extension that should be used"
+    )]
+    pub extension: Option<TemplateExtension>,
+}
+
 pub(crate) fn init_adr(
     directory: Option<String>,
     structure: FileStructure,
     extension: TemplateExtension
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
         Err(_) => Default::default(),
@@ -186,7 +212,7 @@ pub(crate) fn new_adr(
     extension: TemplateExtension,
     // supercedes: Option<Vec<String>>,
     // links: Option<Vec<String>>
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
     let template = get_template(&dir, extension, DEFAULT_ADR_TEMPLATE_PATH);
     let reserve_number =
@@ -236,8 +262,47 @@ pub(crate) fn new_adr(
     let edited = edit::edit(&starting_content)?;
     fs::write(&adr_path, edited)?;
 
-    return Ok(());
+    return Ok(adr_path);
 }
+
+
+// implement ADR / RFD reserve command
+// 1. get latest number
+// 2. verify it doesnt exist
+// git branch -rl *0042
+// 3. checkout
+// $ git checkout -b 0042
+// 4. create the placeholder
+// 5. Push your RFD branch remotely
+// $ git add rfd/0042/README.md
+// $ git commit -m '0042: Adding placeholder for RFD <Title>'
+// $ git push origin 0042
+pub(crate) fn reserve_adr(
+    number: Option<i32>,
+    title: String,
+    extension: TemplateExtension,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let dir = SETTINGS.get_adr_dir();
+    let reserve_number =
+        reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
+
+    let repo = Repository::open(".")?;
+    if git::branch_exists(&repo, reserve_number) {
+        return Err(String::from("branch already exists in remote. Please pull.").into());
+    }
+
+    git::checkout_branch(&repo, reserve_number.to_string().as_str());
+
+    // TODO: revisit clones. Using it for now to resolve value borrowed here after move
+    let created_result = new_adr(number, title.clone(), extension);
+
+    let message = format!("{}: Adding placeholder for ADR {}", reserve_number, title.clone());
+    git::add_and_commit(&repo, created_result.unwrap().as_path(), message.as_str());
+    git::push(&repo);
+
+    return Ok(())
+}
+
 
 
 #[cfg(test)]
