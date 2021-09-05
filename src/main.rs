@@ -21,9 +21,9 @@ mod settings;
 mod templates;
 mod utils;
 
-use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand};
-use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD};
-use crate::commands::til::{build_til_readme, Til, TilCommand};
+use crate::commands::adr::{new_adr, Adr, AdrCommand, GenerateAdrsCommand, init_adr};
+use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd};
+use crate::commands::til::{build_til_readme, Til, TilCommand, new_til, init_til};
 use crate::commands::{build_toc, get_leading_character};
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
 use crate::file_structure::FileStructure;
@@ -45,7 +45,6 @@ use crate::utils::{format_number, is_valid_file, parse_enum};
 // env var DOCTAVIOUS_DEFAULT_OUTPUT - overrides config
 // --output  - overrides env var and config
 // TODO: RFD / ADR meta frontmatter
-// TODO: why do I get a % at the end when using json output
 // Create ADR from RFD - essentially a link similar to linking ADRs to one another
 
 // TODO: automatically update README(s) / CSVs
@@ -96,6 +95,21 @@ use crate::utils::{format_number, is_valid_file, parse_enum};
 // example would be ToC
 // what things would impl the traits?
 // Where should TiL live? markup as well? Can override default impl for example til toc/readme
+
+// implement ADR / RFD reserve command
+// 1. get latest number
+// 2. verify it doesnt exist
+// git branch -rl *0042
+// 3. checkout
+// $ git checkout -b 0042
+// 4. create the placeholder
+// 5. Push your RFD branch remotely
+// $ git add rfd/0042/README.md
+// $ git commit -m '0042: Adding placeholder for RFD <Title>'
+// $ git push origin 0042
+
+// add command to automatically update README on master as a git hook
+// After your branch is pushed, the table in the README on the master branch will update automatically with the new RFD.
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Doctavious")]
@@ -288,7 +302,7 @@ fn strip_current_dir(path: &Path) -> &Path {
 /// get output based on following order of precednece
 /// output argument (--output)
 /// env var DOCTAVIOUS_DEFAULT_OUTPUT
-/// config file overrides output default -- TOOD: implement
+/// config file overrides output default -- TODO: implement
 /// Output default
 fn get_output(opt_output: Option<Output>) -> Output {
     match opt_output {
@@ -377,9 +391,7 @@ fn list(dir: &str, opt_output: Option<Output>) {
                 .filter(|e| e.file_type().is_file())
                 .filter(|f| is_valid_file(&f.path()))
                 .map(|f| {
-                    String::from(
-                        strip_current_dir(&f.path()).to_str().unwrap(),
-                    )
+                    String::from(strip_current_dir(&f.path()).to_str().unwrap())
                 })
                 .collect();
 
@@ -404,32 +416,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match opt.cmd {
         Command::Adr(adr) => match adr.adr_command {
-            // TODO: move to adr
             AdrCommand::Init(params) => {
-                let mut settings = match load_settings() {
-                    Ok(settings) => settings,
-                    Err(_) => Default::default(),
-                };
-
-                let dir = match params.directory {
-                    None => DEFAULT_ADR_DIR,
-                    Some(ref d) => d,
-                };
-
-                let adr_settings = AdrSettings {
-                    dir: Some(dir.to_string()),
-                    structure: Some(params.structure),
-                    template_extension: Some(params.extension),
-                };
-                settings.adr_settings = Some(adr_settings);
-                persist_settings(settings)?;
-                init_dir(dir)?;
-
-                return new_adr(
-                    Some(1),
-                    "Record Architecture Decisions".to_string(),
-                    SETTINGS.get_adr_template_extension(),
-                );
+                return init_adr(params.directory, params.structure, params.extension);
             }
 
             AdrCommand::New(params) => {
@@ -523,32 +511,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::RFD(rfd) => match rfd.rfd_command {
             RFDCommand::Init(params) => {
-                let mut settings = match load_settings() {
-                    Ok(settings) => settings,
-                    Err(_) => Default::default(),
-                };
-
-                let dir = match params.directory {
-                    None => DEFAULT_ADR_DIR,
-                    Some(ref d) => d,
-                };
-
-                let rfd_settings = RFDSettings {
-                    dir: Some(dir.to_string()),
-                    structure: Some(params.structure),
-                    template_extension: Some(params.extension),
-                };
-                settings.rfd_settings = Some(rfd_settings);
-                persist_settings(settings)?;
-
-                init_dir(dir)?;
-
-                // TODO: fix
-                return new_rfd(
-                    Some(1),
-                    "Use RFDs ...".to_string(),
-                    SETTINGS.get_rfd_template_extension(),
-                );
+                return init_rfd(params.directory, params.structure, params.extension);
             }
 
             RFDCommand::New(params) => {
@@ -591,24 +554,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Command::Til(til) => match til.til_command {
             TilCommand::Init(params) => {
-                let mut settings = match load_settings() {
-                    Ok(settings) => settings,
-                    Err(_) => Default::default(),
-                };
-
-                let dir = match params.directory {
-                    None => SETTINGS.get_til_dir(),
-                    Some(ref d) => d,
-                };
-
-                let til_settings = TilSettings {
-                    dir: Some(dir.to_string()),
-                    template_extension: Some(params.extension),
-                };
-
-                settings.til_settings = Some(til_settings);
-                persist_settings(settings)?;
-                init_dir(dir)?;
+                return init_til(params.directory, params.extension);
             }
 
             TilCommand::New(params) => {
@@ -620,37 +566,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     None => SETTINGS.get_til_template_extension(),
                 };
 
-                let file_name = params.title.to_lowercase();
-                let path = Path::new(dir)
-                    .join(params.category)
-                    .join(file_name)
-                    .with_extension(extension.to_string());
-
-                if path.exists() {
-                    eprintln!(
-                        "File {} already exists",
-                        path.to_string_lossy()
-                    );
-                } else {
-                    let leading_char = get_leading_character(extension);
-
-                    let mut starting_content =
-                        format!("{} {}\n", leading_char, params.title);
-                    if params.tags.is_some() {
-                        starting_content.push_str("\ntags: ");
-                        starting_content
-                            .push_str(params.tags.unwrap().join(" ").as_str());
-                    }
-
-                    let edited = edit::edit(&starting_content)?;
-
-                    fs::create_dir_all(path.parent().unwrap())?;
-                    fs::write(&path, edited)?;
-
-                    if params.readme {
-                        build_til_readme(&dir)?;
-                    }
-                }
+                return new_til(params.title, params.category, params.tags, extension, params.readme, dir);
             }
 
             TilCommand::List(_) => {

@@ -1,6 +1,4 @@
-use crate::constants::{
-    DEFAULT_ADR_DIR, DEFAULT_CONFIG_NAME, DEFAULT_TIL_DIR,
-};
+use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_CONFIG_NAME, DEFAULT_TIL_DIR};
 use crate::file_structure::FileStructure;
 use crate::templates::TemplateExtension;
 use lazy_static::lazy_static;
@@ -171,6 +169,9 @@ pub(crate) fn load_settings() -> Result<Settings, Box<dyn std::error::Error>> {
 }
 
 // outside of Settings because we dont want to initialize load given we are using lazy_static
+// TODO: should this take in a mut writer, i.e., a mutable thing we call “writer”.
+// Its type is impl std::io::Write
+// so that its a bit easier to test?
 pub(crate) fn persist_settings(
     settings: Settings,
 ) -> Result<(), Box<dyn std::error::Error>> {

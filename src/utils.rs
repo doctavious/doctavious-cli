@@ -75,9 +75,7 @@ pub(crate) fn build_path(
         FileStructure::Flat => {
             let slug = slugify(&title);
             let file_name = format!("{}-{}", reserved_number, slug);
-            Path::new(dir)
-                .join(file_name)
-                .with_extension(extension.to_string())
+            Path::new(dir).join(file_name).with_extension(extension.to_string())
         }
 
         FileStructure::Nested => Path::new(dir)
@@ -195,10 +193,7 @@ pub(crate) fn is_valid_file(path: &Path) -> bool {
         .contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
-pub(crate) fn get_next_number(
-    dir: &str,
-    file_structure: FileStructure,
-) -> i32 {
+pub(crate) fn get_next_number(dir: &str, file_structure: FileStructure) -> i32 {
     return if let Some(max) =
         get_allocated_numbers(dir, file_structure).iter().max()
     {

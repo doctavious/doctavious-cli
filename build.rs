@@ -13,8 +13,7 @@ fn main() {
         fs::create_dir_all(&target).unwrap();
     }
 
-    for entry in
-        WalkDir::new(&TEMPLATES_DIR).into_iter().filter_map(Result::ok)
+    for entry in WalkDir::new(&TEMPLATES_DIR).into_iter().filter_map(Result::ok)
     {
         let dest_path = target.join(entry.path());
         if entry.file_type().is_dir() {

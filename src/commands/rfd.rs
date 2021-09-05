@@ -1,8 +1,8 @@
-use crate::constants::DEFAULT_RFD_TEMPLATE_PATH;
-use crate::edit;
+use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH, DEFAULT_RFD_DIR};
+use crate::{edit, init_dir};
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
-use crate::settings::SETTINGS;
+use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
 use crate::templates::{
     get_template, parse_template_extension, TemplateExtension,
 };
@@ -97,6 +97,39 @@ pub(crate) struct RFDGraph {
 
     #[structopt(long, short, help = "")]
     pub link_prefix: Option<String>,
+}
+
+pub(crate) fn init_rfd(
+    directory: Option<String>,
+    structure: FileStructure,
+    extension: TemplateExtension
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut settings = match load_settings() {
+        Ok(settings) => settings,
+        Err(_) => Default::default(),
+    };
+
+    let dir = match directory {
+        None => DEFAULT_RFD_DIR,
+        Some(ref d) => d,
+    };
+
+    let rfd_settings = RFDSettings {
+        dir: Some(dir.to_string()),
+        structure: Some(structure),
+        template_extension: Some(extension),
+    };
+    settings.rfd_settings = Some(rfd_settings);
+
+    persist_settings(settings)?;
+    init_dir(dir)?;
+
+    // TODO: fix
+    return new_rfd(
+        Some(1),
+        "Use RFDs ...".to_string(),
+        extension,
+    );
 }
 
 pub(crate) fn new_rfd(

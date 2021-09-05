@@ -1,14 +1,16 @@
-use crate::settings::SETTINGS;
+use crate::commands::{title_string, get_leading_character};
+use crate::settings::{SETTINGS, load_settings, TilSettings, persist_settings};
 use crate::templates::{parse_template_extension, TemplateExtension};
-use chrono::{Utc, DateTime};
+use chrono::{DateTime, Utc};
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{BufReader, LineWriter, Write};
+use std::path::Path;
 use std::{fs, io};
 use structopt::StructOpt;
-use std::path::Path;
-use std::fs::File;
-use std::io::{LineWriter, BufReader, Write};
-use std::collections::BTreeMap;
 use walkdir::WalkDir;
-use crate::commands::title_string;
+use crate::{edit, init_dir};
+use crate::constants::DEFAULT_TIL_DIR;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers Today I Learned (TIL) management commands")]
@@ -41,9 +43,9 @@ pub(crate) struct NewTil {
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     // TODO: change to category
     #[structopt(
-    short,
-    long,
-    help = "TIL category. Represents the directory to place TIL entry under"
+        short,
+        long,
+        help = "TIL category. Represents the directory to place TIL entry under"
     )]
     pub category: String,
 
@@ -52,9 +54,9 @@ pub(crate) struct NewTil {
 
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     #[structopt(
-    short = "T",
-    long,
-    help = "Additional tags associated with the TIL entry"
+        short = "T",
+        long,
+        help = "Additional tags associated with the TIL entry"
     )]
     pub tags: Option<Vec<String>>,
 
@@ -63,9 +65,9 @@ pub(crate) struct NewTil {
 
     // TODO: should this also be a setting in TilSettings?
     #[structopt(
-    short,
-    long,
-    help = "Whether to build a README after a new TIL is added"
+        short,
+        long,
+        help = "Whether to build a README after a new TIL is added"
     )]
     pub readme: bool,
 }
@@ -89,6 +91,70 @@ struct TilEntry {
     date: DateTime<Utc>,
 }
 
+pub(crate) fn init_til(
+    directory: Option<String>,
+    extension: TemplateExtension
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut settings = match load_settings() {
+        Ok(settings) => settings,
+        Err(_) => Default::default(),
+    };
+
+    let dir = match directory {
+        None => DEFAULT_TIL_DIR,
+        Some(ref d) => d,
+    };
+
+    let til_settings = TilSettings {
+        dir: Some(dir.to_string()),
+        template_extension: Some(extension),
+    };
+    settings.til_settings = Some(til_settings);
+
+    persist_settings(settings)?;
+    init_dir(dir)?;
+
+    return Ok(())
+}
+
+pub(crate) fn new_til(
+    title: String,
+    category: String,
+    tags: Option<Vec<String>>,
+    extension: TemplateExtension,
+    readme: bool,
+    dir: &str
+) -> Result<(), Box<dyn std::error::Error>> {
+    let file_name = title.to_lowercase();
+    let path = Path::new(dir)
+        .join(category)
+        .join(file_name)
+        .with_extension(extension.to_string());
+
+    if path.exists() {
+        eprintln!("File {} already exists", path.to_string_lossy());
+    } else {
+        let leading_char = get_leading_character(extension);
+
+        let mut starting_content = format!("{} {}\n", leading_char, title);
+        if tags.is_some() {
+            starting_content.push_str("\ntags: ");
+            starting_content
+                .push_str(tags.unwrap().join(" ").as_str());
+        }
+
+        let edited = edit::edit(&starting_content)?;
+
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(&path, edited)?;
+
+        if readme {
+            build_til_readme(&dir)?;
+        }
+    }
+
+    return Ok(());
+}
 
 pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
@@ -122,7 +188,7 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
         let extension = parse_template_extension(
             entry.path().extension().unwrap().to_str().unwrap(),
         )
-            .unwrap();
+        .unwrap();
         let file = match fs::File::open(&entry.path()) {
             Ok(file) => file,
             Err(_) => panic!("Unable to read title from {:?}", entry.path()),
@@ -176,7 +242,7 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
                     til.title,
                     til.date.format("%Y-%m-%d")
                 )
-                    .as_bytes(),
+                .as_bytes(),
             )?;
             lw.write_all(b"\n")?;
         }

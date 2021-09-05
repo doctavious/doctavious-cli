@@ -1,8 +1,8 @@
-use crate::constants::DEFAULT_ADR_TEMPLATE_PATH;
-use crate::edit;
+use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_ADR_DIR};
+use crate::{edit, init_dir};
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
-use crate::settings::SETTINGS;
+use crate::settings::{SETTINGS, load_settings, AdrSettings, persist_settings};
 use crate::templates::{
     get_template, parse_template_extension, TemplateExtension,
 };
@@ -51,7 +51,12 @@ pub(crate) struct NewAdr {
     #[structopt(long, short, help = "title of ADR")]
     pub title: String,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[structopt(
+        long,
+        short,
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: Option<TemplateExtension>,
 
     #[structopt(
@@ -142,6 +147,39 @@ pub(crate) struct AdrGraph {
     pub link_prefix: Option<String>,
 }
 
+pub(crate) fn init_adr(
+    directory: Option<String>,
+    structure: FileStructure,
+    extension: TemplateExtension
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut settings = match load_settings() {
+        Ok(settings) => settings,
+        Err(_) => Default::default(),
+    };
+
+    let dir = match directory {
+        None => DEFAULT_ADR_DIR,
+        Some(ref d) => d,
+    };
+
+    let adr_settings = AdrSettings {
+        dir: Some(dir.to_string()),
+        structure: Some(structure),
+        template_extension: Some(extension),
+    };
+
+    settings.adr_settings = Some(adr_settings);
+
+    persist_settings(settings)?;
+    init_dir(dir)?;
+
+    return new_adr(
+        Some(1),
+        "Record Architecture Decisions".to_string(),
+        extension,
+    );
+}
+
 pub(crate) fn new_adr(
     number: Option<i32>,
     title: String,
@@ -199,4 +237,33 @@ pub(crate) fn new_adr(
     fs::write(&adr_path, edited)?;
 
     return Ok(());
+}
+
+
+#[cfg(test)]
+mod tests {
+    use tempfile::{tempdir, tempfile, NamedTempFile};
+    use std::fs::File;
+    use std::io::{self, Write, Read};
+    use crate::commands::adr::init_adr;
+    use crate::file_structure::FileStructure;
+    use crate::templates::TemplateExtension;
+
+    // init default
+    #[test]
+    fn init() {
+        let dir = tempdir()?;
+
+        init_adr( dir.as_path().display().to_string(), FileStructure::default(), TemplateExtension::default());
+
+        dir.close()?;
+    }
+
+    // init options
+
+    // init override existing
+
+    // new w/o init
+
+    // new with init
 }

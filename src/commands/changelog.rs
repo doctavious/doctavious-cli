@@ -1,5 +1,8 @@
 // Idea from git-cliff
 // TODO: flush this out more
+// TODO: support conventional commits as well as custom
+// TODO: custom example would be something like cockroachdb
+// TODO: I like cockroachdb's release note and release justification style
 
 use structopt::StructOpt;
 

@@ -65,8 +65,6 @@ impl<'de> Deserialize<'de> for FileStructure {
     }
 }
 
-pub(crate) fn parse_file_structure(
-    src: &str,
-) -> Result<FileStructure, String> {
+pub(crate) fn parse_file_structure(src: &str) -> Result<FileStructure, String> {
     parse_enum(&FILE_STRUCTURES, src)
 }
