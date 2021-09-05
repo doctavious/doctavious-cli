@@ -179,11 +179,11 @@ pub(crate) struct ReserveAdr {
     pub title: String,
 
     #[structopt(
-    long,
-    short,
-    possible_values = &TemplateExtension::variants(),
-    parse(try_from_str = parse_template_extension),
-    help = "Extension that should be used"
+        long,
+        short,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 }
@@ -299,7 +299,7 @@ pub(crate) fn reserve_adr(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_adr_dir();
     let reserve_number =
-        reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
+        reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
 
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {

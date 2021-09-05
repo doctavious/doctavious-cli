@@ -12,6 +12,7 @@ pub mod login;
 pub mod rfd;
 pub mod telemetry;
 pub mod til;
+mod presentation;
 
 pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
 where

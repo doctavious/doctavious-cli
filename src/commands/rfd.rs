@@ -1,5 +1,5 @@
 use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH, DEFAULT_RFD_DIR};
-use crate::{edit, init_dir};
+use crate::{edit, init_dir, git};
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
 use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
@@ -10,6 +10,8 @@ use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use chrono::Utc;
 use std::fs;
 use structopt::StructOpt;
+use git2::Repository;
+use std::path::PathBuf;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers RFD management commands")]
@@ -24,6 +26,7 @@ pub(crate) enum RFDCommand {
     New(NewRFD),
     List(ListRFDs),
     Generate(GenerateRFDs),
+    Reserve(ReserveRFD),
 }
 
 #[derive(StructOpt, Debug)]
@@ -125,11 +128,31 @@ pub(crate) struct RFDGraph {
     pub link_prefix: Option<String>,
 }
 
+#[derive(StructOpt, Debug)]
+#[structopt(name = "reserve", about = "Reserve RFD")]
+pub(crate) struct ReserveRFD {
+    #[structopt(long, short, help = "RFD Number")]
+    pub number: Option<i32>,
+
+    // TODO: can we give title index so we dont have to specify --title or -t?
+    #[structopt(long, short, help = "title of RFD")]
+    pub title: String,
+
+    #[structopt(
+        long,
+        short,
+        possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_template_extension),
+        help = "Extension that should be used"
+    )]
+    pub extension: Option<TemplateExtension>,
+}
+
 pub(crate) fn init_rfd(
     directory: Option<String>,
     structure: FileStructure,
     extension: TemplateExtension
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
         Err(_) => Default::default(),
@@ -162,7 +185,7 @@ pub(crate) fn new_rfd(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let dir = SETTINGS.get_rfd_dir();
     let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number =
@@ -193,5 +216,31 @@ pub(crate) fn new_rfd(
     let edited = edit::edit(&starting_content)?;
     fs::write(&rfd_path, edited)?;
 
-    return Ok(());
+    return Ok(rfd_path);
+}
+
+pub(crate) fn reserve_rfd(
+    number: Option<i32>,
+    title: String,
+    extension: TemplateExtension,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let dir = SETTINGS.get_rfd_dir();
+    let reserve_number =
+        reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
+
+    let repo = Repository::open(".")?;
+    if git::branch_exists(&repo, reserve_number) {
+        return Err(String::from("branch already exists in remote. Please pull.").into());
+    }
+
+    git::checkout_branch(&repo, reserve_number.to_string().as_str());
+
+    // TODO: revisit clones. Using it for now to resolve value borrowed here after move
+    let created_result = new_rfd(number, title.clone(), extension);
+
+    let message = format!("{}: Adding placeholder for RFD {}", reserve_number, title.clone());
+    git::add_and_commit(&repo, created_result.unwrap().as_path(), message.as_str());
+    git::push(&repo);
+
+    return Ok(())
 }
