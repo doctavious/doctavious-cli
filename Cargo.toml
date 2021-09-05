@@ -13,10 +13,13 @@ categories = ["documentation"]
 chrono = "0.4"
 clap = "2.33.3"
 comfy-table = "1.1.1"
+# TODO: look at config and see if it can help. specifically with the need to merge in env vars
+# config = "0.11.0"
 dirs = "2.0.2"
 dotavious = { path = "../dotavious" }
 env_logger = "0.7"
 git2 = "0.13.11"
+git-conventional = "0.10.1"
 lazy_static = "1.4"
 log = "0.4"
 regex = "1.5.4"
