@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DoctaviousError {
 
     // /// Error that may occur while I/O operations.

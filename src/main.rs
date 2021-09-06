@@ -22,7 +22,7 @@ mod templates;
 mod utils;
 mod git;
 mod output;
-mod error;
+mod doctavious_error;
 
 use crate::commands::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr};
 use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd};
