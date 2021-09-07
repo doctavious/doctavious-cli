@@ -65,8 +65,8 @@ pub(crate) fn push(repo: &Repository) -> Result<(), git2::Error> {
 
 fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
     // let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
-    let obj = repo.head()?.resolve()?.peel_to_commit()?;
-    obj.into_commit().map_err(|_| git2::Error::from_str("Couldn't find commit"))
+    let obj = repo.head()?.resolve()?.peel_to_commit();
+    obj.map_err(|_| git2::Error::from_str("Couldn't find commit"))
 }
 
 
