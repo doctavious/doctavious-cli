@@ -8,6 +8,7 @@ use structopt::StructOpt;
 use crate::commands::changelog::StripParts;
 use std::path::PathBuf;
 use crate::commands::changelog::parse_strip_parts;
+use crate::constants::DEFAULT_CONFIG_NAME;
 
 // -v, --verbose       Increases the logging verbosity
 // -i, --init          Writes the default configuration file to cliff.toml
@@ -71,21 +72,14 @@ pub(crate) struct InitChangelog {
     pub trim: bool,
 }
 
-impl InitChangelog {
-    // pub fn should_persist_settings(&self) -> bool {
-    //     return self.directory.is_some() || self.extension.is_some();
-    // }
-}
-
 // rename_all_env = "screaming-snake"
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Generate Changelog")]
 pub(crate) struct GenerateChangeLog {
-    // TODO: default value doctavious.toml
-    #[structopt(long, short, help = "The configuration file to use.")]
-    pub config: Option<String>,
+    #[structopt(long, short, default_value = DEFAULT_CONFIG_NAME, help = "The configuration file to use.")]
+    pub config: String,
 
-    // wokdir?
+    // workdir?
 
     // repository
     // defaults to current directory. env::current_dir()
