@@ -21,8 +21,8 @@ pub enum DoctaviousError {
     #[error("Cannot parse the commit: `{0}`")]
     ParseError(#[from] git_conventional::Error),
     /// Error that may occur while grouping commits.
-    #[error("Grouping error: `{0}`")]
-    GroupError(String),
+    #[error("Category error: `{0}`")]
+    CategoryError(String),
     // /// Error that may occur while generating changelog.
     // #[error("Changelog error: `{0}`")]
     // ChangelogError(String),

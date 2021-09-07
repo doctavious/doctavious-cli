@@ -17,16 +17,14 @@ use crate::commands::changelog::CommitParser;
 #[serde(rename_all = "camelCase")]
 pub struct Commit<'a> {
     /// Commit ID.
-    pub id:      String,
+    pub id: String,
     /// Commit message including title, description and summary.
     pub message: String,
     /// Conventional commit.
     #[serde(skip_deserializing)]
-    pub conv:    Option<ConventionalCommit<'a>>,
-
-    // TODO: I like category instead of group
-    /// Commit group based on a group parser or its conventional type.
-    pub group:   Option<String>,
+    pub conventional: Option<ConventionalCommit<'a>>,
+    /// Commit category based on a category parser or its conventional type.
+    pub category: Option<String>,
 }
 
 impl<'a> From<&GitCommit<'a>> for Commit<'a> {
@@ -44,8 +42,8 @@ impl Commit<'_> {
         Self {
             id,
             message,
-            conv: None,
-            group: None,
+            conventional: None,
+            category: None,
         }
     }
 
@@ -64,8 +62,7 @@ impl Commit<'_> {
             commit = commit.into_conventional()?;
         }
         if let Some(parsers) = parsers {
-            commit =
-                commit.into_grouped(parsers, filter_commits.unwrap_or(false))?;
+            commit = commit.into_category(parsers, filter_commits.unwrap_or(false))?;
         }
         Ok(commit)
     }
@@ -75,16 +72,16 @@ impl Commit<'_> {
         match ConventionalCommit::parse(Box::leak(
             self.message.to_string().into_boxed_str(),
         )) {
-            Ok(conv) => {
-                self.conv = Some(conv);
+            Ok(conventional) => {
+                self.conventional = Some(conventional);
                 Ok(self)
             }
             Err(e) => Err(DoctaviousError::ParseError(e)),
         }
     }
 
-    /// Returns the commit with its group set.
-    pub fn into_grouped(
+    /// Returns the commit with its category set.
+    pub fn into_category(
         mut self,
         parsers: &[CommitParser],
         filter: bool,
@@ -96,10 +93,10 @@ impl Commit<'_> {
             {
                 if regex.is_match(&self.message) {
                     return if parser.skip != Some(true) {
-                        self.group = parser.group.as_ref().cloned();
+                        self.category = parser.category.as_ref().cloned();
                         Ok(self)
                     } else {
-                        Err(DoctaviousError::GroupError(String::from("Skipping commit")))
+                        Err(DoctaviousError::CategoryError(String::from("Skipping commit")))
                     }
                 }
             }
@@ -107,8 +104,8 @@ impl Commit<'_> {
         if !filter {
             Ok(self)
         } else {
-            Err(DoctaviousError::GroupError(String::from(
-                "Commit does not belong to any group",
+            Err(DoctaviousError::CategoryError(String::from(
+                "Commit does not belong to any category",
             )))
         }
     }
@@ -121,7 +118,7 @@ impl Serialize for Commit<'_> {
     {
         let mut commit = serializer.serialize_struct("Commit", 8)?;
         commit.serialize_field("id", &self.id)?;
-        match &self.conv {
+        match &self.conventional {
             Some(conv) => {
                 commit.serialize_field("message", conv.description())?;
                 commit.serialize_field("body", &conv.body())?;
@@ -129,14 +126,14 @@ impl Serialize for Commit<'_> {
                     "footers",
                     &conv
                         .footers()
-                        .to_vec()
+                        .to_vec()// TODO: is this necessary?
                         .iter()
                         .map(|f| f.value())
                         .collect::<Vec<&str>>(),
                 )?;
                 commit.serialize_field(
-                    "group",
-                    self.group.as_ref().unwrap_or(&conv.type_().to_string()),
+                    "category",
+                    self.category.as_ref().unwrap_or(&conv.type_().to_string()),
                 )?;
                 commit.serialize_field(
                     "breaking_description",
@@ -147,7 +144,7 @@ impl Serialize for Commit<'_> {
             }
             None => {
                 commit.serialize_field("message", &self.message)?;
-                commit.serialize_field("group", &self.group)?;
+                commit.serialize_field("category", &self.category)?;
             }
         }
         commit.end()
@@ -157,7 +154,7 @@ impl Serialize for Commit<'_> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use regex::Regex;
+    use regex::{Regex, RegexBuilder};
     #[test]
     fn conventional_commit() {
         let test_cases = vec![
@@ -179,16 +176,82 @@ mod test {
         let commit = test_cases[0]
             .0
             .clone()
-            .into_grouped(
+            .into_category(
                 &[CommitParser {
                     message: Regex::new("test*").ok(),
-                    body:    None,
-                    group:   Some(String::from("test_group")),
-                    skip:    None,
+                    body: None,
+                    category: Some(String::from("test_category")),
+                    skip: None,
                 }],
                 false,
             )
             .unwrap();
-        assert_eq!(Some(String::from("test_group")), commit.group);
+        assert_eq!(Some(String::from("test_category")), commit.category);
+    }
+
+    // # The following release note formats have been seen in the wild:
+    // #
+    // # Release note (xxx): yyy    <- canonical
+    // # Release Notes: None
+    // # Release note (xxx): yyy
+    // # Release note (xxx) : yyy
+    // # Release note: (xxx): yyy
+    // # Release note: xxx: yyy
+    // # Release note: (xxx) yyy
+    // # Release note: yyy (no category)
+    // # Release note (xxx, zzz): yyy
+    // norelnote = re.compile(r'^[rR]elease [nN]otes?: *[Nn]one', flags=re.M)
+    // # Captures :? (xxx) ?: yyy
+    // form1 = r':? *\((?P<cat1>[^)]*)\) *:?'
+    // # Captures : xxx: yyy - this must be careful not to capture too much, we just accept one or two words
+    // form2 = r': *(?P<cat2>[^ ]+(?: +[^ ]+)?) *:'
+    // # Captures : yyy - no category
+    // form3 = r':(?P<cat3>)'
+    // relnote = re.compile(r'(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r') *(?P<note>.*)$', flags=re.S)
+    //
+    // coauthor = re.compile(r'^Co-authored-by: (?P<name>[^<]*) <(?P<email>.*)>', flags=re.M)
+    // fixannot = re.compile(r'^([fF]ix(es|ed)?|[cC]lose(d|s)?) #', flags=re.M)
+    #[test]
+    fn commit_release_note() {
+        // Release justification: testing only
+        // Release justification: Bug fixes and low-risk updates to new
+        // functionality
+        //
+        // Release note: None
+        // Release note (enterprise change): cloud storage sinks are no longer experimental
+
+        // no release note
+        // RegexBuilder::new("^[rR]elease [nN]otes?: *[Nn]one").multi_line(true).build()
+        // Captures :? (xxx) ?: yyy
+        // form1 = Regex::new(":? *\((?P<cat1>[^)]*)\) *:?").ok()
+        // Captures : xxx: yyy - this must be careful not to capture too much, we just accept one or two words
+        // form2 = r': *(?P<cat2>[^ ]+(?: +[^ ]+)?) *:'
+        // form2 = Regex::new(": *(?P<cat2>[^ ]+(?: +[^ ]+)?) *:").ok()
+        // Captures : yyy - no category
+        // form3 = r':(?P<cat3>)'
+        // formt3 = Regex::new(":(?P<cat3>)").ok()
+        // relnote = re.compile(r'(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r') *(?P<note>.*)$', flags=re.S)
+        // release_note =
+        // RegexBuilder::new("(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r").dot_matches_new_line(true).build()
+        // commit_parsers:       Some(vec![
+        //     CommitParser {
+        //         message: Regex::new("^[rR]elease [nN]otes?: *[Nn]one").ok(),
+        //         body:    None,
+        //         category:   Some(String::from("New features")),
+        //         skip:    None,
+        //     },
+        //     CommitParser {
+        //         message: Regex::new("fix*").ok(),
+        //         body:    None,
+        //         category:   Some(String::from("Bug Fixes")),
+        //         skip:    None,
+        //     },
+        //     CommitParser {
+        //         message: Regex::new(".*").ok(),
+        //         body:    None,
+        //         category:   Some(String::from("Other")),
+        //         skip:    None,
+        //     },
+        // ])
     }
 }
