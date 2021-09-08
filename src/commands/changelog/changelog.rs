@@ -10,24 +10,6 @@ use std::path::PathBuf;
 use crate::commands::changelog::parse_strip_parts;
 use crate::constants::DEFAULT_CONFIG_NAME;
 
-// -v, --verbose       Increases the logging verbosity
-// -i, --init          Writes the default configuration file to cliff.toml
-// -l, --latest        Processes the commits starting from the latest tag
-// -u, --unreleased    Processes the commits that do not belong to a tag
-// -h, --help          Prints help information
-// -V, --version       Prints version information
-
-// -c, --config <PATH>        Sets the configuration file [env: CONFIG=]  [default: cliff.toml]
-// -w, --workdir <PATH>       Sets the working directory [env: WORKDIR=]
-// -r, --repository <PATH>    Sets the repository to parse commits from [env: REPOSITORY=]
-// -p, --prepend <PATH>       Prepends entries to the given changelog file [env: PREPEND=]
-// -o, --output <PATH>        Writes output to the given file [env: OUTPUT=]
-// -t, --tag <TAG>            Sets the tag for the latest version [env: TAG=]
-// -b, --body <TEMPLATE>      Sets the template for the changelog body [env: TEMPLATE=]
-// -s, --strip <PART>         Strips the given parts from the changelog [possible values: header, footer, all]
-
-// <RANGE>    Sets the commit range to process
-
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers ADR management commands")]
 pub(crate) struct Changelog {
@@ -76,21 +58,37 @@ pub(crate) struct InitChangelog {
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Generate Changelog")]
 pub(crate) struct GenerateChangeLog {
-    #[structopt(long, short, default_value = DEFAULT_CONFIG_NAME, help = "The configuration file to use.")]
-    pub config: String,
 
-    // workdir?
+    /// Sets the configuration file.
+    #[structopt(
+        long,
+        short,
+        default_value = DEFAULT_CONFIG_NAME,
+        help = "The configuration file to use."
+    )]
+    pub config: PathBuf,
 
-    // repository
+    /// Sets the working directory.
+    #[structopt(short, long, value_name = "PATH")]
+    pub workdir: Option<PathBuf>,
+
+    /// Sets the repository to parse commits from.
+    #[structopt(short, long, value_name = "PATH")]
+    pub repository: Option<PathBuf>,
     // defaults to current directory. env::current_dir()
 
-    #[structopt(long, short, value_name = "PATH", help = "The tag to use for the latest version")]
+    // TODO: this can just be a boolean
+    #[structopt(long, short, value_name = "PATH", help = "Prepends entries to the given changelog file.")]
     pub prepend: Option<PathBuf>,
 
-    // TODO: will have to change this as it conflicts with the global output
-    // TODO: default to CHANGELOG.md?
-    #[structopt(long, short, value_name = "PATH", help = "Writes output to the given file")]
-    pub output: Option<PathBuf>,
+    #[structopt(
+        long,
+        short,
+        value_name = "PATH",
+        default_value = "CHANGELOG.md"
+        help = "Writes output to the given file"
+    )]
+    pub file: Option<PathBuf>,
 
     // Sets the tag for the latest version [env: TAG=]
     #[structopt(long, short, help = "The tag to use for the latest version")]
@@ -113,28 +111,15 @@ pub(crate) struct GenerateChangeLog {
     )]
     pub strip: Option<StripParts>,
 
-    // -c, --config <PATH>        Sets the configuration file [env: CONFIG=]  [default: cliff.toml]
-    // -w, --workdir <PATH>       Sets the working directory [env: WORKDIR=]
-    // -r, --repository <PATH>    Sets the repository to parse commits from [env: REPOSITORY=]
-    // -p, --prepend <PATH>       Prepends entries to the given changelog file [env: PREPEND=]
-    // -o, --output <PATH>        Writes output to the given file [env: OUTPUT=]
-    // -t, --tag <TAG>            Sets the tag for the latest version [env: TAG=]
-    // -b, --body <TEMPLATE>      Sets the template for the changelog body [env: TEMPLATE=]
-    // -s, --strip <PART>         Strips the given parts from the changelog [possible values
+    /// Processes the commits starting from the latest tag.
+    #[structopt(short, long)]
+    pub latest: bool,
 
+    /// Processes the commits that do not belong to a tag.
+    #[structopt(short, long)]
+    pub unreleased: bool,
 
-    // support
-    // -u, --unreleased    Processes the commits that do not belong to a tag. last tag to HEAD
-    // -l, --latest        Processes the commits starting from the latest tag. get last two tags
-    // a range in the format of <commit>..<commit>
-
-    // /// Processes the commits starting from the latest tag.
-    // #[structopt(short, long)]
-    // pub latest:     bool,
-    // /// Processes the commits that do not belong to a tag.
-    // #[structopt(short, long)]
-    // pub unreleased: bool,
-    // #[structopt(value_name = "RANGE")]
-    // pub range:      Option<String>,
-
+    /// Sets the commit range to process.
+    #[structopt(value_name = "RANGE")]
+    pub range: Option<String>,
 }

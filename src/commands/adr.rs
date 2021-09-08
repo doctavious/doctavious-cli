@@ -292,6 +292,13 @@ pub(crate) fn new_adr(
 // $ git add rfd/0042/README.md
 // $ git commit -m '0042: Adding placeholder for RFD <Title>'
 // $ git push origin 0042
+// 6. Update README in main branch
+// After your branch is pushed, the table in the README on the master branch will update
+// automatically with the new RFD. If you ever change the name of the RFD in the future,
+// the table will update as well. Whenever information about the state of the RFD changes,
+// this updates the table as well. The single source of truth for information about the RFD comes
+// from the RFD in the branch until it is merged.
+// I think this would be implemented as a    git hook
 pub(crate) fn reserve_adr(
     number: Option<i32>,
     title: String,
@@ -301,6 +308,7 @@ pub(crate) fn reserve_adr(
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
 
+    // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
         return Err(String::from("branch already exists in remote. Please pull.").into());

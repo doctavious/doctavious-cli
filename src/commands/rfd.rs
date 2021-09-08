@@ -228,6 +228,7 @@ pub(crate) fn reserve_rfd(
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
 
+    // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
         return Err(String::from("branch already exists in remote. Please pull.").into());

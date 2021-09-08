@@ -323,7 +323,7 @@ fn list(dir: &str, opt_output: Option<Output>) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
     if opt.debug {
-        std::env::set_var("RUST_LOG", "doctavious=debug");
+        std::env::set_var("RUST_LOG", "debug");
         env_logger::init();
     }
 
