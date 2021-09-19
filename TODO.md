@@ -1,3 +1,7 @@
+- support environment variables for commands
+- logging verbosity more than just debug?
+- look at Strum for enums to reduce boilerplate code
+
 
 // https://stackoverflow.com/questions/32555589/is-there-a-clean-way-to-have-a-global-mutable-state-in-a-rust-plugin
 // https://stackoverflow.com/questions/61159698/update-re-initialize-a-var-defined-in-lazy-static
