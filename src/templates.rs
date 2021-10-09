@@ -46,16 +46,13 @@ impl TemplateExtension {
 // {%- for row in data %}
 // | {{- row['status'] }} | {{ row['RFD'] }} |
 // {%- endfor -%}
-    
+
     pub(crate) fn toc_template(self) ->  &'static str {
         return match self {
             TemplateExtension::Markdown => {
 r#"{# snippet::markdown_toc #}
-{% if headers %}
-|
-    {%- for header in headers %}
-        {{- header }} |
-    {%- endfor %}
+{% if headers -%}
+  | {{ headers | join(sep=" | ") }}
 |
     {%- for i in range(end=headers|length) -%}
         --- |
@@ -72,18 +69,14 @@ r#"{# snippet::markdown_toc #}
             TemplateExtension::Asciidoc => {
 r#"{# snippet::asciidoc_toc #}
 |===
-{% if headers %}
-|
-    {%- for header in headers -%}
-        {{ header }}
-    {% endfor %}
-
-{% endif %}
+{% if headers -%}
+  | {{ headers | join(sep=" | ") }}
+{%- endif %}
 {%- for row in data %}
-    {% for record in row %}
-        | {{ record }}
-    {% endfor %}
-{% endfor %}
+{% for key, value in row %}
+| {{ value }}
+{%- endfor -%}
+{%- endfor -%}
 {# end::asciidoc_toc #}"#
             }
         }
@@ -233,8 +226,8 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
         output.push(map);
     }
     context.insert("data", &output);
-
-    println!("{:?}", context);
+    println!("{:?}", &output);
+    println!("{:?}", &context.clone().into_json());
 
     return Tera::one_off(template, &context, false).unwrap();
 }
@@ -252,9 +245,6 @@ mod tests {
 
     #[test]
     fn markdown_toc() {
-        // let data = fs::read_to_string("../tests/resources/sample_csv.csv").expect("Unable to read file");
-        let path = env::current_dir().unwrap();
-        println!("The current directory is {}", path.display());
         let toc = super::render_toc(
             Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
             TemplateExtension::Markdown.toc_template()
@@ -264,6 +254,10 @@ mod tests {
 
     #[test]
     fn asciidoc_toc() {
-
+        let toc = super::render_toc(
+            Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
+            TemplateExtension::Asciidoc.toc_template()
+        );
+        println!("{}", toc);
     }
 }

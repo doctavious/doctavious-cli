@@ -38,6 +38,9 @@ serde_derive = "1.0"
 serde_regex = "1.1.0"
 structopt = "0.3"
 tempfile = "3.2.0"
+
+# tera seems fine but has enough differences to jinja2 that I would like something that was more compliant
+# with the engine it was referencing. Maybe we look at rust handlebars and see how closely those match
 tera = "1.12.1"
 thiserror = "1.0.29"
 toml = "0.5"
