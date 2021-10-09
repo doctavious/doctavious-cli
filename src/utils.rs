@@ -1,61 +1,60 @@
 use crate::templates::TemplateExtension;
 use crate::templates::TEMPLATE_EXTENSIONS;
 use std::collections::HashMap;
-use std::io::{ErrorKind, Write};
+use std::io::{ErrorKind, Write, Error};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 use crate::file_structure::FileStructure;
 use unidecode::unidecode;
 use walkdir::WalkDir;
+use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
+use crate::output::{Output, get_output, print_output};
+use serde::Serializer;
+use std::fmt::{Display, Formatter, Debug};
+use serde::ser::SerializeSeq;
 
 pub(crate) fn parse_enum<A: Copy>(
     env: &'static HashMap<&'static str, A>,
     src: &str,
-) -> Result<A, String> {
+) -> Result<A, EnumError> {
     match env.get(src) {
         Some(p) => Ok(*p),
         None => {
             let supported: Vec<&&str> = env.keys().collect();
-            Err(format!(
+            Err(EnumError {
+                message: format!(
                 "Unsupported value: \"{}\". Supported values: {:?}",
                 src, supported
-            ))
+                )
+            })
         }
     }
 }
 
 pub(crate) fn ensure_path(
     path: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> DoctavousResult<()> {
     if path.exists() {
         println!("File already exists at: {}", path.to_string_lossy());
         print!("Overwrite? (y/N): ");
         io::stdout().flush()?;
         let mut decision = String::new();
         io::stdin().read_line(&mut decision)?;
-        if decision.trim().eq_ignore_ascii_case("Y") {
-            return Ok(());
+        return if decision.trim().eq_ignore_ascii_case("Y") {
+            Ok(())
         } else {
-            return Err(format!(
+            Err(DoctaviousError::NoConfirmation(format!(
                 "Unable to write config file to: {}",
                 path.to_string_lossy()
-            )
-            .into());
+            ).into()))
         }
     } else {
         let parent_dir = path.parent();
-        match parent_dir {
-            Some(path) => {
-                fs::create_dir_all(path)?;
-                Ok(())
-            }
-            None => Err(format!(
-                "Unable to write file to: {}",
-                path.to_string_lossy()
-            )
-            .into()),
+        if parent_dir.is_some() {
+            fs::create_dir_all(parent_dir.unwrap())?;
         }
+        Ok(())
     }
 }
 
@@ -89,13 +88,13 @@ pub(crate) fn reserve_number(
     dir: &str,
     number: Option<i32>,
     file_structure: FileStructure,
-) -> Result<i32, Box<dyn std::error::Error>> {
+) -> DoctavousResult<i32> {
     return if let Some(i) = number {
         if is_number_reserved(dir, i, file_structure) {
             // TODO: the prompt to overwrite be here?
             // TODO: return custom error NumberAlreadyReservedErr(number has already been reserved);
             eprintln!("{} has already been reserved", i);
-            return Err(format!("{} has already been reserved", i).into());
+            return Err(DoctaviousError::ReservedNumberError(i));
         }
         Ok(i)
     } else {
@@ -242,4 +241,88 @@ pub(crate) fn slugify(string: &str) -> String {
     let s = String::from_utf8(slug).unwrap();
     s.trim_end_matches(separator_char).to_string();
     s
+}
+
+
+struct List<A>(Vec<A>);
+
+impl<A> Debug for List<A>
+    where
+        A: Debug,
+{
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        for value in self.0.iter() {
+            writeln!(f, "{:?}", value)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<A> Display for List<A>
+    where
+        A: Display,
+{
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        for value in self.0.iter() {
+            writeln!(f, "{}", value)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<A> serde::ser::Serialize for List<A>
+    where
+        A: serde::ser::Serialize,
+{
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+        for elem in self.0.iter() {
+            seq.serialize_element(elem)?;
+        }
+
+        seq.end()
+    }
+}
+
+pub(crate) fn list(dir: &str, opt_output: Option<Output>) {
+    match fs::metadata(&dir) {
+        Ok(_) => {
+            let files = get_files(dir);
+            print_output(get_output(opt_output), List(files)).unwrap();
+        }
+        Err(e) => match e.kind() {
+            ErrorKind::NotFound => {
+                eprintln!("the {} directory should exist", dir)
+            }
+            _ => eprintln!("Error occurred: {:?}", e),
+        },
+    }
+}
+
+pub(crate) fn get_files(dir: &str) -> Vec<String> {
+    let mut f: Vec<_> = WalkDir::new(&dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .filter(|f| is_valid_file(&f.path()))
+        .map(|f| {
+            String::from(strip_current_dir(&f.path()).to_str().unwrap())
+        })
+        .collect();
+
+    f.sort();
+    return f;
+}
+
+/// Remove the `./` prefix from a path.
+fn strip_current_dir(path: &Path) -> &Path {
+    return path.strip_prefix(".").unwrap_or(path);
 }

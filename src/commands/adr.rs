@@ -1,21 +1,28 @@
-use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_ADR_DIR};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use chrono::Utc;
+use git2::{Branches, BranchType, Direction, Repository};
+use regex::Regex;
+use structopt::StructOpt;
+
 use crate::{edit, init_dir};
-use crate::file_structure::parse_file_structure;
+use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH};
 use crate::file_structure::FileStructure;
-use crate::settings::{SETTINGS, load_settings, AdrSettings, persist_settings};
+use crate::file_structure::parse_file_structure;
+use crate::git;
+use crate::settings::{AdrSettings, load_settings, persist_settings, SETTINGS};
 use crate::templates::{
     get_template, parse_template_extension, TemplateExtension,
 };
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
-use chrono::Utc;
-use std::fs;
-use structopt::StructOpt;
-
-use crate::git;
-use git2::{Branches, Repository, Direction, BranchType};
-use regex::Regex;
-use std::path::{Path, PathBuf};
-
+use crate::doctavious_error::Result;
+use tera::{
+    Context as TeraContext,
+    Result as TeraResult,
+    Tera,
+    Value,
+};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers ADR management commands")]
@@ -41,21 +48,21 @@ pub(crate) struct InitADR {
     pub directory: Option<String>,
 
     #[structopt(
-        long,
-        short,
-        default_value,
-        possible_values = &FileStructure::variants(),
-        parse(try_from_str = parse_file_structure),
-        help = "How ADRs should be structured"
+    long,
+    short,
+    default_value,
+    possible_values = & FileStructure::variants(),
+    parse(try_from_str = parse_file_structure),
+    help = "How ADRs should be structured"
     )]
     pub structure: FileStructure,
 
     #[structopt(
-        long,
-        short,
-        possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
-        help = "Extension that should be used"
+    long,
+    short,
+    possible_values = & TemplateExtension::variants(),
+    parse(try_from_str = parse_template_extension),
+    help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 }
@@ -72,18 +79,18 @@ pub(crate) struct NewADR {
     pub title: String,
 
     #[structopt(
-        long,
-        short,
-        possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
-        help = "Extension that should be used"
+    long,
+    short,
+    possible_values = & TemplateExtension::variants(),
+    parse(try_from_str = parse_template_extension),
+    help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 
     #[structopt(
-        long,
-        short,
-        help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
+    long,
+    short,
+    help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
     )]
     pub supercede: Option<Vec<String>>,
 
@@ -109,9 +116,9 @@ pub(crate) struct LinkADRs {
 
     // TODO: can we give title index so we dont have to specify --title or -t?
     #[structopt(
-        long,
-        short,
-        help = "Description of the link created in the new ADR"
+    long,
+    short,
+    help = "Description of the link created in the new ADR"
     )]
     pub link: String,
 
@@ -119,9 +126,9 @@ pub(crate) struct LinkADRs {
     pub target: i32,
 
     #[structopt(
-        long,
-        short,
-        help = "Description of the link created in the existing ADR that will refer to new ADR"
+    long,
+    short,
+    help = "Description of the link created in the existing ADR that will refer to new ADR"
     )]
     pub reverse_link: String,
 }
@@ -179,11 +186,11 @@ pub(crate) struct ReserveADR {
     pub title: String,
 
     #[structopt(
-        long,
-        short,
-        possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
-        help = "Extension that should be used"
+    long,
+    short,
+    possible_values = & TemplateExtension::variants(),
+    parse(try_from_str = parse_template_extension),
+    help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 }
@@ -191,8 +198,8 @@ pub(crate) struct ReserveADR {
 pub(crate) fn init_adr(
     directory: Option<String>,
     structure: FileStructure,
-    extension: Option<TemplateExtension>
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    extension: Option<TemplateExtension>,
+) -> Result<PathBuf> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
         Err(_) => Default::default(),
@@ -218,6 +225,7 @@ pub(crate) fn init_adr(
         Some(1),
         "Record Architecture Decisions".to_string(),
         SETTINGS.get_adr_template_extension(extension),
+        INIT_ADR_TEMPLATE_PATH,
     );
 }
 
@@ -225,11 +233,12 @@ pub(crate) fn new_adr(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,
+    template_path: &str,
     // supercedes: Option<Vec<String>>,
     // links: Option<Vec<String>>
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+) -> Result<PathBuf> {
     let dir = SETTINGS.get_adr_dir();
-    let template = get_template(&dir, extension, DEFAULT_ADR_TEMPLATE_PATH);
+    let template = get_template(&dir, extension, template_path);
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
     let formatted_reserved_number = format_number(reserve_number);
@@ -274,9 +283,18 @@ pub(crate) fn new_adr(
         .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
     starting_content = starting_content.replace("<STATUS>", "Accepted");
 
+    let mut context = TeraContext::new();
+    context.insert("number", &reserve_number);
+    context.insert("title", &title);
+    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
+    context.insert("status", "Accepted");
+
+    // tera.render("template", &TeraContext::from_serialize(release)?)?;
+    // Tera::one_off(input, context, autoescape)
+
+
     let edited = edit::edit(&starting_content)?;
     fs::write(&adr_path, edited)?;
-
     return Ok(adr_path);
 }
 
@@ -303,7 +321,7 @@ pub(crate) fn reserve_adr(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let dir = SETTINGS.get_adr_dir();
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
@@ -311,13 +329,13 @@ pub(crate) fn reserve_adr(
     // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
-        return Err(String::from("branch already exists in remote. Please pull.").into());
+        return Err(git2::Error::from_str("branch already exists in remote. Please pull.").into());
     }
 
     git::checkout_branch(&repo, reserve_number.to_string().as_str());
 
     // TODO: revisit clones. Using it for now to resolve value borrowed here after move
-    let created_result = new_adr(number, title.clone(), extension);
+    let created_result = new_adr(number, title.clone(), extension, DEFAULT_ADR_TEMPLATE_PATH);
 
     let message = format!("{}: Adding placeholder for ADR {}", reserve_number, title.clone());
     git::add_and_commit(&repo, created_result.unwrap().as_path(), message.as_str());
@@ -326,13 +344,18 @@ pub(crate) fn reserve_adr(
     return Ok(())
 }
 
+pub(crate) fn generate_csv() {
+
+}
 
 
 #[cfg(test)]
 mod tests {
-    use tempfile::{tempdir, tempfile, NamedTempFile};
     use std::fs::File;
-    use std::io::{self, Write, Read};
+    use std::io::{self, Read, Write};
+
+    use tempfile::{NamedTempFile, tempdir, tempfile};
+
     use crate::commands::adr::init_adr;
     use crate::file_structure::FileStructure;
     use crate::templates::TemplateExtension;
@@ -340,15 +363,15 @@ mod tests {
     // init default
     #[test]
     fn init() {
-        let dir = tempdir()?;
+        let dir = tempdir().unwrap();
 
         init_adr(
-            dir.as_path().display().to_string(),
+            Some(dir.path().display().to_string()),
             FileStructure::default(),
-            Some(TemplateExtension::default())
+            Some(TemplateExtension::default()),
         );
 
-        dir.close()?;
+        dir.close().unwrap();
     }
 
     // init options

@@ -1,0 +1,16 @@
+[adr]
+dir = "docs/adr"
+structure = "flat"
+
+[rfd]
+dir = "docs/rfd"
+structure = "flat"
+template_extension = "md"
+
+[til]
+dir = "docs/til"
+template_extension = "md"
+
+# TODO: snippets
+# TODO: changelog
+# TODO: githooks

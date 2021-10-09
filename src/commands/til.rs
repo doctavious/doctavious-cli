@@ -1,6 +1,7 @@
 use crate::commands::{title_string, get_leading_character};
 use crate::settings::{SETTINGS, load_settings, TilSettings, persist_settings};
 use crate::templates::{parse_template_extension, TemplateExtension};
+use crate::doctavious_error::{Result as DoctaviousResult};
 use chrono::{DateTime, Utc};
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -94,7 +95,7 @@ struct TilEntry {
 pub(crate) fn init_til(
     directory: Option<String>,
     extension: TemplateExtension
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> DoctaviousResult<()> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
         Err(_) => Default::default(),
@@ -124,7 +125,7 @@ pub(crate) fn new_til(
     extension: TemplateExtension,
     readme: bool,
     dir: &str
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> DoctaviousResult<()> {
     let file_name = title.to_lowercase();
     let path = Path::new(dir)
         .join(category)

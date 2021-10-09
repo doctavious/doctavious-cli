@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+// #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum DoctaviousError {
 
@@ -26,21 +27,47 @@ pub enum DoctaviousError {
     /// Error that may occur while generating changelog.
     #[error("Changelog error: `{0}`")]
     ChangelogError(String),
-    // /// Error that may occur while template operations such as parse and render.
-    // #[error("Template error: `{0}`")]
-    // TemplateError(#[from] tera::Error),
+    /// Error that may occur while template operations such as parse and render.
+    #[error("Template error: `{0}`")]
+    TemplateError(#[from] tera::Error),
     // /// Error that may occur while parsing the command line arguments.
     // #[error("Argument error: `{0}`")]
     // ArgumentError(String),
     // /// Error that may occur while extracting the embedded content.
     // #[error("Embedded error: `{0}`")]
     // EmbeddedError(String),
-    // /// Errors that may occur when deserializing types from TOML format.
-    // #[error("Cannot parse TOML: `{0}`")]
-    // DeserializeError(#[from] toml::de::Error),
 
+    // TODO: fix toml serde error names
+    /// Errors that may occur when deserializing types from TOML format.
+    #[error("Cannot parse TOML: `{0}`")]
+    DeserializeError(#[from] toml::de::Error),
+    /// Errors that may occur when serializing types from TOML format.
+    #[error("Cannot parse TOML: `{0}`")]
+    SerializeError(#[from] toml::ser::Error),
 
+    /// Error that may occur while converting to enum.
+    #[error("Enum error: `{0}`")]
+    EnumError(#[from] EnumError),
+    #[error("Serde json error: `{0}`")]
+    SerdeJson(#[from] serde_json::Error),
+    /// Error that may occur while reserving ADR/RFD number.
+    #[error("{0} has already been reserved")]
+    ReservedNumberError(i32),
+
+    #[error("walkdir error")]
+    WalkdirError(#[from] walkdir::Error),
+
+    // TODO: fix this
+    #[error("{0}")]
+    NoConfirmation(String),
+}
+
+#[derive(serde::Deserialize, Error, Debug)]
+#[error("Enum error: {message}")]
+pub struct EnumError {
+    pub message: String,
 }
 
 
 pub type Result<T> = core::result::Result<T, DoctaviousError>;
+// pub type Result<T, E = Error> = std::result::Result<T, E>;

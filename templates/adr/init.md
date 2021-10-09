@@ -1,12 +1,12 @@
 ---
 authors: 
-date: <DATE>
+date: {{DATE}}
 discussion: 
 ---
 
 # 1. Record architecture decisions
 
-Date: DATE
+Date: {{DATE}}
 
 ## Status
 

@@ -1,17 +1,29 @@
 use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH, DEFAULT_RFD_DIR};
 use crate::{edit, init_dir, git};
+use crate::doctavious_error::Result;
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
 use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
 use crate::templates::{
     get_template, parse_template_extension, TemplateExtension,
 };
-use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::utils::{build_path, ensure_path, format_number, reserve_number, get_files};
 use chrono::Utc;
 use std::fs;
 use structopt::StructOpt;
 use git2::Repository;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
+use tera::{
+    Context as TeraContext,
+    Result as TeraResult,
+    Tera,
+    Value,
+};
+use csv::Writer;
+use gray_matter::Matter;
+use gray_matter::engine::YAML;
+use std::fs::File;
+use std::io::Write;
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Gathers RFD management commands")]
@@ -87,15 +99,95 @@ pub(crate) struct GenerateRFDs {
     pub generate_rfd_command: GenerateRFDsCommand,
 }
 
+// TODO: flush this out more?
+// keeping ToC is probably fine
+// but also want to generate CSV
+// Generate README / index file
+// Update README with table (maybe even list)
 #[derive(StructOpt, Debug)]
 pub(crate) enum GenerateRFDsCommand {
-    Toc(RFDToc),
+    Toc(RFDToc), // template, csv file. what is the snippet?
+    Csv(RFDCsv),
+    File(RFDFile),
+    // TODO: CSV - path, if exists just update. What about supporting it in another branch/remote. what about committing to that branch? flag for commit and commit message?
+    // TODO: File - // template and path to where file should be created
     Graph(RFDGraph),
+}
+
+// optional file means to stdout
+// add overwrite flag to not modify existing
+// remote? commit message?
+#[derive(StructOpt, Debug)]
+#[structopt(about = "Generates RFD CSV")]
+pub(crate) struct RFDCsv {
+
+    #[structopt(long, short, help = "Directory of RFDs")]
+    pub directory: Option<String>,
+
+    // output_path
+    #[structopt(long, short, parse(from_os_str), help = "")]
+    pub path: Option<PathBuf>, // where to write file to. stdout if not provided
+
+    #[structopt(long, short, help = "")]
+    pub fields: Vec<String>, // which fields to include? default to all (*). should this just be a comma separate list?
+
+    #[structopt(long, short, help = "")]
+    pub overwrite: bool,
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(about = "Generates RFD File")]
+pub(crate) struct RFDFile {
+
+    #[structopt(long, short, help = "Directory of RFDs")]
+    pub directory: Option<String>,
+
+    #[structopt(
+        long,
+        short,
+        help = "Template that will be used to generate file. \
+                If not present use value from config otherwise default template based on \
+                output_path extension will be used. See <location> for default template"
+    )]
+    pub template: Option<String>, // optional. use config, use provided here. use default
+
+    // output_path
+    #[structopt(
+        long,
+        short,
+        parse(from_os_str),
+        help = "Path to file which to write table of contents to. File must contain snippet. \
+                If not present ToC will be written to stdout"
+    )]
+    pub path: PathBuf, // where to write file to. required
+
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Generates RFD table of contents (Toc) to stdout")]
 pub(crate) struct RFDToc {
+    #[structopt(long, short, help = "Directory of RFDs")]
+    pub directory: Option<String>,
+
+    #[structopt(
+        long,
+        short,
+        help = "Template that will be used to generate file. \
+                If not present use value from config otherwise default template based on \
+                output_path extension will be used. See <location> for default template"
+    )]
+    pub template: Option<String>, // optional. use config, use provided here. use default
+
+    #[structopt(
+        long,
+        short,
+        parse(from_os_str),
+        help = "Path to file which to write table of contents to. File must contain snippet. \
+                If not present ToC will be written to stdout"
+    )]
+    pub output_path: PathBuf, // where to write file to. required
+
+
     #[structopt(long, short, help = "")]
     pub intro: Option<String>,
 
@@ -118,6 +210,9 @@ pub(crate) struct RFDToc {
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Create RFD Graph")]
 pub(crate) struct RFDGraph {
+    #[structopt(long, short, help = "Directory of RFDs")]
+    pub directory: Option<String>,
+
     #[structopt(long, short, help = "")]
     pub intro: Option<String>,
 
@@ -152,7 +247,7 @@ pub(crate) fn init_rfd(
     directory: Option<String>,
     structure: FileStructure,
     extension: TemplateExtension
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+) -> Result<PathBuf> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
         Err(_) => Default::default(),
@@ -185,7 +280,7 @@ pub(crate) fn new_rfd(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+) -> Result<PathBuf> {
     let dir = SETTINGS.get_rfd_dir();
     let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number =
@@ -213,6 +308,12 @@ pub(crate) fn new_rfd(
     starting_content = starting_content
         .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
 
+    let mut context = TeraContext::new();
+    context.insert("number", &reserve_number);
+    context.insert("title", &title);
+    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
+    context.insert("status", "Accepted");
+
     let edited = edit::edit(&starting_content)?;
     fs::write(&rfd_path, edited)?;
 
@@ -223,7 +324,7 @@ pub(crate) fn reserve_rfd(
     number: Option<i32>,
     title: String,
     extension: TemplateExtension,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let dir = SETTINGS.get_rfd_dir();
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
@@ -231,7 +332,7 @@ pub(crate) fn reserve_rfd(
     // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
-        return Err(String::from("branch already exists in remote. Please pull.").into());
+        return Err(git2::Error::from_str("branch already exists in remote. Please pull.").into());
     }
 
     git::checkout_branch(&repo, reserve_number.to_string().as_str());

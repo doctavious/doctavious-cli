@@ -9,6 +9,7 @@ mod changelog;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use serde::de::Error;
+use crate::doctavious_error::EnumError;
 
 lazy_static! {
     pub static ref STRIP_PARTS: HashMap<&'static str, StripParts> = {
@@ -120,13 +121,13 @@ impl<'de> Deserialize<'de> for StripParts {
                 eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
                 // TODO: was having an issue with lifetimes / borrow with using variants.
                 // find a better way to do this.
-                Err(D::Error::unknown_field(e.as_str(), &["header", "footer", "all"]))
+                Err(D::Error::unknown_field(e.message.as_str(), &["header", "footer", "all"]))
             }
         };
     }
 }
 
 
-pub(crate) fn parse_strip_parts(src: &str) -> Result<StripParts, String> {
+pub(crate) fn parse_strip_parts(src: &str) -> Result<StripParts, EnumError> {
     parse_enum(&STRIP_PARTS, src)
 }

@@ -1,3 +1,5 @@
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+
 // idea from rusty-hook and left-hook
 // TODO: flush this out more
 
@@ -28,11 +30,13 @@ const HOOK_NAMES: [&str; 21] = [
     "post-index-change"
 ];
 
+#[derive(Debug, Clone, serde_derive::Serialize, serde_derive::Deserialize)]
 struct GitHooks {
     hooks: Vec<Hook>,
 }
 
-struct Hook {
+#[derive(Debug, Clone, serde_derive::Serialize, serde_derive::Deserialize)]
+pub struct Hook {
     name: String,
     parallel: bool,
     piped: bool, // If any command in the sequence fails, the other will not be executed.
@@ -79,7 +83,7 @@ struct Script {
 //     - frontend
 
 
-
+#[derive(Debug, Clone, serde_derive::Serialize, serde_derive::Deserialize)]
 struct HookCommand {
     name: String,
     tags: Vec<String>,

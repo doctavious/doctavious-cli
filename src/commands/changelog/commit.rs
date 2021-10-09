@@ -54,7 +54,7 @@ impl Commit<'_> {
     pub fn process(
         &self,
         parsers: Option<&Vec<CommitParser>>,
-        filter_commits: Option<bool>,
+        filter_commits: bool,
         conventional_commits: bool,
     ) -> Result<Self> {
         let mut commit = self.clone();
@@ -62,7 +62,7 @@ impl Commit<'_> {
             commit = commit.into_conventional()?;
         }
         if let Some(parsers) = parsers {
-            commit = commit.into_category(parsers, filter_commits.unwrap_or(false))?;
+            commit = commit.into_category(parsers, filter_commits)?;
         }
         Ok(commit)
     }

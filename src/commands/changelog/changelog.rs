@@ -5,7 +5,7 @@
 // TODO: I like cockroachdb's release note and release justification style
 
 use structopt::StructOpt;
-use crate::commands::changelog::StripParts;
+use crate::commands::changelog::{StripParts, ChangelogConfig};
 use std::path::PathBuf;
 use crate::commands::changelog::parse_strip_parts;
 use crate::constants::DEFAULT_CONFIG_NAME;
@@ -22,13 +22,18 @@ use crate::doctavious_error::{
 };
 use crate::commands::changelog::release::Release;
 use crate::commands::changelog::commit::Commit;
-
+use crate::settings::{
+    load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings, ChangelogSettings,
+    SETTINGS,
+};
+use crate::templates::Templates;
 use log::warn;
+use std::io::Write;
 
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers ADR management commands")]
-pub(crate) struct Changelog {
+#[structopt(about = "Gathers Changelog management commands")]
+pub(crate) struct ChangelogOpt {
     #[structopt(subcommand)]
     pub changelog_command: ChangelogCommand,
 }
@@ -89,6 +94,7 @@ pub(crate) struct GenerateChangeLog {
     #[structopt(short, long, value_name = "PATH")]
     pub workdir: Option<PathBuf>,
 
+    // TODO: support multiple
     /// Sets the repository to parse commits from.
     #[structopt(short, long, value_name = "PATH")]
     pub repository: Option<PathBuf>,
@@ -141,6 +147,140 @@ pub(crate) struct GenerateChangeLog {
     pub range: Option<String>,
 }
 
+/// Changelog generator.
+#[derive(Debug)]
+pub struct Changelog<'a> {
+    releases: Vec<Release<'a>>,
+    template: Templates, // TODO: change to Template
+    // config:   &'a Config,
+    // config: ChangelogConfig
+    config: &'a ChangelogSettings
+}
+
+impl<'a> Changelog<'a> {
+    /// Constructs a new instance.
+    pub fn new(releases: Vec<Release<'a>>, config: &'a ChangelogSettings) -> Result<Self> {
+        let mut changelog = Self {
+            releases,
+            template: Templates::new({
+                let mut template = config.body.to_string();
+                if config.trim {
+                    template = template
+                        .lines()
+                        .map(|v| v.trim())
+                        .collect::<Vec<&str>>()
+                        .join("\n")
+                }
+                template
+            })?,
+            config,
+        };
+        changelog.process_commits();
+        changelog.process_releases();
+        Ok(changelog)
+    }
+
+    /// Processes the commits and omits the ones that doesn't match the
+    /// criteria set by configuration file.
+    fn process_commits(&mut self) {
+        log::debug!("Processing the commits...");
+        let config = &self.config.git;
+        self.releases.iter_mut().for_each(|release| {
+            release.commits = release
+                .commits
+                .iter()
+                .filter_map(|commit| {
+                    match commit.process(
+                        config.commit_parsers.as_ref(),
+                        config.filter_commits,
+                        config.conventional_commits,
+                    ) {
+                        Ok(commit) => Some(commit),
+                        Err(e) => {
+                            log::trace!(
+								"{} - {:?} ({})",
+								commit.id[..7].to_string(),
+								e,
+								commit
+									.message
+									.lines()
+									.next()
+									.unwrap_or_default()
+									.trim()
+							);
+                            None
+                        }
+                    }
+                })
+                .collect::<Vec<Commit>>();
+        });
+    }
+
+    /// Processes the releases and filters them out based on the configuration.
+    fn process_releases(&mut self) {
+        log::debug!("Processing the releases...");
+        let skip_regex = self.config.git.skip_tags.as_ref();
+        self.releases = self
+            .releases
+            .clone()
+            .into_iter()
+            .rev()
+            .filter(|release| {
+                if release.commits.is_empty() {
+                    if let Some(version) = release.version.as_ref().cloned() {
+                        log::trace!("Release doesn't have any commits: {}", version);
+                    }
+                    false
+                } else if let Some(version) = &release.version {
+                    !skip_regex
+                        .map(|r| {
+                            let skip_tag = r.is_match(version);
+                            if skip_tag {
+                                log::trace!("Skipping release: {}", version)
+                            }
+                            skip_tag
+                        })
+                        .unwrap_or_default()
+                } else {
+                    true
+                }
+            })
+            .collect();
+    }
+
+    /// Generates the changelog and writes it to the given output.
+    pub fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
+        log::debug!("Generating changelog...");
+        if let Some(header) = &self.config.header {
+            write!(out, "{}", header)?;
+        }
+        for release in &self.releases {
+            write!(out, "{}", self.template.render(release)?)?;
+        }
+        if let Some(footer) = &self.config.footer {
+            write!(out, "{}", footer)?;
+        }
+        Ok(())
+    }
+
+    /// Generates a changelog and prepends it to the given changelog.
+    pub fn prepend<W: Write>(
+        &self,
+        mut changelog: String,
+        out: &mut W,
+    ) -> Result<()> {
+        log::debug!("Generating changelog and prepending...");
+        if let Some(header) = &self.config.header {
+            changelog = changelog.replacen(header, "", 1);
+        }
+        self.generate(out)?;
+        write!(out, "{}", changelog)?;
+        Ok(())
+    }
+}
+
+
+
 pub(crate) fn init_changelog() {
 
 }
@@ -151,9 +291,14 @@ pub(crate) fn generate_changelog(
 {
     // TODO: get config/settings default if not present
 
+    // TODO: get repository from arg/env
     // Initialize the git repository.
     let repository =
         Repository::init(args.repository.unwrap_or(env::current_dir()?))?;
+
+    let config = load_settings()?
+        .changelog_settings
+        .ok_or(DoctaviousError::ChangelogError(String::from("changelog configuration not found")))?;
 
     // Parse tags.
     let mut tags = git::tags(&repository, &config.git.tag_pattern)?;
@@ -229,11 +374,10 @@ pub(crate) fn generate_changelog(
     let changelog = Changelog::new(releases, &config)?;
     if let Some(path) = args.prepend {
         changelog.prepend(fs::read_to_string(&path)?, &mut File::create(path)?)
-    } else if let Some(path) = args.output {
+    } else if let Some(path) = args.file {
         changelog.generate(&mut File::create(path)?)
     } else {
         changelog.generate(&mut io::stdout())
     }
 
-    return Ok(());
 }

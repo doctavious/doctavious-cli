@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
-use crate::constants::DEFAULT_CONFIG_NAME;
+use crate::constants::{DEFAULT_CONFIG_NAME, DEFAULT_ADR_TEMPLATE_PATH};
 use std::collections::HashMap;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
@@ -23,6 +23,8 @@ mod utils;
 mod git;
 mod output;
 mod doctavious_error;
+mod markdown;
+mod frontmatter;
 
 use crate::commands::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr};
 use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd};
@@ -37,7 +39,9 @@ use crate::settings::{
 use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
 use crate::utils::{format_number, is_valid_file, parse_enum};
 use std::error::Error;
-use crate::output::Output;
+use crate::output::{Output, parse_output, print_output};
+use crate::doctavious_error::{Result as DoctaviousResult, EnumError};
+use crate::utils::list;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Doctavious")]
@@ -127,111 +131,10 @@ struct Presentation {
     preview: bool,
 }
 
-lazy_static! {
-    static ref OUTPUT_TYPES: HashMap<&'static str, Output> = {
-        let mut map = HashMap::new();
-        map.insert("json", Output::Json);
-        map.insert("text", Output::Text);
-        map
-    };
-}
-
-fn parse_output(src: &str) -> Result<Output, String> {
-    parse_enum(&OUTPUT_TYPES, src)
-}
-
-fn print_output<A: std::fmt::Display + Serialize>(
-    output: Output,
-    value: A,
-) -> Result<(), Box<dyn std::error::Error>> {
-    match output {
-        Output::Json => {
-            serde_json::to_writer_pretty(std::io::stdout(), &value)?;
-            Ok(())
-        }
-        Output::Text => {
-            println!("{}", value);
-            Ok(())
-        }
-        Output::Table => {
-            todo!()
-        }
-    }
-}
-
-struct List<A>(Vec<A>);
-
-impl<A> Debug for List<A>
-where
-    A: Debug,
-{
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        for value in self.0.iter() {
-            writeln!(f, "{:?}", value)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<A> Display for List<A>
-where
-    A: Display,
-{
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        for value in self.0.iter() {
-            writeln!(f, "{}", value)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<A> serde::ser::Serialize for List<A>
-where
-    A: serde::ser::Serialize,
-{
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-    where
-        S: Serializer,
-    {
-        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
-        for elem in self.0.iter() {
-            seq.serialize_element(elem)?;
-        }
-
-        seq.end()
-    }
-}
-
-/// Remove the `./` prefix from a path.
-fn strip_current_dir(path: &Path) -> &Path {
-    return path.strip_prefix(".").unwrap_or(path);
-}
-
-/// get output based on following order of precednece
-/// output argument (--output)
-/// env var DOCTAVIOUS_DEFAULT_OUTPUT
-/// config file overrides output default -- TODO: implement
-/// Output default
-fn get_output(opt_output: Option<Output>) -> Output {
-    match opt_output {
-        Some(o) => o,
-        None => {
-            match env::var("DOCTAVIOUS_DEFAULT_OUTPUT") {
-                Ok(val) => parse_output(&val).unwrap(), // TODO: is unwrap ok here?
-                Err(_) => Output::default(), // TODO: implement output via settings/config file
-            }
-        }
-    }
-}
-
-fn init_dir(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn init_dir(dir: &str) -> DoctaviousResult<()> {
     // TODO: create_dir_all doesnt appear to throw AlreadyExists. Confirm this
     // I think this is fine just need to make sure that we dont overwrite initial file
+    println!("{}", format!("creating dir {}", dir));
     let create_dir_result = fs::create_dir_all(dir);
     match create_dir_result {
         Ok(_) => Ok(()),
@@ -295,32 +198,7 @@ fn get_content(
     };
 }
 
-fn list(dir: &str, opt_output: Option<Output>) {
-    match fs::metadata(&dir) {
-        Ok(_) => {
-            let mut f: Vec<_> = WalkDir::new(&dir)
-                .into_iter()
-                .filter_map(Result::ok)
-                .filter(|e| e.file_type().is_file())
-                .filter(|f| is_valid_file(&f.path()))
-                .map(|f| {
-                    String::from(strip_current_dir(&f.path()).to_str().unwrap())
-                })
-                .collect();
-
-            f.sort();
-            print_output(get_output(opt_output), List(f)).unwrap();
-        }
-        Err(e) => match e.kind() {
-            ErrorKind::NotFound => {
-                eprintln!("the {} directory should exist", dir)
-            }
-            _ => eprintln!("Error occurred: {:?}", e),
-        },
-    }
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> DoctaviousResult<()> {
     let opt = Opt::from_args();
     if opt.debug {
         std::env::set_var("RUST_LOG", "debug");
@@ -402,7 +280,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 init_dir(SETTINGS.get_adr_dir())?;
 
                 let extension = SETTINGS.get_adr_template_extension(params.extension);
-                return match new_adr(params.number, params.title, extension) {
+                return match new_adr(params.number, params.title, extension, DEFAULT_ADR_TEMPLATE_PATH) {
                     Ok(_) => Ok(()),
                     Err(err) => Err(err)
                 };
@@ -465,6 +343,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     GenerateRFDsCommand::Graph(params) => {}
+                    GenerateRFDsCommand::Csv(_) => {}
+                    GenerateRFDsCommand::File(_) => {}
                 }
             }
 

@@ -1,1 +1,1 @@
-mod githooks;
+pub mod githooks;

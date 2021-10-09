@@ -1,4 +1,5 @@
 use crate::utils::parse_enum;
+use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
@@ -65,7 +66,7 @@ impl<'de> Deserialize<'de> for FileStructure {
         let structure = match parse_file_structure(&s) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
+                eprintln!("Error when parsing {}, fallback to default settings. Error: {:?}\n", s, e);
                 FileStructure::default()
             }
         };
@@ -73,6 +74,6 @@ impl<'de> Deserialize<'de> for FileStructure {
     }
 }
 
-pub(crate) fn parse_file_structure(src: &str) -> Result<FileStructure, String> {
+pub(crate) fn parse_file_structure(src: &str) -> Result<FileStructure, EnumError> {
     parse_enum(&FILE_STRUCTURES, src)
 }

@@ -15,6 +15,17 @@
 // --output  - overrides env var and config
 // TODO: RFD / ADR meta frontmatter
 // Create ADR from RFD - essentially a link similar to linking ADRs to one another
+// ADR generate should take in a template?
+// How to specify just to inject into existing markdown?
+// generate csv - create/update CSV of rfds
+// generate file - given a custom template generate file
+// generate toc - generate table and insert into existing file. could this be a template as well? why not?
+// generate graph - generate graph
+
+// Extract frontmatter and use that for ADR and RFD tables
+// https://www.11ty.dev/docs/data-frontmatter-customize/
+// https://crates.io/crates/gray_matter
+
 
 // TODO: automatically update README(s) / CSVs
 // or at the very least lint
@@ -79,9 +90,11 @@
 
 // add command to automatically update README on master as a git hook
 // After your branch is pushed, the table in the README on the master branch will update automatically with the new RFD.
+// git hook should be able to curl for hook. see python pre-commit hook. something related to gitlab
 
 integrate tera in our templates
 
 integrate unified/remark to build/edit AST while we work on marcup
 
+add #[non_exhaustive] to enums. Add Other or something
 
