@@ -10,6 +10,8 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use serde::de::Error;
 use crate::doctavious_error::EnumError;
+use clap::{ArgEnum, PossibleValue};
+
 
 lazy_static! {
     pub static ref STRIP_PARTS: HashMap<&'static str, StripParts> = {
@@ -69,12 +71,21 @@ pub struct CommitParser {
     pub skip: Option<bool>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(ArgEnum, Clone, Copy, Debug)]
 pub enum StripParts {
     Header,
     Footer,
     All,
 }
+
+impl StripParts {
+    pub fn possible_values() -> impl Iterator<Item = PossibleValue<'static>> {
+        StripParts::value_variants()
+            .iter()
+            .filter_map(ArgEnum::to_possible_value)
+    }
+}
+
 
 impl StripParts {
 

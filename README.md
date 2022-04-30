@@ -44,6 +44,14 @@ footers other than BREAKING CHANGE: <description> may be provided and follow a c
 
 We could also have a release sub command that runs a script to increment version based on the above
 
+
+https://github.com/crate-ci/committed
+Enforce commit standards, whether for:
+- Readability, especially in logs
+- Consistent styling
+- Compatibility with programmatic processing
+.pre-commit 
+
 ### Custom
 
 custom example would be something like cockroachdb. 
@@ -103,3 +111,22 @@ rfd graph | dot -Tpng -o rfd.png
 - Roam style knowledge graph
 - git changelogs / releases
 - snippets
+
+if I plan to split out changelog / releases name should be related to J. Jonah Jameson publisher of the Daily Bugle. Thought process went from "ship it" -> "release it" -> "publish" -> "publisher". "shipit" crate was already take.
+
+i'm still not sure if it makes sense to keep changelogs and releases together.
+
+https://github.com/gembaadvantage/uplift has the following 
+- bump
+- changelog
+- tag 
+- release (combines the above)
+
+has support for pre-release suffix for tag, bump, release commands
+
+for releases need a way to identify starting commit - likely candidate is tag
+
+what about MRs? is there a way to bump version numbers when merging where you arent tagging?
+
+
+generate Fig completions for clap based CLIs https://github.com/clap-rs/clap/tree/24a2f3a90153bbb7a7c362818aef8149f7a01722/clap_complete_fig

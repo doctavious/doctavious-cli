@@ -4,7 +4,7 @@
 // TODO: custom example would be something like cockroachdb
 // TODO: I like cockroachdb's release note and release justification style
 
-use structopt::StructOpt;
+use clap::Parser;
 use crate::commands::changelog::{StripParts, ChangelogConfig};
 use std::path::PathBuf;
 use crate::commands::changelog::parse_strip_parts;
@@ -15,6 +15,7 @@ use std::fs::{
     File,
 };
 use std::{io, env};
+use std::collections::HashMap;
 use crate::git;
 use crate::doctavious_error::{
     DoctaviousError,
@@ -31,44 +32,44 @@ use log::warn;
 use std::io::Write;
 
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers Changelog management commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers Changelog management commands")]
 pub(crate) struct ChangelogOpt {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub changelog_command: ChangelogCommand,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum ChangelogCommand {
     Init(InitChangelog),
     Generate(GenerateChangeLog)
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Init Changelog")]
+#[derive(Parser, Debug)]
+#[clap(about = "Init Changelog")]
 pub(crate) struct InitChangelog {
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Header text that will be added to the beginning of the changelog."
     )]
     pub header: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Body template that represents a single release in the changelog."
     )]
     pub body: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Footer text that will be added to the end of the changelog."
     )]
     pub footer: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "If set to true, leading and trailing whitespaces are removed from the body."
@@ -77,12 +78,12 @@ pub(crate) struct InitChangelog {
 }
 
 // rename_all_env = "screaming-snake"
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Generate Changelog")]
+#[derive(Parser, Debug)]
+#[clap(about = "Generate Changelog")]
 pub(crate) struct GenerateChangeLog {
 
     /// Sets the configuration file.
-    #[structopt(
+    #[clap(
         long,
         short,
         default_value = DEFAULT_CONFIG_NAME,
@@ -91,20 +92,20 @@ pub(crate) struct GenerateChangeLog {
     pub config: PathBuf,
 
     /// Sets the working directory.
-    #[structopt(short, long, value_name = "PATH")]
+    #[clap(short, long, value_name = "PATH")]
     pub workdir: Option<PathBuf>,
 
     // TODO: support multiple
     /// Sets the repository to parse commits from.
-    #[structopt(short, long, value_name = "PATH")]
+    #[clap(short, long, value_name = "PATH")]
     pub repository: Option<PathBuf>,
     // defaults to current directory. env::current_dir()
 
     // TODO: this can just be a boolean
-    #[structopt(long, short, value_name = "PATH", help = "Prepends entries to the given changelog file.")]
+    #[clap(long, short, value_name = "PATH", help = "Prepends entries to the given changelog file.")]
     pub prepend: Option<PathBuf>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         value_name = "PATH",
@@ -113,10 +114,10 @@ pub(crate) struct GenerateChangeLog {
     pub file: Option<PathBuf>,
 
     // Sets the tag for the latest version [env: TAG=]
-    #[structopt(long, short, help = "The tag to use for the latest version")]
+    #[clap(long, short, help = "The tag to use for the latest version")]
     pub tag: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         value_name = "TEMPLATE",
@@ -125,25 +126,26 @@ pub(crate) struct GenerateChangeLog {
     pub body: Option<String>,
 
     // TODO: include possible values
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        possible_values = &StripParts::variants(),
+        // possible_values = StripParts::possible_values(),
         parse(try_from_str = parse_strip_parts),
         help = "The configuration file to use."
     )]
     pub strip: Option<StripParts>,
 
     /// Processes the commits starting from the latest tag.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub latest: bool,
 
     /// Processes the commits that do not belong to a tag.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub unreleased: bool,
 
     /// Sets the commit range to process.
-    #[structopt(value_name = "RANGE")]
+    #[clap(value_name = "RANGE")]
     pub range: Option<String>,
 }
 
@@ -162,7 +164,7 @@ impl<'a> Changelog<'a> {
     pub fn new(releases: Vec<Release<'a>>, config: &'a ChangelogSettings) -> Result<Self> {
         let mut changelog = Self {
             releases,
-            template: Templates::new({
+            template: Templates::new_with_templates({
                 let mut template = config.body.to_string();
                 if config.trim {
                     template = template
@@ -171,7 +173,7 @@ impl<'a> Changelog<'a> {
                         .collect::<Vec<&str>>()
                         .join("\n")
                 }
-                template
+                HashMap::from([("release", template)])
             })?,
             config,
         };
@@ -255,7 +257,7 @@ impl<'a> Changelog<'a> {
             write!(out, "{}", header)?;
         }
         for release in &self.releases {
-            write!(out, "{}", self.template.render(release)?)?;
+            write!(out, "{}", self.template.render("release", release)?)?;
         }
         if let Some(footer) = &self.config.footer {
             write!(out, "{}", footer)?;

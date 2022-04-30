@@ -1,6 +1,7 @@
 [adr]
-dir = "docs/adr"
+dir = "/var/folders/jm/1m24fjf96xv_458bclbpd1xh0000gn/T/.tmp9CM5at"
 structure = "flat"
+template_extension = "md"
 
 [rfd]
 dir = "docs/rfd"
@@ -11,6 +12,8 @@ template_extension = "md"
 dir = "docs/til"
 template_extension = "md"
 
-# TODO: snippets
-# TODO: changelog
-# TODO: githooks
+# snippets
+
+# scm
+
+

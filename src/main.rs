@@ -10,7 +10,7 @@ use std::fs::{self};
 use std::io::ErrorKind;
 use std::io::{self};
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
+use clap::Parser;
 use walkdir::WalkDir;
 
 mod commands;
@@ -25,11 +25,14 @@ mod output;
 mod doctavious_error;
 mod markdown;
 mod frontmatter;
+mod scm;
+mod keyring;
+mod markup_format;
 
-use crate::commands::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr};
-use crate::commands::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd};
+use crate::commands::design_decisions::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr, graph_adrs};
+use crate::commands::design_decisions::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd, graph_rfds};
 use crate::commands::til::{build_til_readme, Til, TilCommand, new_til, init_til};
-use crate::commands::{build_toc, get_leading_character};
+use crate::commands::{build_toc};
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
 use crate::file_structure::FileStructure;
 use crate::settings::{
@@ -43,17 +46,17 @@ use crate::output::{Output, parse_output, print_output};
 use crate::doctavious_error::{Result as DoctaviousResult, EnumError};
 use crate::utils::list;
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "Doctavious")]
+#[derive(Parser, Debug)]
+#[clap(name = "Doctavious")]
 pub struct Opt {
-    #[structopt(
+    #[clap(
         long,
         help = "Prints a verbose output during the program execution",
         global = true
     )]
     debug: bool,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         parse(try_from_str = parse_output),
@@ -62,7 +65,7 @@ pub struct Opt {
     )]
     pub(crate) output: Option<Output>,
 
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Command,
 }
 
@@ -74,7 +77,7 @@ lazy_static! {
     };
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 enum Command {
     RFD(RFD),
     Adr(ADR),
@@ -82,16 +85,16 @@ enum Command {
     Presentation(Presentation),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Presentation commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Presentation commands")]
 struct Presentation {
-    #[structopt(
+    #[clap(
         long,
         help = "Output file path (or directory input-dir is passed)"
     )]
     output_dir: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "The base directory to find markdown and theme CSS"
@@ -121,13 +124,13 @@ struct Presentation {
     //                                            [string]
     // --no-config-file, --no-config  Prevent looking up for a configuration file
     //                                           [boolean]
-    #[structopt(long, short, help = "Watch input markdowns for changes")]
+    #[clap(long, short, help = "Watch input markdowns for changes")]
     watch: bool,
 
-    #[structopt(long, short, help = "Enable server mode")]
+    #[clap(long, short, help = "Enable server mode")]
     server: bool,
 
-    #[structopt(long, short, help = "Open preview window")]
+    #[clap(long, short, help = "Open preview window")]
     preview: bool,
 }
 
@@ -199,7 +202,7 @@ fn get_content(
 }
 
 fn main() -> DoctaviousResult<()> {
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     if opt.debug {
         std::env::set_var("RUST_LOG", "debug");
         env_logger::init();
@@ -248,6 +251,7 @@ fn main() -> DoctaviousResult<()> {
                     }
 
                     GenerateAdrsCommand::Graph(params) => {
+                        graph_adrs();
                         // Generates a visualisation of the links between decision records in
                         // Graphviz format.  This can be piped into the graphviz tools to
                         // generate a an image file.
@@ -342,7 +346,9 @@ fn main() -> DoctaviousResult<()> {
                         );
                     }
 
-                    GenerateRFDsCommand::Graph(params) => {}
+                    GenerateRFDsCommand::Graph(params) => {
+                        graph_rfds()
+                    }
                     GenerateRFDsCommand::Csv(_) => {}
                     GenerateRFDsCommand::File(_) => {}
                 }

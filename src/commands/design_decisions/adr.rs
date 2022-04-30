@@ -1,10 +1,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use clap::Parser;
 use chrono::Utc;
+use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::{Branches, BranchType, Direction, Repository};
 use regex::Regex;
-use structopt::StructOpt;
 
 use crate::{edit, init_dir};
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH};
@@ -13,7 +14,7 @@ use crate::file_structure::parse_file_structure;
 use crate::git;
 use crate::settings::{AdrSettings, load_settings, persist_settings, SETTINGS};
 use crate::templates::{
-    get_template, parse_template_extension, TemplateExtension,
+    parse_template_extension, TemplateExtension,
 };
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use crate::doctavious_error::Result;
@@ -23,15 +24,16 @@ use tera::{
     Tera,
     Value,
 };
+use crate::commands::design_decisions::get_template;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers ADR management commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers ADR management commands")]
 pub(crate) struct ADR {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub adr_command: ADRCommand,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum ADRCommand {
     Init(InitADR),
     Generate(GenerateADRs),
@@ -41,26 +43,28 @@ pub(crate) enum ADRCommand {
     Reserve(ReserveADR),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "init", about = "Init ADR")]
+#[derive(Parser, Debug)]
+#[clap(name = "init", about = "Init ADR")]
 pub(crate) struct InitADR {
-    #[structopt(long, short, help = "Directory to store ADRs")]
+    #[clap(long, short, help = "Directory to store ADRs")]
     pub directory: Option<String>,
 
-    #[structopt(
+    #[clap(
+    arg_enum,
     long,
     short,
-    default_value,
-    possible_values = & FileStructure::variants(),
+    default_value_t,
+    // possible_values = &FileStructure::variants(),
     parse(try_from_str = parse_file_structure),
     help = "How ADRs should be structured"
     )]
     pub structure: FileStructure,
 
-    #[structopt(
+    #[clap(
+    arg_enum,
     long,
     short,
-    possible_values = & TemplateExtension::variants(),
+    // possible_values = &TemplateExtension::variants(),
     parse(try_from_str = parse_template_extension),
     help = "Extension that should be used"
     )]
@@ -68,26 +72,27 @@ pub(crate) struct InitADR {
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
-#[derive(StructOpt, Debug)]
-#[structopt(name = "new", about = "New ADR")]
+#[derive(Parser, Debug)]
+#[clap(name = "new", about = "New ADR")]
 pub(crate) struct NewADR {
-    #[structopt(long, short, help = "ADR Number")]
+    #[clap(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[structopt(long, short, help = "title of ADR")]
+    #[clap(long, short, help = "title of ADR")]
     pub title: String,
 
-    #[structopt(
+    #[clap(
+    arg_enum,
     long,
     short,
-    possible_values = & TemplateExtension::variants(),
+    // possible_values = & TemplateExtension::variants(),
     parse(try_from_str = parse_template_extension),
     help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 
-    #[structopt(
+    #[clap(
     long,
     short,
     help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
@@ -100,32 +105,32 @@ pub(crate) struct NewADR {
     // LINK is the description of the link created in the new ADR.
     // REVERSE-LINK is the description of the link created in the
     // existing ADR that will refer to the new ADR.
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub link: Option<Vec<String>>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "list", about = "List ADRs")]
+#[derive(Parser, Debug)]
+#[clap(name = "list", about = "List ADRs")]
 pub(crate) struct ListADRs {}
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "link", about = "Link ADRs")]
+#[derive(Parser, Debug)]
+#[clap(name = "link", about = "Link ADRs")]
 pub(crate) struct LinkADRs {
-    #[structopt(long, short, help = "Reference number of source ADR")]
+    #[clap(long, short, help = "Reference number of source ADR")]
     pub source: i32,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[structopt(
+    #[clap(
     long,
     short,
     help = "Description of the link created in the new ADR"
     )]
     pub link: String,
 
-    #[structopt(long, short, help = "Reference number of target ADR")]
+    #[clap(long, short, help = "Reference number of target ADR")]
     pub target: i32,
 
-    #[structopt(
+    #[clap(
     long,
     short,
     help = "Description of the link created in the existing ADR that will refer to new ADR"
@@ -133,62 +138,63 @@ pub(crate) struct LinkADRs {
     pub reverse_link: String,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers generate ADR commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers generate ADR commands")]
 pub(crate) struct GenerateADRs {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub generate_adr_command: GenerateAdrsCommand,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum GenerateAdrsCommand {
     Toc(AdrToc),
     Graph(AdrGraph),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Generates ADR table of contents (Toc) to stdout")]
+#[derive(Parser, Debug)]
+#[clap(about = "Generates ADR table of contents (Toc) to stdout")]
 pub(crate) struct AdrToc {
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub intro: Option<String>,
 
-    #[structopt(long, help = "")]
+    #[clap(long, help = "")]
     pub outro: Option<String>,
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
+    #[clap(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
     pub format: Option<TemplateExtension>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Create ADR Graph")]
+#[derive(Parser, Debug)]
+#[clap(about = "Create ADR Graph")]
 pub(crate) struct AdrGraph {
-    #[structopt(long, short, help = "")]
-    pub intro: Option<String>,
+    #[clap(long, short, help = "Directory of ADRs")]
+    pub directory: Option<String>,
 
-    #[structopt(long, help = "")]
-    pub outro: Option<String>,
+    // TODO: what to default to?
+    #[clap(long, short, help = "")]
+    pub link_extension: Option<String>,
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub link_prefix: Option<String>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "reserve", about = "Reserve ADR")]
+#[derive(Parser, Debug)]
+#[clap(name = "reserve", about = "Reserve ADR")]
 pub(crate) struct ReserveADR {
-    #[structopt(long, short, help = "ADR Number")]
+    #[clap(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[structopt(long, short, help = "title of ADR")]
+    #[clap(long, short, help = "title of ADR")]
     pub title: String,
 
-    #[structopt(
+    #[clap(
     long,
     short,
-    possible_values = & TemplateExtension::variants(),
+    // possible_values = &TemplateExtension::variants(),
     parse(try_from_str = parse_template_extension),
     help = "Extension that should be used"
     )]
@@ -348,6 +354,17 @@ pub(crate) fn generate_csv() {
 
 }
 
+pub(crate) fn graph_adrs() {
+    let graph = GraphBuilder::new_named_directed("example")
+        .add_node(Node::new("N0"))
+        .add_node(Node::new("N1"))
+        .add_edge(Edge::new("N0", "N1"))
+        .build()
+        .unwrap();
+
+    let dot = Dot { graph };
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -356,8 +373,8 @@ mod tests {
 
     use tempfile::{NamedTempFile, tempdir, tempfile};
 
-    use crate::commands::adr::init_adr;
     use crate::file_structure::FileStructure;
+    use crate::init_adr;
     use crate::templates::TemplateExtension;
 
     // init default

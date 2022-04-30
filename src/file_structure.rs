@@ -1,5 +1,6 @@
 use crate::utils::parse_enum;
 use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
+use clap::{ArgEnum, PossibleValue};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
@@ -14,7 +15,7 @@ lazy_static! {
     };
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(ArgEnum, Clone, Copy, Debug)]
 pub enum FileStructure {
     Flat,
     Nested,

@@ -2,25 +2,25 @@ use crate::commands::{title_string, get_leading_character};
 use crate::settings::{SETTINGS, load_settings, TilSettings, persist_settings};
 use crate::templates::{parse_template_extension, TemplateExtension};
 use crate::doctavious_error::{Result as DoctaviousResult};
+use clap::{ArgEnum, Parser};
 use chrono::{DateTime, Utc};
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{BufReader, LineWriter, Write};
+use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
 use std::{fs, io};
-use structopt::StructOpt;
 use walkdir::WalkDir;
 use crate::{edit, init_dir};
 use crate::constants::DEFAULT_TIL_DIR;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers Today I Learned (TIL) management commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers Today I Learned (TIL) management commands")]
 pub(crate) struct Til {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub til_command: TilCommand,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum TilCommand {
     Init(InitTil),
     New(NewTil),
@@ -28,44 +28,44 @@ pub(crate) enum TilCommand {
     Readme(BuildTilReadMe),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Init TIL")]
+#[derive(Parser, Debug)]
+#[clap(about = "Init TIL")]
 pub(crate) struct InitTil {
-    #[structopt(long, short, help = "Directory to store TILs")]
+    #[clap(long, short, help = "Directory to store TILs")]
     pub directory: Option<String>,
 
-    #[structopt(long, short, default_value, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[clap(arg_enum, long, short, default_value_t, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     pub extension: TemplateExtension,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "New TIL")]
+#[derive(Parser, Debug)]
+#[clap(about = "New TIL")]
 pub(crate) struct NewTil {
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
     // TODO: change to category
-    #[structopt(
+    #[clap(
         short,
         long,
         help = "TIL category. Represents the directory to place TIL entry under"
     )]
     pub category: String,
 
-    #[structopt(long, short, help = "title of the TIL entry")]
+    #[clap(long, short, help = "title of the TIL entry")]
     pub title: String,
 
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
-    #[structopt(
-        short = "T",
+    #[clap(
+        short = 'T',
         long,
         help = "Additional tags associated with the TIL entry"
     )]
     pub tags: Option<Vec<String>>,
 
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[clap(arg_enum, long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     pub extension: Option<TemplateExtension>,
 
     // TODO: should this also be a setting in TilSettings?
-    #[structopt(
+    #[clap(
         short,
         long,
         help = "Whether to build a README after a new TIL is added"
@@ -73,14 +73,14 @@ pub(crate) struct NewTil {
     pub readme: bool,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "List TILs")]
+#[derive(Parser, Debug)]
+#[clap(about = "List TILs")]
 pub(crate) struct ListTils {}
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Build TIL ReadMe")]
+#[derive(Parser, Debug)]
+#[clap(about = "Build TIL ReadMe")]
 pub(crate) struct BuildTilReadMe {
-    #[structopt(long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
+    #[clap(arg_enum, long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
     pub extension: Option<TemplateExtension>,
 }
 

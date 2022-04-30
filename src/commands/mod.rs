@@ -1,43 +1,26 @@
-use crate::templates::TemplateExtension;
+use crate::templates::{get_leading_character, TemplateExtension};
 use crate::utils::is_valid_file;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
 
-pub mod adr;
 pub mod init;
 pub mod login;
-pub mod rfd;
 pub mod telemetry;
 pub mod til;
 mod presentation;
 pub mod changelog;
 pub mod githooks;
 mod snippets;
+mod tag;
+mod bump;
+mod release;
+pub mod design_decisions;
+mod cdg;
+mod software_template;
+mod service_directory;
 
-pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
-where
-    R: BufRead,
-{
-    // TODO: swap this implementation for AST when ready
-    let leading_char = get_leading_character(extension);
-    for line in rdr.lines() {
-        let line = line.unwrap();
-        if line.starts_with(&format!("{} ", leading_char)) {
-            let last_hash = line
-                .char_indices()
-                .skip_while(|&(_, c)| c == leading_char)
-                .next()
-                .map_or(0, |(idx, _)| idx);
-
-            // Trim the leading hashes and any whitespace
-            return line[last_hash..].trim().to_string();
-        }
-    }
-
-    panic!("Unable to find title for file");
-}
-
+// TODO: not a fan of the list ToC for ADRs and RFDs
 // TODO: pass in header
 pub(crate) fn build_toc(
     dir: &str,
@@ -99,9 +82,25 @@ pub(crate) fn build_toc(
     print!("{}", content);
 }
 
-pub(crate) fn get_leading_character(extension: TemplateExtension) -> char {
-    return match extension {
-        TemplateExtension::Markdown => '#',
-        TemplateExtension::Asciidoc => '=',
-    };
+pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
+    where
+        R: BufRead,
+{
+    // TODO: swap this implementation for AST when ready
+    let leading_char = get_leading_character(extension);
+    for line in rdr.lines() {
+        let line = line.unwrap();
+        if line.starts_with(&format!("{} ", leading_char)) {
+            let last_hash = line
+                .char_indices()
+                .skip_while(|&(_, c)| c == leading_char)
+                .next()
+                .map_or(0, |(idx, _)| idx);
+
+            // Trim the leading hashes and any whitespace
+            return line[last_hash..].trim().to_string();
+        }
+    }
+
+    panic!("Unable to find title for file");
 }

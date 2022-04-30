@@ -1,7 +1,7 @@
-use structopt::StructOpt;
+use clap::Parser;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Snippet")]
+#[derive(Parser, Debug)]
+#[clap(about = "Snippet")]
 pub(crate) struct Snippet {
 
 }

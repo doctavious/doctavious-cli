@@ -27,9 +27,14 @@ pub enum DoctaviousError {
     /// Error that may occur while generating changelog.
     #[error("Changelog error: `{0}`")]
     ChangelogError(String),
+
+    /// Error that may occur while parsing the template.
+    #[error("Template parse error:\n{0}")]
+    TemplateParseError(String),
     /// Error that may occur while template operations such as parse and render.
     #[error("Template error: `{0}`")]
     TemplateError(#[from] tera::Error),
+
     // /// Error that may occur while parsing the command line arguments.
     // #[error("Argument error: `{0}`")]
     // ArgumentError(String),

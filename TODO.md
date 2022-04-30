@@ -98,3 +98,11 @@ integrate unified/remark to build/edit AST while we work on marcup
 
 add #[non_exhaustive] to enums. Add Other or something
 
+TODO: Releases  
+Look at https://github.com/googleapis/release-please  
+Support Gitlab / GitHub / Gitea  
+Need to support version bumping, release (github/gitlab/gitea), and changelog  
+How to support variety of languages and things like maven pom vs gradle
+- https://docs.github.com/en/rest/reference/repos#releases
+- https://docs.gitlab.com/ee/api/releases/
+- https://try.gitea.io/api/swagger#/repository/repoCreateRelease

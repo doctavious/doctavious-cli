@@ -6,6 +6,11 @@ use regex::Regex;
 use indexmap::IndexMap;
 use std::ops::Deref;
 
+// https://github.com/simeg/eureka/blob/master/src/git.rs
+
+
+// Latest semver tag. Need to verify as this probably doesnt take into account pre-release or build
+// git tag | sort -r --version-sort | head -n1
 
 // TODO: return a Result<bool, Error> instead?
 pub(crate) fn branch_exists(repo: &Repository, reserve_number: i32) -> bool {

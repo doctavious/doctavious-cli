@@ -5,12 +5,12 @@ use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
 use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
 use crate::templates::{
-    get_template, parse_template_extension, TemplateExtension,
+    parse_template_extension, TemplateExtension,
 };
 use crate::utils::{build_path, ensure_path, format_number, reserve_number, get_files};
+use clap::{ArgEnum, Parser};
 use chrono::Utc;
 use std::fs;
-use structopt::StructOpt;
 use git2::Repository;
 use std::path::{PathBuf, Path};
 use tera::{
@@ -24,15 +24,17 @@ use gray_matter::Matter;
 use gray_matter::engine::YAML;
 use std::fs::File;
 use std::io::Write;
+use dotavious::{Dot, Edge, GraphBuilder, Node};
+use crate::commands::design_decisions::get_template;
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers RFD management commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers RFD management commands")]
 pub(crate) struct RFD {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub rfd_command: RFDCommand,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum RFDCommand {
     Init(InitRFD),
     New(NewRFD),
@@ -41,61 +43,64 @@ pub(crate) enum RFDCommand {
     Reserve(ReserveRFD),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Init RFD")]
+#[derive(Parser, Debug)]
+#[clap(about = "Init RFD")]
 pub(crate) struct InitRFD {
-    #[structopt(long, short, help = "Directory to store RFDs")]
+    #[clap(long, short, help = "Directory to store RFDs")]
     pub directory: Option<String>,
 
     // TODO: should we default here?
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        default_value,
-        possible_values = &FileStructure::variants(),
+        default_value_t,
+        // possible_values = &FileStructure::variants(),
         parse(try_from_str = parse_file_structure),
         help = "How RFDs should be structured"
     )]
     pub structure: FileStructure,
 
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        default_value,
-        possible_values = &TemplateExtension::variants(),
+        default_value_t,
+        // possible_values = &TemplateExtension::variants(),
         parse(try_from_str = parse_template_extension),
         help = "Extension that should be used"
     )]
     pub extension: TemplateExtension,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "New RFD")]
+#[derive(Parser, Debug)]
+#[clap(about = "New RFD")]
 pub(crate) struct NewRFD {
-    #[structopt(long, short, help = "RFD number")]
+    #[clap(long, short, help = "RFD number")]
     pub number: Option<i32>,
 
-    #[structopt(long, short, help = "title of RFD")]
+    #[clap(long, short, help = "title of RFD")]
     pub title: String,
 
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        possible_values = &TemplateExtension::variants(),
+        // possible_values = &TemplateExtension::variants(),
         parse(try_from_str = parse_template_extension),
         help = "Extension that should be used"
     )]
     pub extension: Option<TemplateExtension>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "List RFDs")]
+#[derive(Parser, Debug)]
+#[clap(about = "List RFDs")]
 pub(crate) struct ListRFDs {}
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Gathers generate RFD commands")]
+#[derive(Parser, Debug)]
+#[clap(about = "Gathers generate RFD commands")]
 pub(crate) struct GenerateRFDs {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub generate_rfd_command: GenerateRFDsCommand,
 }
 
@@ -104,7 +109,7 @@ pub(crate) struct GenerateRFDs {
 // but also want to generate CSV
 // Generate README / index file
 // Update README with table (maybe even list)
-#[derive(StructOpt, Debug)]
+#[derive(Parser, Debug)]
 pub(crate) enum GenerateRFDsCommand {
     Toc(RFDToc), // template, csv file. what is the snippet?
     Csv(RFDCsv),
@@ -117,32 +122,32 @@ pub(crate) enum GenerateRFDsCommand {
 // optional file means to stdout
 // add overwrite flag to not modify existing
 // remote? commit message?
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Generates RFD CSV")]
+#[derive(Parser, Debug)]
+#[clap(about = "Generates RFD CSV")]
 pub(crate) struct RFDCsv {
 
-    #[structopt(long, short, help = "Directory of RFDs")]
+    #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
     // output_path
-    #[structopt(long, short, parse(from_os_str), help = "")]
+    #[clap(long, short, parse(from_os_str), help = "")]
     pub path: Option<PathBuf>, // where to write file to. stdout if not provided
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub fields: Vec<String>, // which fields to include? default to all (*). should this just be a comma separate list?
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub overwrite: bool,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Generates RFD File")]
+#[derive(Parser, Debug)]
+#[clap(about = "Generates RFD File")]
 pub(crate) struct RFDFile {
 
-    #[structopt(long, short, help = "Directory of RFDs")]
+    #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Template that will be used to generate file. \
@@ -152,7 +157,7 @@ pub(crate) struct RFDFile {
     pub template: Option<String>, // optional. use config, use provided here. use default
 
     // output_path
-    #[structopt(
+    #[clap(
         long,
         short,
         parse(from_os_str),
@@ -163,13 +168,13 @@ pub(crate) struct RFDFile {
 
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Generates RFD table of contents (Toc) to stdout")]
+#[derive(Parser, Debug)]
+#[clap(about = "Generates RFD table of contents (Toc) to stdout")]
 pub(crate) struct RFDToc {
-    #[structopt(long, short, help = "Directory of RFDs")]
+    #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
-    #[structopt(
+    #[clap(
         long,
         short,
         help = "Template that will be used to generate file. \
@@ -178,7 +183,7 @@ pub(crate) struct RFDToc {
     )]
     pub template: Option<String>, // optional. use config, use provided here. use default
 
-    #[structopt(
+    #[clap(
         long,
         short,
         parse(from_os_str),
@@ -188,55 +193,55 @@ pub(crate) struct RFDToc {
     pub output_path: PathBuf, // where to write file to. required
 
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub intro: Option<String>,
 
-    #[structopt(long, help = "")]
+    #[clap(long, help = "")]
     pub outro: Option<String>,
 
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        possible_values = &TemplateExtension::variants(),
+        // possible_values = &TemplateExtension::variants(),
         parse(try_from_str = parse_template_extension),
         help = "Output format"
     )]
     pub format: Option<TemplateExtension>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Create RFD Graph")]
+#[derive(Parser, Debug)]
+#[clap(about = "Create RFD Graph")]
 pub(crate) struct RFDGraph {
-    #[structopt(long, short, help = "Directory of RFDs")]
+    #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
-    #[structopt(long, short, help = "")]
-    pub intro: Option<String>,
+    // TODO: what to default to?
+    #[clap(long, short, help = "")]
+    pub link_extension: Option<String>,
 
-    #[structopt(long, help = "")]
-    pub outro: Option<String>,
-
-    #[structopt(long, short, help = "")]
+    #[clap(long, short, help = "")]
     pub link_prefix: Option<String>,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(name = "reserve", about = "Reserve RFD")]
+#[derive(Parser, Debug)]
+#[clap(name = "reserve", about = "Reserve RFD")]
 pub(crate) struct ReserveRFD {
-    #[structopt(long, short, help = "RFD Number")]
+    #[clap(long, short, help = "RFD Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[structopt(long, short, help = "title of RFD")]
+    #[clap(long, short, help = "title of RFD")]
     pub title: String,
 
-    #[structopt(
+    #[clap(
+        arg_enum,
         long,
         short,
-        possible_values = &TemplateExtension::variants(),
+        // possible_values = &TemplateExtension::variants(),
         parse(try_from_str = parse_template_extension),
         help = "Extension that should be used"
     )]
@@ -345,4 +350,15 @@ pub(crate) fn reserve_rfd(
     git::push(&repo);
 
     return Ok(())
+}
+
+pub(crate) fn graph_rfds() {
+    let graph = GraphBuilder::new_named_directed("example")
+        .add_node(Node::new("N0"))
+        .add_node(Node::new("N1"))
+        .add_edge(Edge::new("N0", "N1"))
+        .build()
+        .unwrap();
+
+    let dot = Dot { graph };
 }

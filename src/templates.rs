@@ -2,15 +2,11 @@ use crate::utils::parse_enum;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use clap::arg_enum;
-use tera::{
-    Context as TeraContext,
-    Result as TeraResult,
-    Tera,
-    Value,
-};
+use clap::ArgEnum;
+use tera::{Context as TeraContext, Context, Function, Result as TeraResult, Tera, Value};
 use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
 use csv::ReaderBuilder;
 use log::Record;
@@ -27,7 +23,7 @@ lazy_static! {
 
 // TODO: is there a better name for this?
 // TODO: can these enums hold other attributes? extension value (adoc / md), leading char (= / #), etc
-#[derive(Clone, Copy, Debug)]
+#[derive(ArgEnum, Clone, Copy, Debug)]
 #[non_exhaustive]
 pub enum TemplateExtension {
     Markdown,
@@ -39,47 +35,6 @@ impl TemplateExtension {
 
     pub(crate) fn variants() -> [&'static str; 2] {
         ["adoc", "md"]
-    }
-
-
-// TODO: can also access fields like the following. Make sure to include in docs
-// {%- for row in data %}
-// | {{- row['status'] }} | {{ row['RFD'] }} |
-// {%- endfor -%}
-
-    pub(crate) fn toc_template(self) ->  &'static str {
-        return match self {
-            TemplateExtension::Markdown => {
-r#"{# snippet::markdown_toc #}
-{% if headers -%}
-  | {{ headers | join(sep=" | ") }}
-|
-    {%- for i in range(end=headers|length) -%}
-        --- |
-    {%- endfor -%}
-{%- endif -%}
-{% for row in data %}
-|
-    {%- for key, value in row %}
-        {{- value }} |
-    {%- endfor -%}
-{%- endfor -%}
-{# end::markdown_toc #}"#
-            }
-            TemplateExtension::Asciidoc => {
-r#"{# snippet::asciidoc_toc #}
-|===
-{% if headers -%}
-  | {{ headers | join(sep=" | ") }}
-{%- endif %}
-{%- for row in data %}
-{% for key, value in row %}
-| {{ value }}
-{%- endfor -%}
-{%- endfor -%}
-{# end::asciidoc_toc #}"#
-            }
-        }
     }
 
 }
@@ -136,26 +91,14 @@ pub(crate) fn parse_template_extension(
     parse_enum(&TEMPLATE_EXTENSIONS, src)
 }
 
-pub(crate) fn get_template(
-    dir: &str,
-    extension: TemplateExtension,
-    default_template_path: &str,
-) -> PathBuf {
-    let custom_template =
-        Path::new(dir).join("template").with_extension(extension.to_string());
-
-    let template = if custom_template.exists() {
-        custom_template
-    } else {
-        Path::new(default_template_path)
-            .with_extension(extension.to_string())
-            .to_path_buf()
+pub(crate) fn get_leading_character(extension: TemplateExtension) -> char {
+    return match extension {
+        TemplateExtension::Markdown => '#',
+        TemplateExtension::Asciidoc => '=',
     };
-
-    return template;
 }
 
-/// Wrapper for [`Tera`].
+/// Wrapper for [`tera`].
 #[derive(Debug)]
 pub struct Templates {
     tera: Tera,
@@ -163,73 +106,47 @@ pub struct Templates {
 
 impl Templates {
     /// Constructs a new instance.
-    pub fn new(template: String) -> DoctavousResult<Self> {
+    pub fn new() -> DoctavousResult<Self> {
         let mut tera = Tera::default();
-        tera.add_raw_template("template", &template)?;
-        tera.register_filter("upper_first", Self::upper_first_filter);
-        Ok(Self { tera })
+        return Ok(Self { tera });
     }
 
-    /// Filter for making the first character of a string uppercase.
-    fn upper_first_filter(
-        value: &Value,
-        _: &HashMap<String, Value>,
-    ) -> TeraResult<Value> {
-        let mut s =
-            tera::try_get_value!("upper_first_filter", "value", String, value);
-        let mut c = s.chars();
-        s = match c.next() {
-            None => String::new(),
-            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-        };
-        Ok(tera::to_value(&s)?)
+    pub fn new_with_templates(templates: HashMap<&str, String>) -> DoctavousResult<Self> {
+        let mut tera = Tera::default();
+        for (k, v) in templates {
+            if let Err(e) = tera.add_raw_template(k, v.as_str()) {
+                return if let Some(error_source) = e.source() {
+                    Err(DoctaviousError::TemplateParseError(error_source.to_string()))
+                } else {
+                    Err(DoctaviousError::TemplateError(e))
+                };
+            }
+        }
+
+        return Ok(Self { tera });
     }
 
-    // TODO: render method
+    // TODO: probably makes sense to make this Into<&str, String>?
     /// Renders the template.
-    pub fn render<S>(&self, release: S) -> DoctavousResult<String>
+    pub fn render<S>(&self, template: &str, context: &S) -> DoctavousResult<String>
         where
             S: Serialize,
     {
-        Ok(self
-            .tera
-            .render("template", &TeraContext::from_serialize(release)?)?)
+        let tera_context = Context::from_serialize(context)?;
+        return Ok(self.tera.render(template, &tera_context)?);
     }
-}
 
-// toc from Vec<&str> list of content
-// toc from Vec<PathBuf> list of files
-// toc from list<string> (headers) and Vec<HashMap> (data)
-pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
-    let mut rdr = ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(path).unwrap();
-
-    let mut context = TeraContext::new();
-
-    let headers = rdr.headers().unwrap().clone();
-    let headers_vec: Vec<String> = headers.deserialize(None).unwrap();
-    context.insert("headers", &headers_vec);
-
-    let mut output: Vec<IndexMap<String,String>> = Vec::new();
-    for record in rdr.records() {
-        // let record: IndexMap<String,Option<String>> = row.unwrap().deserialize(Some(&headers)).unwrap();
-        // output.push(record);
-        // let record: Record = row.unwrap().deserialize(Some(&headers)).unwrap();
-        let mut map: IndexMap<String, String> = IndexMap::new();
-        for row in record.iter() {
-            for (pos, field) in row.into_iter().enumerate() {
-                println!("{} / {}", pos, field);
-                map.insert(headers_vec.get(pos).unwrap().to_string(), field.to_string());
-            }
-        }
-        output.push(map);
+    pub fn register_function<F: Function + 'static>(&mut self, name: &str, function: F) {
+        self.tera.register_function(name, function)
     }
-    context.insert("data", &output);
-    println!("{:?}", &output);
-    println!("{:?}", &context.clone().into_json());
 
-    return Tera::one_off(template, &context, false).unwrap();
+    pub fn one_off<S>(template: &str, context: &S, escape: bool) -> DoctavousResult<String>
+        where
+            S: Serialize
+    {
+        let tera_context = Context::from_serialize(context)?;
+        return Ok(Tera::one_off(template, &tera_context, escape)?);
+    }
 }
 
 
@@ -243,21 +160,4 @@ mod tests {
 
     // TODO: invalid template should return valid error
 
-    #[test]
-    fn markdown_toc() {
-        let toc = super::render_toc(
-            Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            TemplateExtension::Markdown.toc_template()
-        );
-        println!("{}", toc);
-    }
-
-    #[test]
-    fn asciidoc_toc() {
-        let toc = super::render_toc(
-            Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            TemplateExtension::Asciidoc.toc_template()
-        );
-        println!("{}", toc);
-    }
 }
