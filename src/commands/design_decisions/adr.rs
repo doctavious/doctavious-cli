@@ -52,17 +52,15 @@ pub(crate) struct InitADR {
         long,
         short,
         default_value_t,
-        // possible_values = &FileStructure::variants(),
         parse(try_from_str = parse_file_structure),
         help = "How ADRs should be structured"
     )]
     pub structure: FileStructure,
 
     #[clap(
-        arg_enum,
         long,
         short,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
@@ -81,7 +79,6 @@ pub(crate) struct NewADR {
     pub title: String,
 
     #[clap(
-        // arg_enum,
         long,
         short,
         possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),

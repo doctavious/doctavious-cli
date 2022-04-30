@@ -7,12 +7,15 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::slice::Iter;
+use crate::FileStructure::{Flat, Nested};
 
 lazy_static! {
     pub static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
         let mut map = HashMap::new();
-        map.insert("flat", FileStructure::Flat);
-        map.insert("nested", FileStructure::Nested);
+        for file_structure in FileStructure::iterator() {
+            map.insert(file_structure.value(), file_structure.to_owned());
+        }
         map
     };
 }
@@ -24,22 +27,29 @@ pub enum FileStructure {
 }
 
 impl FileStructure {
-    pub(crate) fn variants() -> [&'static str; 2] {
-        ["flat", "nested"]
+    pub(crate) fn iterator() -> Iter<'static, FileStructure> {
+        return [Flat, Nested].iter();
+    }
+
+    pub(crate) fn value(&self) -> &'static str {
+        return match self {
+            Flat => "flat",
+            Nested => "nested",
+        };
     }
 }
 
 impl Default for FileStructure {
     fn default() -> Self {
-        FileStructure::Flat
+        Flat
     }
 }
 
 impl Display for FileStructure {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match *self {
-            FileStructure::Flat => write!(f, "flat"),
-            FileStructure::Nested => write!(f, "nested"),
+            Flat => write!(f, "flat"),
+            Nested => write!(f, "nested"),
         }
     }
 }
@@ -50,8 +60,8 @@ impl Serialize for FileStructure {
         S: Serializer,
     {
         let s = match *self {
-            FileStructure::Flat => "flat",
-            FileStructure::Nested => "nested",
+            Flat => "flat",
+            Nested => "nested",
         };
 
         s.serialize(serializer)

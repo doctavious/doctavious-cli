@@ -4,7 +4,7 @@ use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
 use crate::doctavious_error::Result;
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
-use crate::markup_format::{parse_markup_format_extension, MarkupFormat};
+use crate::markup_format::{parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS};
 use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
 use crate::utils::{
     build_path, ensure_path, format_number, get_files, reserve_number,
@@ -51,18 +51,16 @@ pub(crate) struct InitRFD {
         long,
         short,
         default_value_t,
-        // possible_values = &FileStructure::variants(),
         parse(try_from_str = parse_file_structure),
         help = "How RFDs should be structured"
     )]
     pub structure: FileStructure,
 
     #[clap(
-        arg_enum,
         long,
         short,
         default_value_t,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
@@ -79,10 +77,9 @@ pub(crate) struct NewRFD {
     pub title: String,
 
     #[clap(
-        arg_enum,
         long,
         short,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
@@ -195,10 +192,9 @@ pub(crate) struct RFDToc {
     pub link_prefix: Option<String>,
 
     #[clap(
-        arg_enum,
         long,
         short,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Output format"
     )]
@@ -230,10 +226,9 @@ pub(crate) struct ReserveRFD {
     pub title: String,
 
     #[clap(
-        arg_enum,
         long,
         short,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
