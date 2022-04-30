@@ -1,14 +1,12 @@
-use crate::doctavious_error::{
-    DoctaviousError, EnumError, Result as DoctavousResult,
-};
+use crate::doctavious_error::EnumError;
 use crate::utils::parse_enum;
-use clap::{ArgEnum, PossibleValue};
+use crate::FileStructure::{Flat, Nested};
+use clap::ArgEnum;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
-use crate::FileStructure::{Flat, Nested};
 
 lazy_static! {
     pub static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {

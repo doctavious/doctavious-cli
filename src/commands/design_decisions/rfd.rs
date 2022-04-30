@@ -1,27 +1,20 @@
-use std::collections::HashMap;
 use crate::commands::design_decisions::get_template;
 use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
 use crate::doctavious_error::Result;
-use crate::file_structure::parse_file_structure;
-use crate::file_structure::FileStructure;
-use crate::markup_format::{parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS};
-use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
-use crate::utils::{
-    build_path, ensure_path, format_number, get_files, reserve_number,
+use crate::markup_format::{
+    parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
-use crate::{edit, git, init_dir};
+use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
+use crate::templates::Templates;
+use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::{edit, git, init_dir, FileStructure};
 use chrono::Utc;
-use clap::{ArgEnum, Parser};
-use csv::Writer;
+use clap::Parser;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
-use gray_matter::engine::YAML;
-use gray_matter::Matter;
+use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use crate::templates::Templates;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers RFD management commands")]
@@ -286,7 +279,7 @@ pub(crate) fn new_rfd(
     // TODO: supersceded
     // TODO: reverse links
 
-    let mut starting_content = fs::read_to_string(&template).expect(&format!(
+    let starting_content = fs::read_to_string(&template).expect(&format!(
         "failed to read file {}.",
         &template.to_string_lossy()
     ));
@@ -296,7 +289,8 @@ pub(crate) fn new_rfd(
     context.insert("title", title);
     context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
 
-    let rendered = Templates::one_off(starting_content.as_str(), &context, false)?;
+    let rendered =
+        Templates::one_off(starting_content.as_str(), &context, false)?;
 
     let edited = edit::edit(&rendered)?;
     fs::write(&rfd_path, edited)?;

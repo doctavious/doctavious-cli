@@ -14,7 +14,6 @@
 // md_string += "\n"
 
 use csv::ReaderBuilder;
-use std::io;
 use std::path::PathBuf;
 
 // https://docs.rs/csv/1.1.6/csv/cookbook/index.html

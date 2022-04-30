@@ -1,9 +1,8 @@
 use crate::markup_format::MarkupFormat::{Asciidoc, Markdown};
 use crate::{parse_enum, EnumError};
-use clap::{ArgEnum, PossibleValue};
+use clap::ArgEnum;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::hash_map::Keys;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;

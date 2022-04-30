@@ -1,21 +1,8 @@
-use crate::doctavious_error::{
-    DoctaviousError, EnumError, Result as DoctavousResult,
-};
-use crate::utils::parse_enum;
-use clap::ArgEnum;
-use csv::ReaderBuilder;
-use indexmap::map::IndexMap;
-use lazy_static::lazy_static;
-use log::Record;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
-use tera::{
-    Context as TeraContext, Context, Function, Result as TeraResult, Tera,
-    Value,
-};
+use tera::{Context, Function, Tera};
 
 /// Wrapper for [`tera`].
 #[derive(Debug)]
@@ -26,7 +13,7 @@ pub struct Templates {
 impl Templates {
     /// Constructs a new instance.
     pub fn new() -> DoctavousResult<Self> {
-        let mut tera = Tera::default();
+        let tera = Tera::default();
         return Ok(Self { tera });
     }
 

@@ -3,15 +3,13 @@
 // | {{- row['status'] }} | {{ row['RFD'] }} |
 // {%- endfor -%}
 
+use crate::markup_format::MarkupFormat;
+use crate::templates::Templates;
 use csv::ReaderBuilder;
 use indexmap::IndexMap;
 use serde_json::{json, to_value, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
-// use crate::TemplateExtension;
-use crate::markup_format::MarkupFormat;
-use crate::templates::Templates;
-use serde_json::value::Value as Json;
 use std::string::String;
 
 pub(crate) fn toc_template(extension: MarkupFormat) -> &'static str {

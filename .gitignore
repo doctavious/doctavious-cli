@@ -36,6 +36,8 @@ Cargo.lock
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
 
+/.idea/sonarlint/
+
 # CMake
 cmake-build-*/
 
@@ -59,3 +61,4 @@ fabric.properties
 
 # Editor-based Rest Client
 .idea/httpRequests
+

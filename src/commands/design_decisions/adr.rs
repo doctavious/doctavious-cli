@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::commands::design_decisions::get_template;
 use crate::constants::{
     DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH,
 };
 use crate::doctavious_error::Result;
-use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
 use crate::git;
 use crate::markup_format::{
@@ -20,9 +19,7 @@ use crate::{edit, init_dir};
 use chrono::Utc;
 use clap::Parser;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
-use git2::{BranchType, Branches, Direction, Repository};
-use regex::Regex;
-use serde::Serialize;
+use git2::Repository;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers ADR management commands")]
@@ -274,7 +271,7 @@ pub(crate) fn new_adr(
     //     }
     // }
 
-    let mut starting_content = fs::read_to_string(&template).expect(&format!(
+    let starting_content = fs::read_to_string(&template).expect(&format!(
         "failed to read file {}.",
         &template.to_string_lossy()
     ));
@@ -285,7 +282,8 @@ pub(crate) fn new_adr(
     // TODO: allow date to be customized
     context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
 
-    let rendered = Templates::one_off(starting_content.as_str(), &context, false)?;
+    let rendered =
+        Templates::one_off(starting_content.as_str(), &context, false)?;
 
     let edited = edit::edit(&rendered)?;
     fs::write(&adr_path, edited)?;

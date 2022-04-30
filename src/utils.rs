@@ -1,7 +1,7 @@
 // use crate::templates::TemplateExtension;
 // use crate::templates::TEMPLATE_EXTENSIONS;
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Write};
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 

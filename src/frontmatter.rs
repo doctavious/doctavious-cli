@@ -1,5 +1,5 @@
 use crate::utils::get_files;
-use csv::{ReaderBuilder, Writer};
+use csv::Writer;
 use gray_matter::engine::YAML;
 use gray_matter::Matter;
 use std::fs;

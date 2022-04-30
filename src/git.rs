@@ -1,11 +1,8 @@
 // from https://siciarz.net/24-days-rust-git2/
 
-use git2::{
-    BranchType, Commit, Direction, ObjectType, Oid, Repository, Signature, Sort,
-};
+use git2::{BranchType, Commit, Direction, Oid, Repository, Sort};
 use indexmap::IndexMap;
 use regex::Regex;
-use std::ops::Deref;
 use std::path::Path;
 
 // https://github.com/simeg/eureka/blob/master/src/git.rs
