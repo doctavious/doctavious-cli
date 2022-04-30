@@ -4,9 +4,9 @@ use crate::doctavious_error::Result;
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
 use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
-use crate::templates::{
-    parse_template_extension, TemplateExtension,
-};
+// use crate::templates::{
+//     parse_template_extension, TemplateExtension,
+// };
 use crate::utils::{build_path, ensure_path, format_number, reserve_number, get_files};
 use clap::{ArgEnum, Parser};
 use chrono::Utc;
@@ -26,6 +26,7 @@ use std::fs::File;
 use std::io::Write;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use crate::commands::design_decisions::get_template;
+use crate::markup_format::{MarkupFormat,parse_markup_format_extension};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers RFD management commands")]
@@ -67,10 +68,10 @@ pub(crate) struct InitRFD {
         short,
         default_value_t,
         // possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
+        parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
-    pub extension: TemplateExtension,
+    pub extension: MarkupFormat,
 }
 
 #[derive(Parser, Debug)]
@@ -87,10 +88,10 @@ pub(crate) struct NewRFD {
         long,
         short,
         // possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
+        parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
-    pub extension: Option<TemplateExtension>,
+    pub extension: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
@@ -207,10 +208,10 @@ pub(crate) struct RFDToc {
         long,
         short,
         // possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
+        parse(try_from_str = parse_markup_format_extension),
         help = "Output format"
     )]
-    pub format: Option<TemplateExtension>,
+    pub format: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
@@ -242,16 +243,16 @@ pub(crate) struct ReserveRFD {
         long,
         short,
         // possible_values = &TemplateExtension::variants(),
-        parse(try_from_str = parse_template_extension),
+        parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
-    pub extension: Option<TemplateExtension>,
+    pub extension: Option<MarkupFormat>,
 }
 
 pub(crate) fn init_rfd(
     directory: Option<String>,
     structure: FileStructure,
-    extension: TemplateExtension
+    extension: MarkupFormat
 ) -> Result<PathBuf> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -284,7 +285,7 @@ pub(crate) fn init_rfd(
 pub(crate) fn new_rfd(
     number: Option<i32>,
     title: String,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
 ) -> Result<PathBuf> {
     let dir = SETTINGS.get_rfd_dir();
     let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
@@ -313,6 +314,7 @@ pub(crate) fn new_rfd(
     starting_content = starting_content
         .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
 
+    // TODO: use templates.rs
     let mut context = TeraContext::new();
     context.insert("number", &reserve_number);
     context.insert("title", &title);
@@ -328,7 +330,7 @@ pub(crate) fn new_rfd(
 pub(crate) fn reserve_rfd(
     number: Option<i32>,
     title: String,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
 ) -> Result<()> {
     let dir = SETTINGS.get_rfd_dir();
     let reserve_number =

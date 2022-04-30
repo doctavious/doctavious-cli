@@ -13,9 +13,9 @@ use crate::file_structure::FileStructure;
 use crate::file_structure::parse_file_structure;
 use crate::git;
 use crate::settings::{AdrSettings, load_settings, persist_settings, SETTINGS};
-use crate::templates::{
-    parse_template_extension, TemplateExtension,
-};
+// use crate::templates::{
+//     parse_template_extension, TemplateExtension,
+// };
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use crate::doctavious_error::Result;
 use tera::{
@@ -25,6 +25,7 @@ use tera::{
     Value,
 };
 use crate::commands::design_decisions::get_template;
+use crate::markup_format::{MarkupFormat,parse_markup_format_extension,MARKUP_FORMAT_EXTENSIONS};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers ADR management commands")]
@@ -65,10 +66,10 @@ pub(crate) struct InitADR {
     long,
     short,
     // possible_values = &TemplateExtension::variants(),
-    parse(try_from_str = parse_template_extension),
+    parse(try_from_str = parse_markup_format_extension),
     help = "Extension that should be used"
     )]
-    pub extension: Option<TemplateExtension>,
+    pub extension: Option<MarkupFormat>,
 }
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
@@ -83,14 +84,14 @@ pub(crate) struct NewADR {
     pub title: String,
 
     #[clap(
-    arg_enum,
+    // arg_enum,
     long,
     short,
-    // possible_values = & TemplateExtension::variants(),
-    parse(try_from_str = parse_template_extension),
+    possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+    parse(try_from_str = parse_markup_format_extension),
     help = "Extension that should be used"
     )]
-    pub extension: Option<TemplateExtension>,
+    pub extension: Option<MarkupFormat>,
 
     #[clap(
     long,
@@ -163,8 +164,8 @@ pub(crate) struct AdrToc {
     #[clap(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[clap(long, short, parse(try_from_str = parse_template_extension), help = "Output format")]
-    pub format: Option<TemplateExtension>,
+    #[clap(long, short, parse(try_from_str = parse_markup_format_extension), help = "Output format")]
+    pub format: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
@@ -195,16 +196,16 @@ pub(crate) struct ReserveADR {
     long,
     short,
     // possible_values = &TemplateExtension::variants(),
-    parse(try_from_str = parse_template_extension),
+    parse(try_from_str = parse_markup_format_extension),
     help = "Extension that should be used"
     )]
-    pub extension: Option<TemplateExtension>,
+    pub extension: Option<MarkupFormat>,
 }
 
 pub(crate) fn init_adr(
     directory: Option<String>,
     structure: FileStructure,
-    extension: Option<TemplateExtension>,
+    extension: Option<MarkupFormat>,
 ) -> Result<PathBuf> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -238,7 +239,7 @@ pub(crate) fn init_adr(
 pub(crate) fn new_adr(
     number: Option<i32>,
     title: String,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
     template_path: &str,
     // supercedes: Option<Vec<String>>,
     // links: Option<Vec<String>>
@@ -326,7 +327,7 @@ pub(crate) fn new_adr(
 pub(crate) fn reserve_adr(
     number: Option<i32>,
     title: String,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
 ) -> Result<()> {
     let dir = SETTINGS.get_adr_dir();
     let reserve_number =
@@ -375,7 +376,7 @@ mod tests {
 
     use crate::file_structure::FileStructure;
     use crate::init_adr;
-    use crate::templates::TemplateExtension;
+    use crate::markup_format::MarkupFormat;
 
     // init default
     #[test]
@@ -385,7 +386,7 @@ mod tests {
         init_adr(
             Some(dir.path().display().to_string()),
             FileStructure::default(),
-            Some(TemplateExtension::default()),
+            Some(MarkupFormat::default()),
         );
 
         dir.close().unwrap();

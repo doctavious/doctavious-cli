@@ -10,15 +10,16 @@ use std::path::PathBuf;
 use csv::ReaderBuilder;
 use indexmap::IndexMap;
 use serde_json::{json, to_value, Value};
-use crate::TemplateExtension;
+// use crate::TemplateExtension;
 use crate::templates::Templates;
 use std::string::String;
 use serde_json::value::Value as Json;
+use crate::markup_format::MarkupFormat;
 
 
-pub(crate) fn toc_template(extension: TemplateExtension) ->  &'static str {
+pub(crate) fn toc_template(extension: MarkupFormat) ->  &'static str {
     return match extension {
-        TemplateExtension::Markdown => {
+        MarkupFormat::Markdown => {
             r#"<!-- snippet::markdown_toc -->
 {% if headers -%}
   | {{ headers | join(sep=" | ") }} |
@@ -35,7 +36,7 @@ pub(crate) fn toc_template(extension: TemplateExtension) ->  &'static str {
 {%- endfor %}
 <!-- end::markdown_toc -->"#
         }
-        TemplateExtension::Asciidoc => {
+        MarkupFormat::Asciidoc => {
             r#"<!-- snippet::asciidoc_toc -->
 |===
 {% if headers -%}
@@ -218,14 +219,14 @@ mod tests {
     use crate::commands::design_decisions::toc::{toc_template};
 
     use crate::output::Output;
-    use crate::templates::TemplateExtension;
     use std::string::String;
+    use crate::markup_format::MarkupFormat;
 
     #[test]
     fn markdown_toc() {
         let toc = super::render_toc(
             Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            toc_template(TemplateExtension::Markdown)
+            toc_template(MarkupFormat::Markdown)
         );
         let expected = r#"<!-- snippet::markdown_toc -->
 | status | RFD |
@@ -240,7 +241,7 @@ mod tests {
     fn asciidoc_toc() {
         let toc = super::render_toc(
             Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            toc_template(TemplateExtension::Asciidoc)
+            toc_template(MarkupFormat::Asciidoc)
         );
 
         let expected = r#"<!-- snippet::asciidoc_toc -->

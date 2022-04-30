@@ -39,11 +39,12 @@ use crate::settings::{
     load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings,
     SETTINGS,
 };
-use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
+// use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
 use crate::utils::{format_number, is_valid_file, parse_enum};
 use std::error::Error;
 use crate::output::{Output, parse_output, print_output};
 use crate::doctavious_error::{Result as DoctaviousResult, EnumError};
+use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
 use crate::utils::list;
 
 #[derive(Parser, Debug)]
@@ -162,7 +163,7 @@ fn get_content(
             for entry in fs::read_dir(dir).unwrap() {
                 let entry = entry.unwrap();
                 let path = entry.path();
-                for key in TEMPLATE_EXTENSIONS.keys() {
+                for key in MARKUP_FORMAT_EXTENSIONS.keys() {
                     let file_name =
                         entry.file_name().to_str().unwrap().to_owned();
                     let formatted_number = format!("{}-", number);
@@ -186,7 +187,7 @@ fn get_content(
         }
 
         FileStructure::Nested => {
-            for key in TEMPLATE_EXTENSIONS.keys() {
+            for key in MARKUP_FORMAT_EXTENSIONS.keys() {
                 let p = Path::new(dir)
                     .join(&number)
                     .join("README.")
@@ -204,7 +205,7 @@ fn get_content(
 fn main() -> DoctaviousResult<()> {
     let opt = Opt::parse();
     if opt.debug {
-        std::env::set_var("RUST_LOG", "debug");
+        env::set_var("RUST_LOG", "debug");
         env_logger::init();
     }
 

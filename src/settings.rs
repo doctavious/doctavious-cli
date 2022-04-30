@@ -1,6 +1,6 @@
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_CONFIG_NAME, DEFAULT_TIL_DIR};
 use crate::file_structure::FileStructure;
-use crate::templates::TemplateExtension;
+// use crate::templates::TemplateExtension;
 use crate::doctavious_error::Result;
 // TODO: fix this
 use crate::commands::githooks::githooks::Hook;
@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use crate::commands::changelog::CommitParser;
 use regex::Regex;
+use crate::markup_format::MarkupFormat;
 
 lazy_static! {
     // TODO: doctavious config will live in project directory
@@ -41,7 +42,7 @@ lazy_static! {
 // TODO: should this include output?
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Settings {
-    pub template_extension: Option<TemplateExtension>,
+    pub template_extension: Option<MarkupFormat>,
 
     #[serde(rename(serialize = "adr"))]
     #[serde(alias = "adr")]
@@ -91,20 +92,20 @@ pub struct ChangelogGitSettings {
 pub struct AdrSettings {
     pub dir: Option<String>,
     pub structure: Option<FileStructure>,
-    pub template_extension: Option<TemplateExtension>,
+    pub template_extension: Option<MarkupFormat>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RFDSettings {
     pub dir: Option<String>,
     pub structure: Option<FileStructure>,
-    pub template_extension: Option<TemplateExtension>,
+    pub template_extension: Option<MarkupFormat>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TilSettings {
     pub dir: Option<String>,
-    pub template_extension: Option<TemplateExtension>,
+    pub template_extension: Option<MarkupFormat>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -154,7 +155,7 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_adr_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+    pub fn get_adr_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -169,7 +170,7 @@ impl Settings {
             return template_extension;
         }
 
-        return TemplateExtension::default();
+        return MarkupFormat::default();
     }
 
     pub fn get_rfd_dir(&self) -> &str {
@@ -192,7 +193,7 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_rfd_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+    pub fn get_rfd_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -207,7 +208,7 @@ impl Settings {
             return template_extension;
         }
 
-        return TemplateExtension::default();
+        return MarkupFormat::default();
     }
 
     pub fn get_til_dir(&self) -> &str {
@@ -222,7 +223,7 @@ impl Settings {
 
     // TODO: I might revert having this take in an extension and rather just have a function in til
     // that does and defers to settings
-    pub fn get_til_template_extension(&self, extension: Option<TemplateExtension>) -> TemplateExtension {
+    pub fn get_til_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -237,7 +238,7 @@ impl Settings {
             return template_extension;
         }
 
-        return TemplateExtension::default();
+        return MarkupFormat::default();
     }
 }
 

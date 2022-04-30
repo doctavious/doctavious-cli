@@ -1,8 +1,9 @@
-use crate::templates::{get_leading_character, TemplateExtension};
+// use crate::templates::{get_leading_character, TemplateExtension};
 use crate::utils::is_valid_file;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
+use crate::markup_format::MarkupFormat;
 
 pub mod init;
 pub mod login;
@@ -24,12 +25,12 @@ mod service_directory;
 // TODO: pass in header
 pub(crate) fn build_toc(
     dir: &str,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
     intro: Option<String>,
     outro: Option<String>,
     link_prefix: Option<String>,
 ) {
-    let leading_char = get_leading_character(extension);
+    let leading_char = extension.leading_header_character();
     let mut content = String::new();
     content.push_str(&format!(
         "{} {}\n\n",
@@ -82,12 +83,12 @@ pub(crate) fn build_toc(
     print!("{}", content);
 }
 
-pub(crate) fn title_string<R>(rdr: R, extension: TemplateExtension) -> String
+pub(crate) fn title_string<R>(rdr: R, extension: MarkupFormat) -> String
     where
         R: BufRead,
 {
     // TODO: swap this implementation for AST when ready
-    let leading_char = get_leading_character(extension);
+    let leading_char = extension.leading_header_character();
     for line in rdr.lines() {
         let line = line.unwrap();
         if line.starts_with(&format!("{} ", leading_char)) {

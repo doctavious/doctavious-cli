@@ -1,6 +1,6 @@
-use crate::commands::{title_string, get_leading_character};
+use crate::commands::{title_string};
 use crate::settings::{SETTINGS, load_settings, TilSettings, persist_settings};
-use crate::templates::{parse_template_extension, TemplateExtension};
+// use crate::templates::{parse_template_extension, TemplateExtension};
 use crate::doctavious_error::{Result as DoctaviousResult};
 use clap::{ArgEnum, Parser};
 use chrono::{DateTime, Utc};
@@ -12,6 +12,7 @@ use std::{fs, io};
 use walkdir::WalkDir;
 use crate::{edit, init_dir};
 use crate::constants::DEFAULT_TIL_DIR;
+use crate::markup_format::{MarkupFormat,parse_markup_format_extension};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers Today I Learned (TIL) management commands")]
@@ -34,8 +35,8 @@ pub(crate) struct InitTil {
     #[clap(long, short, help = "Directory to store TILs")]
     pub directory: Option<String>,
 
-    #[clap(arg_enum, long, short, default_value_t, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: TemplateExtension,
+    #[clap(arg_enum, long, short, default_value_t, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    pub extension: MarkupFormat,
 }
 
 #[derive(Parser, Debug)]
@@ -61,8 +62,8 @@ pub(crate) struct NewTil {
     )]
     pub tags: Option<Vec<String>>,
 
-    #[clap(arg_enum, long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: Option<TemplateExtension>,
+    #[clap(arg_enum, long, short, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    pub extension: Option<MarkupFormat>,
 
     // TODO: should this also be a setting in TilSettings?
     #[clap(
@@ -80,8 +81,8 @@ pub(crate) struct ListTils {}
 #[derive(Parser, Debug)]
 #[clap(about = "Build TIL ReadMe")]
 pub(crate) struct BuildTilReadMe {
-    #[clap(arg_enum, long, short, parse(try_from_str = parse_template_extension), help = "Extension that should be used")]
-    pub extension: Option<TemplateExtension>,
+    #[clap(arg_enum, long, short, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    pub extension: Option<MarkupFormat>,
 }
 
 #[derive(Clone, Debug)]
@@ -94,7 +95,7 @@ struct TilEntry {
 
 pub(crate) fn init_til(
     directory: Option<String>,
-    extension: TemplateExtension
+    extension: MarkupFormat
 ) -> DoctaviousResult<()> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -122,7 +123,7 @@ pub(crate) fn new_til(
     title: String,
     category: String,
     tags: Option<Vec<String>>,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
     readme: bool,
     dir: &str
 ) -> DoctaviousResult<()> {
@@ -135,7 +136,7 @@ pub(crate) fn new_til(
     if path.exists() {
         eprintln!("File {} already exists", path.to_string_lossy());
     } else {
-        let leading_char = get_leading_character(extension);
+        let leading_char = extension.leading_header_character();
 
         let mut starting_content = format!("{} {}\n", leading_char, title);
         if tags.is_some() {
@@ -186,11 +187,11 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
 
         let file_name =
             entry.path().file_name().unwrap().to_str().unwrap().to_string();
-        let extension = parse_template_extension(
+        let extension = parse_markup_format_extension(
             entry.path().extension().unwrap().to_str().unwrap(),
         )
         .unwrap();
-        let file = match fs::File::open(&entry.path()) {
+        let file = match File::open(&entry.path()) {
             Ok(file) => file,
             Err(_) => panic!("Unable to read title from {:?}", entry.path()),
         };

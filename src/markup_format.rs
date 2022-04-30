@@ -1,49 +1,61 @@
+use std::collections::hash_map::Keys;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::slice::Iter;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{EnumError, parse_enum};
-use clap::ArgEnum;
+use clap::{ArgEnum, PossibleValue};
+use crate::markup_format::MarkupFormat::{Asciidoc, Markdown};
 
 lazy_static! {
     pub static ref MARKUP_FORMAT_EXTENSIONS: HashMap<&'static str, MarkupFormat> = {
         let mut map = HashMap::new();
-        map.insert("md", MarkupFormat::Markdown);
-        map.insert("adoc", MarkupFormat::Asciidoc);
+        for markup_format in MarkupFormat::iterator() {
+            map.insert(markup_format.extension(), markup_format.to_owned());
+        }
         map
     };
 }
 
-// TODO: is there a better name for this?
-// TODO: can these enums hold other attributes? extension value (adoc / md), leading char (= / #), etc
 #[derive(ArgEnum, Clone, Copy, Debug)]
 #[non_exhaustive]
 pub enum MarkupFormat {
-    Markdown,
     Asciidoc,
+    Markdown,
     // TODO: Other(str)?
 }
 
 impl MarkupFormat {
 
-    pub(crate) fn variants() -> [&'static str; 2] {
-        ["adoc", "md"]
+    pub(crate) fn iterator() -> Iter<'static, MarkupFormat> {
+        return [Asciidoc, Markdown].iter();
     }
 
+    pub(crate) fn extension(&self) -> &'static str {
+        return match self {
+            Asciidoc => "adoc",
+            Markdown => "md",
+        };
+    }
+
+    pub(crate) fn leading_header_character(&self) -> char {
+        return match self {
+            Asciidoc => '=',
+            Markdown => '#',
+        };
+    }
 }
 
 impl Default for MarkupFormat {
     fn default() -> Self {
-        MarkupFormat::Markdown
+        Markdown
     }
 }
 
 impl Display for MarkupFormat {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match *self {
-            MarkupFormat::Markdown => write!(f, "md"),
-            MarkupFormat::Asciidoc => write!(f, "adoc"),
-        }
+        write!(f, "{}", self.extension())
     }
 }
 
@@ -52,11 +64,7 @@ impl Serialize for MarkupFormat {
         where
             S: Serializer,
     {
-        let s = match *self {
-            MarkupFormat::Markdown => "md",
-            MarkupFormat::Asciidoc => "adoc",
-        };
-
+        let s = self.extension();
         s.serialize(serializer)
     }
 }
@@ -82,11 +90,4 @@ pub(crate) fn parse_markup_format_extension(
     src: &str,
 ) -> Result<MarkupFormat, EnumError> {
     parse_enum(&MARKUP_FORMAT_EXTENSIONS, src)
-}
-
-pub(crate) fn get_leading_character(extension: MarkupFormat) -> char {
-    return match extension {
-        MarkupFormat::Markdown => '#',
-        MarkupFormat::Asciidoc => '=',
-    };
 }

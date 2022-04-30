@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use crate::TemplateExtension;
+use crate::markup_format::MarkupFormat;
 
 // TODO: put adrs and rfds in this module. add specific TOC logic in this module
 pub mod rfd;
@@ -9,7 +9,7 @@ mod toc;
 
 pub(crate) fn get_template(
     dir: &str,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
     default_template_path: &str,
 ) -> PathBuf {
     let custom_template =

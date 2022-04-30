@@ -1,5 +1,5 @@
-use crate::templates::TemplateExtension;
-use crate::templates::TEMPLATE_EXTENSIONS;
+// use crate::templates::TemplateExtension;
+// use crate::templates::TEMPLATE_EXTENSIONS;
 use std::collections::HashMap;
 use std::io::{ErrorKind, Write, Error};
 use std::path::{Path, PathBuf};
@@ -13,6 +13,8 @@ use crate::output::{Output, get_output, print_output};
 use serde::Serializer;
 use std::fmt::{Display, Formatter, Debug};
 use serde::ser::SerializeSeq;
+use crate::markup_format::MarkupFormat;
+use crate::MARKUP_FORMAT_EXTENSIONS;
 
 pub(crate) fn parse_enum<A: Copy>(
     env: &'static HashMap<&'static str, A>,
@@ -67,7 +69,7 @@ pub(crate) fn build_path(
     dir: &str,
     title: &str,
     reserved_number: &str,
-    extension: TemplateExtension,
+    extension: MarkupFormat,
     file_structure: FileStructure,
 ) -> PathBuf {
     return match file_structure {
@@ -188,7 +190,7 @@ pub(crate) fn get_allocated_numbers_via_flat_files(dir: &str) -> Vec<i32> {
 
 ///
 pub(crate) fn is_valid_file(path: &Path) -> bool {
-    return TEMPLATE_EXTENSIONS
+    return MARKUP_FORMAT_EXTENSIONS
         .contains_key(&path.extension().unwrap().to_str().unwrap());
 }
 
