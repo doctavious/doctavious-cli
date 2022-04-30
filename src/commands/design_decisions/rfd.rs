@@ -21,6 +21,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use crate::templates::Templates;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers RFD management commands")]
@@ -294,20 +295,15 @@ pub(crate) fn new_rfd(
         "failed to read file {}.",
         &template.to_string_lossy()
     ));
-    starting_content =
-        starting_content.replace("<NUMBER>", &formatted_reserved_number);
-    starting_content = starting_content.replace("<TITLE>", &title);
-    starting_content = starting_content
-        .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
 
-    // TODO: use templates.rs
     let mut context = HashMap::new();
     context.insert("number", reserve_number.to_string());
     context.insert("title", title);
     context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
-    context.insert("status", String::from("Accepted"));
 
-    let edited = edit::edit(&starting_content)?;
+    let rendered = Templates::one_off(starting_content.as_str(), &context, false)?;
+
+    let edited = edit::edit(&rendered)?;
     fs::write(&rfd_path, edited)?;
 
     return Ok(rfd_path);

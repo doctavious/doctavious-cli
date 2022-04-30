@@ -1,16 +1,16 @@
 ---
 authors:
-date: {{DATE}}
+date: {{date}}
 discussion:
 ---
 
-= {{NUMBER}}. {{TITLE}}
+= {{number}}. {{title}}
 
-Date: {{DATE}}
+Date: {{date}}
 
 == Status
 
-{{STATUS}}
+Accepted
 
 == Context
 

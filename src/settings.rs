@@ -91,6 +91,8 @@ pub struct AdrSettings {
     pub dir: Option<String>,
     pub structure: Option<FileStructure>,
     pub template_extension: Option<MarkupFormat>,
+    // TODO: custom date format
+
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

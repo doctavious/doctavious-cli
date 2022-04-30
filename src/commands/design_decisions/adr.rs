@@ -192,7 +192,7 @@ pub(crate) struct ReserveADR {
     #[clap(
         long,
         short,
-        // possible_values = &TemplateExtension::variants(),
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
         parse(try_from_str = parse_markup_format_extension),
         help = "Extension that should be used"
     )]
@@ -225,6 +225,7 @@ pub(crate) fn init_adr(
     persist_settings(settings)?;
     init_dir(dir)?;
 
+    // TODO: This seems a bit unnecessary for init which is pretty much static content outside of date
     return new_adr(
         Some(1),
         "Record Architecture Decisions".to_string(),
@@ -280,23 +281,16 @@ pub(crate) fn new_adr(
         "failed to read file {}.",
         &template.to_string_lossy()
     ));
-    starting_content =
-        starting_content.replace("<NUMBER>", &reserve_number.to_string());
-    starting_content = starting_content.replace("<TITLE>", &title);
-    starting_content = starting_content
-        .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
-    starting_content = starting_content.replace("<STATUS>", "Accepted");
 
     let mut context = HashMap::new();
     context.insert("number", reserve_number.to_string());
     context.insert("title", title);
+    // TODO: allow date to be customized
     context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
-    context.insert("status", String::from("Accepted"));
 
-    // tera.render("template", &TeraContext::from_serialize(release)?)?;
-    // Tera::one_off(input, context, autoescape)
+    let rendered = Templates::one_off(starting_content.as_str(), &context, false)?;
 
-    let edited = edit::edit(&starting_content)?;
+    let edited = edit::edit(&rendered)?;
     fs::write(&adr_path, edited)?;
     return Ok(adr_path);
 }

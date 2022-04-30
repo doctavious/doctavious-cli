@@ -4,6 +4,8 @@ pub mod adr;
 pub mod rfd;
 mod toc;
 
+// TODO: This is wrong for ADRs init as it doesnt look for a custom init template
+// does it need to take in name?
 pub(crate) fn get_template(
     dir: &str,
     extension: MarkupFormat,
