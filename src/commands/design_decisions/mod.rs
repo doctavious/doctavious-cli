@@ -1,11 +1,8 @@
-use std::path::{Path, PathBuf};
 use crate::markup_format::MarkupFormat;
-
-// TODO: put adrs and rfds in this module. add specific TOC logic in this module
-pub mod rfd;
+use std::path::{Path, PathBuf};
 pub mod adr;
+pub mod rfd;
 mod toc;
-
 
 pub(crate) fn get_template(
     dir: &str,

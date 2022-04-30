@@ -1,5 +1,7 @@
+use crate::doctavious_error::{
+    DoctaviousError, EnumError, Result as DoctavousResult,
+};
 use crate::utils::parse_enum;
-use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
 use clap::{ArgEnum, PossibleValue};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -22,11 +24,9 @@ pub enum FileStructure {
 }
 
 impl FileStructure {
-
     pub(crate) fn variants() -> [&'static str; 2] {
         ["flat", "nested"]
     }
-
 }
 
 impl Default for FileStructure {
@@ -75,6 +75,8 @@ impl<'de> Deserialize<'de> for FileStructure {
     }
 }
 
-pub(crate) fn parse_file_structure(src: &str) -> Result<FileStructure, EnumError> {
+pub(crate) fn parse_file_structure(
+    src: &str,
+) -> Result<FileStructure, EnumError> {
     parse_enum(&FILE_STRUCTURES, src)
 }

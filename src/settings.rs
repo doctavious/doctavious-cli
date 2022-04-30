@@ -1,19 +1,18 @@
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_CONFIG_NAME, DEFAULT_TIL_DIR};
-use crate::file_structure::FileStructure;
-// use crate::templates::TemplateExtension;
 use crate::doctavious_error::Result;
+use crate::file_structure::FileStructure;
 // TODO: fix this
 use crate::commands::githooks::githooks::Hook;
 use lazy_static::lazy_static;
 use std::fs;
 use std::str;
 
-use serde_derive::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use crate::commands::changelog::CommitParser;
-use regex::Regex;
 use crate::markup_format::MarkupFormat;
+use regex::Regex;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 lazy_static! {
     // TODO: doctavious config will live in project directory
@@ -83,7 +82,6 @@ pub struct ChangelogGitSettings {
     #[serde(with = "serde_regex", default)]
     /// Regex to skip matched tags.
     pub skip_tags: Option<Regex>,
-
     // https://github.com/orhun/git-cliff/issues/10
     // skip intermediate tags?
 }
@@ -110,7 +108,7 @@ pub struct TilSettings {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct GithookSettings {
-    pub hooks: HashMap<String, Hook>
+    pub hooks: HashMap<String, Hook>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -155,7 +153,10 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_adr_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
+    pub fn get_adr_template_extension(
+        &self,
+        extension: Option<MarkupFormat>,
+    ) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -193,7 +194,10 @@ impl Settings {
         return FileStructure::default();
     }
 
-    pub fn get_rfd_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
+    pub fn get_rfd_template_extension(
+        &self,
+        extension: Option<MarkupFormat>,
+    ) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -223,7 +227,10 @@ impl Settings {
 
     // TODO: I might revert having this take in an extension and rather just have a function in til
     // that does and defers to settings
-    pub fn get_til_template_extension(&self, extension: Option<MarkupFormat>) -> MarkupFormat {
+    pub fn get_til_template_extension(
+        &self,
+        extension: Option<MarkupFormat>,
+    ) -> MarkupFormat {
         if extension.is_some() {
             return extension.unwrap();
         }
@@ -252,9 +259,7 @@ pub(crate) fn load_settings() -> Result<Settings> {
 // TODO: should this take in a mut writer, i.e., a mutable thing we call “writer”.
 // Its type is impl std::io::Write
 // so that its a bit easier to test?
-pub(crate) fn persist_settings(
-    settings: Settings,
-) -> Result<()> {
+pub(crate) fn persist_settings(settings: Settings) -> Result<()> {
     let content = toml::to_string(&settings)?;
     fs::write(SETTINGS_FILE.as_path(), content)?;
 

@@ -1,12 +1,12 @@
+use crate::markup_format::MarkupFormat::{Asciidoc, Markdown};
+use crate::{parse_enum, EnumError};
+use clap::{ArgEnum, PossibleValue};
+use lazy_static::lazy_static;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::hash_map::Keys;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
-use lazy_static::lazy_static;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use crate::{EnumError, parse_enum};
-use clap::{ArgEnum, PossibleValue};
-use crate::markup_format::MarkupFormat::{Asciidoc, Markdown};
 
 lazy_static! {
     pub static ref MARKUP_FORMAT_EXTENSIONS: HashMap<&'static str, MarkupFormat> = {
@@ -27,7 +27,6 @@ pub enum MarkupFormat {
 }
 
 impl MarkupFormat {
-
     pub(crate) fn iterator() -> Iter<'static, MarkupFormat> {
         return [Asciidoc, Markdown].iter();
     }
@@ -61,8 +60,8 @@ impl Display for MarkupFormat {
 
 impl Serialize for MarkupFormat {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let s = self.extension();
         s.serialize(serializer)
@@ -71,8 +70,8 @@ impl Serialize for MarkupFormat {
 
 impl<'de> Deserialize<'de> for MarkupFormat {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let extension = match parse_markup_format_extension(&s) {

@@ -1,13 +1,14 @@
 // from https://siciarz.net/24-days-rust-git2/
 
-use git2::{Oid, Signature, Repository, BranchType, Direction, Commit, ObjectType, Sort};
-use std::path::Path;
-use regex::Regex;
+use git2::{
+    BranchType, Commit, Direction, ObjectType, Oid, Repository, Signature, Sort,
+};
 use indexmap::IndexMap;
+use regex::Regex;
 use std::ops::Deref;
+use std::path::Path;
 
 // https://github.com/simeg/eureka/blob/master/src/git.rs
-
 
 // Latest semver tag. Need to verify as this probably doesnt take into account pre-release or build
 // git tag | sort -r --version-sort | head -n1
@@ -16,7 +17,8 @@ use std::ops::Deref;
 pub(crate) fn branch_exists(repo: &Repository, reserve_number: i32) -> bool {
     let pattern = format!("*{}", reserve_number);
     let re = Regex::new(pattern.as_str()).unwrap();
-    let c = repo.branches(Some(BranchType::Remote))
+    let c = repo
+        .branches(Some(BranchType::Remote))
         .unwrap()
         .find(|b| re.is_match(b.as_ref().unwrap().0.name().unwrap().unwrap()));
 
@@ -28,21 +30,20 @@ pub(crate) fn checkout_branch(repo: &Repository, branch_name: &str) {
     let oid = head.target().unwrap();
     let commit = repo.find_commit(oid).unwrap();
 
-    let branch = repo.branch(
-        branch_name,
-        &commit,
-        false,
-    );
+    let branch = repo.branch(branch_name, &commit, false);
 
-    let obj = repo.revparse_single(&("refs/heads/".to_owned() + branch_name)).unwrap();
+    let obj = repo
+        .revparse_single(&("refs/heads/".to_owned() + branch_name))
+        .unwrap();
 
-    repo.checkout_tree(
-        &obj,
-        None
-    );
+    repo.checkout_tree(&obj, None);
 }
 
-pub(crate) fn add_and_commit(repo: &Repository, path: &Path, message: &str) -> Result<Oid, git2::Error> {
+pub(crate) fn add_and_commit(
+    repo: &Repository,
+    path: &Path,
+    message: &str,
+) -> Result<Oid, git2::Error> {
     let mut index = repo.index()?;
     index.add_path(path)?;
 
@@ -54,12 +55,14 @@ pub(crate) fn add_and_commit(repo: &Repository, path: &Path, message: &str) -> R
     let tree = repo.find_tree(oid)?;
     let signature = repo.signature()?;
 
-    return repo.commit(Some("HEAD"), //  point HEAD to our new commit
-                &signature, // author
-                &signature, // committer
-                message, // commit message
-                &tree, // tree
-                &[&parent_commit]);// parents
+    return repo.commit(
+        Some("HEAD"), //  point HEAD to our new commit
+        &signature,   // author
+        &signature,   // committer
+        message,      // commit message
+        &tree,        // tree
+        &[&parent_commit],
+    ); // parents
 }
 
 pub(crate) fn push(repo: &Repository) -> Result<(), git2::Error> {
@@ -74,11 +77,13 @@ fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
     obj.map_err(|_| git2::Error::from_str("Couldn't find commit"))
 }
 
-
 /// Parses and returns the commits.
 ///
 /// Sorts the commits by their time.
-pub fn commits(repo: &Repository, range: Option<String>) -> Result<Vec<Commit>, git2::Error> {
+pub fn commits(
+    repo: &Repository,
+    range: Option<String>,
+) -> Result<Vec<Commit>, git2::Error> {
     let mut revwalk = repo.revwalk()?;
     revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)?;
     if let Some(range) = range {
@@ -103,7 +108,9 @@ pub fn tags(
 
     // from https://github.com/rust-lang/git2-rs/blob/master/examples/tag.rs
     // also check https://github.com/orhun/git-cliff/blob/main/git-cliff-core/src/repo.rs tags
-    for name in repo.tag_names(pattern.as_deref())?.iter().flatten().map(String::from) {
+    for name in
+        repo.tag_names(pattern.as_deref())?.iter().flatten().map(String::from)
+    {
         let obj = repo.revparse_single(name.as_str())?;
         if let Some(tag) = obj.as_tag() {
             if let Some(commit) = tag
@@ -120,8 +127,5 @@ pub fn tags(
     }
 
     tags.sort_by(|a, b| a.0.time().seconds().cmp(&b.0.time().seconds()));
-    Ok(tags
-        .into_iter()
-        .map(|(a, b)| (a.id().to_string(), b))
-        .collect())
+    Ok(tags.into_iter().map(|(a, b)| (a.id().to_string(), b)).collect())
 }

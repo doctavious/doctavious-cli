@@ -1,20 +1,22 @@
 // use crate::templates::TemplateExtension;
 // use crate::templates::TEMPLATE_EXTENSIONS;
 use std::collections::HashMap;
-use std::io::{ErrorKind, Write, Error};
+use std::io::{Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
+use crate::doctavious_error::{
+    DoctaviousError, EnumError, Result as DoctavousResult,
+};
 use crate::file_structure::FileStructure;
+use crate::markup_format::MarkupFormat;
+use crate::output::{get_output, print_output, Output};
+use crate::MARKUP_FORMAT_EXTENSIONS;
+use serde::ser::SerializeSeq;
+use serde::Serializer;
+use std::fmt::{Debug, Display, Formatter};
 use unidecode::unidecode;
 use walkdir::WalkDir;
-use crate::doctavious_error::{DoctaviousError, Result as DoctavousResult, EnumError};
-use crate::output::{Output, get_output, print_output};
-use serde::Serializer;
-use std::fmt::{Display, Formatter, Debug};
-use serde::ser::SerializeSeq;
-use crate::markup_format::MarkupFormat;
-use crate::MARKUP_FORMAT_EXTENSIONS;
 
 pub(crate) fn parse_enum<A: Copy>(
     env: &'static HashMap<&'static str, A>,
@@ -26,17 +28,15 @@ pub(crate) fn parse_enum<A: Copy>(
             let supported: Vec<&&str> = env.keys().collect();
             Err(EnumError {
                 message: format!(
-                "Unsupported value: \"{}\". Supported values: {:?}",
-                src, supported
-                )
+                    "Unsupported value: \"{}\". Supported values: {:?}",
+                    src, supported
+                ),
             })
         }
     }
 }
 
-pub(crate) fn ensure_path(
-    path: &PathBuf,
-) -> DoctavousResult<()> {
+pub(crate) fn ensure_path(path: &PathBuf) -> DoctavousResult<()> {
     if path.exists() {
         println!("File already exists at: {}", path.to_string_lossy());
         print!("Overwrite? (y/N): ");
@@ -46,11 +46,14 @@ pub(crate) fn ensure_path(
         return if decision.trim().eq_ignore_ascii_case("Y") {
             Ok(())
         } else {
-            Err(DoctaviousError::NoConfirmation(format!(
-                "Unable to write config file to: {}",
-                path.to_string_lossy()
-            ).into()))
-        }
+            Err(DoctaviousError::NoConfirmation(
+                format!(
+                    "Unable to write config file to: {}",
+                    path.to_string_lossy()
+                )
+                .into(),
+            ))
+        };
     } else {
         let parent_dir = path.parent();
         if parent_dir.is_some() {
@@ -101,7 +104,7 @@ pub(crate) fn reserve_number(
         Ok(i)
     } else {
         Ok(get_next_number(dir, file_structure))
-    }
+    };
 }
 
 pub(crate) fn is_number_reserved(
@@ -245,12 +248,11 @@ pub(crate) fn slugify(string: &str) -> String {
     s
 }
 
-
 struct List<A>(Vec<A>);
 
 impl<A> Debug for List<A>
-    where
-        A: Debug,
+where
+    A: Debug,
 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         for value in self.0.iter() {
@@ -262,8 +264,8 @@ impl<A> Debug for List<A>
 }
 
 impl<A> Display for List<A>
-    where
-        A: Display,
+where
+    A: Display,
 {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         for value in self.0.iter() {
@@ -275,15 +277,12 @@ impl<A> Display for List<A>
 }
 
 impl<A> serde::ser::Serialize for List<A>
-    where
-        A: serde::ser::Serialize,
+where
+    A: serde::ser::Serialize,
 {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
         for elem in self.0.iter() {
@@ -315,9 +314,7 @@ pub(crate) fn get_files(dir: &str) -> Vec<String> {
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
         .filter(|f| is_valid_file(&f.path()))
-        .map(|f| {
-            String::from(strip_current_dir(&f.path()).to_str().unwrap())
-        })
+        .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))
         .collect();
 
     f.sort();

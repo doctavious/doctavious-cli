@@ -1,13 +1,10 @@
-use tempfile::{tempdir, tempfile, NamedTempFile};
 use std::fs::File;
-use std::io::{self, Write, Read};
-
+use std::io::{self, Read, Write};
+use tempfile::{tempdir, tempfile, NamedTempFile};
 
 // init default
 #[test]
-fn init() {
-
-}
+fn init() {}
 
 // init options
 

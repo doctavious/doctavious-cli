@@ -1,23 +1,20 @@
-
-
 // TODO: can also access fields like the following. Make sure to include in docs
 // {%- for row in data %}
 // | {{- row['status'] }} | {{ row['RFD'] }} |
 // {%- endfor -%}
 
-use std::collections::HashMap;
-use std::path::PathBuf;
 use csv::ReaderBuilder;
 use indexmap::IndexMap;
 use serde_json::{json, to_value, Value};
+use std::collections::HashMap;
+use std::path::PathBuf;
 // use crate::TemplateExtension;
-use crate::templates::Templates;
-use std::string::String;
-use serde_json::value::Value as Json;
 use crate::markup_format::MarkupFormat;
+use crate::templates::Templates;
+use serde_json::value::Value as Json;
+use std::string::String;
 
-
-pub(crate) fn toc_template(extension: MarkupFormat) ->  &'static str {
+pub(crate) fn toc_template(extension: MarkupFormat) -> &'static str {
     return match extension {
         MarkupFormat::Markdown => {
             r#"<!-- snippet::markdown_toc -->
@@ -49,7 +46,7 @@ pub(crate) fn toc_template(extension: MarkupFormat) ->  &'static str {
 {%- endfor %}
 <!-- end::asciidoc_toc -->"#
         }
-    }
+    };
 }
 
 // TODO: this should likely live somewhere else. somewhere that could be used by adr and rfds
@@ -57,9 +54,8 @@ pub(crate) fn toc_template(extension: MarkupFormat) ->  &'static str {
 // toc from Vec<PathBuf> list of files
 // toc from list<string> (headers) and Vec<HashMap> (data)
 pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
-    let mut rdr = ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(path).unwrap();
+    let mut rdr =
+        ReaderBuilder::new().has_headers(true).from_path(path).unwrap();
 
     let mut context: HashMap<&str, Value> = HashMap::new();
 
@@ -67,7 +63,7 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
     let headers_vec: Vec<String> = headers.deserialize(None).unwrap();
     context.insert("headers", json!(&headers_vec));
 
-    let mut output: Vec<IndexMap<String,String>> = Vec::new();
+    let mut output: Vec<IndexMap<String, String>> = Vec::new();
     for record in rdr.records() {
         // let record: IndexMap<String,Option<String>> = row.unwrap().deserialize(Some(&headers)).unwrap();
         // output.push(record);
@@ -76,7 +72,10 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
         for row in record.iter() {
             for (pos, field) in row.into_iter().enumerate() {
                 println!("{} / {}", pos, field);
-                map.insert(headers_vec.get(pos).unwrap().to_string(), field.to_string());
+                map.insert(
+                    headers_vec.get(pos).unwrap().to_string(),
+                    field.to_string(),
+                );
             }
         }
         output.push(map);
@@ -88,7 +87,6 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
 
     return Templates::one_off(template, &context, false).unwrap();
 }
-
 
 // r#"<!-- snippet::markdown_toc -->
 // {{# if headers }}
@@ -105,7 +103,6 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
 //     {%- endfor -%}
 // {%- endfor -%}
 // {# end::markdown_toc #}"#
-
 
 // implement via bare function
 // fn toc(h: &Helper, _: &Handlebars, c: &Context, rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult {
@@ -211,22 +208,22 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, env};
     use std::collections::HashMap;
     use std::path::Path;
+    use std::{env, fs};
     // use handlebars::Handlebars;
     // use crate::commands::design_decisions::toc::{JoinHelper, RepeatHelper, toc_template};
-    use crate::commands::design_decisions::toc::{toc_template};
+    use crate::commands::design_decisions::toc::toc_template;
 
+    use crate::markup_format::MarkupFormat;
     use crate::output::Output;
     use std::string::String;
-    use crate::markup_format::MarkupFormat;
 
     #[test]
     fn markdown_toc() {
         let toc = super::render_toc(
             Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            toc_template(MarkupFormat::Markdown)
+            toc_template(MarkupFormat::Markdown),
         );
         let expected = r#"<!-- snippet::markdown_toc -->
 | status | RFD |
@@ -241,7 +238,7 @@ mod tests {
     fn asciidoc_toc() {
         let toc = super::render_toc(
             Path::new("./tests/resources/sample_csv.csv").to_path_buf(),
-            toc_template(MarkupFormat::Asciidoc)
+            toc_template(MarkupFormat::Asciidoc),
         );
 
         let expected = r#"<!-- snippet::asciidoc_toc -->
@@ -284,4 +281,3 @@ mod tests {
     //     assert_eq!(r0.ok().unwrap(), "hello hello ".to_string());
     // }
 }
-

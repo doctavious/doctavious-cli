@@ -1,25 +1,25 @@
 // use crate::templates::{get_leading_character, TemplateExtension};
+use crate::markup_format::MarkupFormat;
 use crate::utils::is_valid_file;
 use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
-use crate::markup_format::MarkupFormat;
 
+mod bump;
+mod cdg;
+pub mod changelog;
+pub mod design_decisions;
+pub mod githooks;
 pub mod init;
 pub mod login;
+mod presentation;
+mod release;
+mod service_directory;
+mod snippets;
+mod software_template;
+mod tag;
 pub mod telemetry;
 pub mod til;
-mod presentation;
-pub mod changelog;
-pub mod githooks;
-mod snippets;
-mod tag;
-mod bump;
-mod release;
-pub mod design_decisions;
-mod cdg;
-mod software_template;
-mod service_directory;
 
 // TODO: not a fan of the list ToC for ADRs and RFDs
 // TODO: pass in header
@@ -84,8 +84,8 @@ pub(crate) fn build_toc(
 }
 
 pub(crate) fn title_string<R>(rdr: R, extension: MarkupFormat) -> String
-    where
-        R: BufRead,
+where
+    R: BufRead,
 {
     // TODO: swap this implementation for AST when ready
     let leading_char = extension.leading_header_character();

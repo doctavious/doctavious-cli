@@ -1,16 +1,8 @@
-use crate::doctavious_error::{
-    DoctaviousError,
-    Result,
-};
+use crate::commands::changelog::CommitParser;
+use crate::doctavious_error::{DoctaviousError, Result};
 use git2::Commit as GitCommit;
 use git_conventional::Commit as ConventionalCommit;
-use serde::ser::{
-    Serialize,
-    SerializeStruct,
-    Serializer,
-};
-use crate::commands::changelog::CommitParser;
-
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 /// Common commit object that is parsed from a repository.
 #[derive(Debug, Clone, PartialEq, serde_derive::Deserialize)]
@@ -39,12 +31,7 @@ impl<'a> From<&GitCommit<'a>> for Commit<'a> {
 impl Commit<'_> {
     /// Constructs a new instance.
     pub fn new(id: String, message: String) -> Self {
-        Self {
-            id,
-            message,
-            conventional: None,
-            category: None,
-        }
+        Self { id, message, conventional: None, category: None }
     }
 
     /// Processes the commit.
@@ -96,8 +83,10 @@ impl Commit<'_> {
                         self.category = parser.category.as_ref().cloned();
                         Ok(self)
                     } else {
-                        Err(DoctaviousError::CategoryError(String::from("Skipping commit")))
-                    }
+                        Err(DoctaviousError::CategoryError(String::from(
+                            "Skipping commit",
+                        )))
+                    };
                 }
             }
         }
@@ -112,9 +101,12 @@ impl Commit<'_> {
 }
 
 impl Serialize for Commit<'_> {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
     {
         let mut commit = serializer.serialize_struct("Commit", 8)?;
         commit.serialize_field("id", &self.id)?;
@@ -126,7 +118,7 @@ impl Serialize for Commit<'_> {
                     "footers",
                     &conv
                         .footers()
-                        .to_vec()// TODO: is this necessary?
+                        .to_vec() // TODO: is this necessary?
                         .iter()
                         .map(|f| f.value())
                         .collect::<Vec<&str>>(),
@@ -165,13 +157,13 @@ mod test {
                 ),
                 true,
             ),
-            (
-                Commit::new(String::from("124124"), String::from("xyz")),
-                false,
-            ),
+            (Commit::new(String::from("124124"), String::from("xyz")), false),
         ];
         for (commit, is_conventional) in &test_cases {
-            assert_eq!(is_conventional, &commit.clone().into_conventional().is_ok())
+            assert_eq!(
+                is_conventional,
+                &commit.clone().into_conventional().is_ok()
+            )
         }
         let commit = test_cases[0]
             .0

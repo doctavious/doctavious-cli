@@ -1,3 +1,5 @@
+- Create TemplateContext and use instead of `let mut context: HashMap<dyn Serialize + ?Sized, dyn Into<String>> = HashMap::new();` 
+- Move ADR / RFDs to template engine
 - support environment variables for commands
 - logging verbosity more than just debug?
 - look at Strum for enums to reduce boilerplate code

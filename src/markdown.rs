@@ -1,6 +1,3 @@
-
-
-
 // md_string = " | "
 // for header in headers:
 // md_string += header+" |"
@@ -16,18 +13,17 @@
 // md_string += row[header]+" | "
 // md_string += "\n"
 
+use csv::ReaderBuilder;
 use std::io;
 use std::path::PathBuf;
-use csv::ReaderBuilder;
 
 // https://docs.rs/csv/1.1.6/csv/cookbook/index.html
 
 // TODO: CSV to markdown table
 // TODO: support asciidoc
 fn csv_to_table(path: PathBuf) -> String {
-    let mut rdr = ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(path).unwrap();
+    let mut rdr =
+        ReaderBuilder::new().has_headers(true).from_path(path).unwrap();
 
     let mut md_string = String::from(" | ");
     for header in rdr.headers().unwrap() {
@@ -52,6 +48,3 @@ fn csv_to_table(path: PathBuf) -> String {
 
     md_string
 }
-
-
-

@@ -1,32 +1,26 @@
-use crate::constants::{DEFAULT_RFD_TEMPLATE_PATH, DEFAULT_RFD_DIR};
-use crate::{edit, init_dir, git};
+use std::collections::HashMap;
+use crate::commands::design_decisions::get_template;
+use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
 use crate::doctavious_error::Result;
 use crate::file_structure::parse_file_structure;
 use crate::file_structure::FileStructure;
-use crate::settings::{SETTINGS, load_settings, RFDSettings, persist_settings};
-// use crate::templates::{
-//     parse_template_extension, TemplateExtension,
-// };
-use crate::utils::{build_path, ensure_path, format_number, reserve_number, get_files};
-use clap::{ArgEnum, Parser};
-use chrono::Utc;
-use std::fs;
-use git2::Repository;
-use std::path::{PathBuf, Path};
-use tera::{
-    Context as TeraContext,
-    Result as TeraResult,
-    Tera,
-    Value,
+use crate::markup_format::{parse_markup_format_extension, MarkupFormat};
+use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
+use crate::utils::{
+    build_path, ensure_path, format_number, get_files, reserve_number,
 };
+use crate::{edit, git, init_dir};
+use chrono::Utc;
+use clap::{ArgEnum, Parser};
 use csv::Writer;
-use gray_matter::Matter;
+use dotavious::{Dot, Edge, GraphBuilder, Node};
+use git2::Repository;
 use gray_matter::engine::YAML;
+use gray_matter::Matter;
+use std::fs;
 use std::fs::File;
 use std::io::Write;
-use dotavious::{Dot, Edge, GraphBuilder, Node};
-use crate::commands::design_decisions::get_template;
-use crate::markup_format::{MarkupFormat,parse_markup_format_extension};
+use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers RFD management commands")]
@@ -126,7 +120,6 @@ pub(crate) enum GenerateRFDsCommand {
 #[derive(Parser, Debug)]
 #[clap(about = "Generates RFD CSV")]
 pub(crate) struct RFDCsv {
-
     #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
@@ -144,7 +137,6 @@ pub(crate) struct RFDCsv {
 #[derive(Parser, Debug)]
 #[clap(about = "Generates RFD File")]
 pub(crate) struct RFDFile {
-
     #[clap(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
@@ -166,7 +158,6 @@ pub(crate) struct RFDFile {
                 If not present ToC will be written to stdout"
     )]
     pub path: PathBuf, // where to write file to. required
-
 }
 
 #[derive(Parser, Debug)]
@@ -192,7 +183,6 @@ pub(crate) struct RFDToc {
                 If not present ToC will be written to stdout"
     )]
     pub output_path: PathBuf, // where to write file to. required
-
 
     #[clap(long, short, help = "")]
     pub intro: Option<String>,
@@ -252,7 +242,7 @@ pub(crate) struct ReserveRFD {
 pub(crate) fn init_rfd(
     directory: Option<String>,
     structure: FileStructure,
-    extension: MarkupFormat
+    extension: MarkupFormat,
 ) -> Result<PathBuf> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -275,11 +265,7 @@ pub(crate) fn init_rfd(
     init_dir(dir)?;
 
     // TODO: fix
-    return new_rfd(
-        Some(1),
-        "Use RFDs ...".to_string(),
-        extension,
-    );
+    return new_rfd(Some(1), "Use RFDs ...".to_string(), extension);
 }
 
 pub(crate) fn new_rfd(
@@ -315,11 +301,11 @@ pub(crate) fn new_rfd(
         .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
 
     // TODO: use templates.rs
-    let mut context = TeraContext::new();
-    context.insert("number", &reserve_number);
-    context.insert("title", &title);
-    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
-    context.insert("status", "Accepted");
+    let mut context = HashMap::new();
+    context.insert("number", reserve_number.to_string());
+    context.insert("title", title);
+    context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
+    context.insert("status", String::from("Accepted"));
 
     let edited = edit::edit(&starting_content)?;
     fs::write(&rfd_path, edited)?;
@@ -339,7 +325,10 @@ pub(crate) fn reserve_rfd(
     // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
-        return Err(git2::Error::from_str("branch already exists in remote. Please pull.").into());
+        return Err(git2::Error::from_str(
+            "branch already exists in remote. Please pull.",
+        )
+        .into());
     }
 
     git::checkout_branch(&repo, reserve_number.to_string().as_str());
@@ -347,12 +336,22 @@ pub(crate) fn reserve_rfd(
     // TODO: revisit clones. Using it for now to resolve value borrowed here after move
     let created_result = new_rfd(number, title.clone(), extension);
 
-    let message = format!("{}: Adding placeholder for RFD {}", reserve_number, title.clone());
-    git::add_and_commit(&repo, created_result.unwrap().as_path(), message.as_str());
+    let message = format!(
+        "{}: Adding placeholder for RFD {}",
+        reserve_number,
+        title.clone()
+    );
+    git::add_and_commit(
+        &repo,
+        created_result.unwrap().as_path(),
+        message.as_str(),
+    );
     git::push(&repo);
 
-    return Ok(())
+    return Ok(());
 }
+
+pub(crate) fn generate_csv() {}
 
 pub(crate) fn graph_rfds() {
     let graph = GraphBuilder::new_named_directed("example")

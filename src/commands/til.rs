@@ -1,18 +1,17 @@
-use crate::commands::{title_string};
-use crate::settings::{SETTINGS, load_settings, TilSettings, persist_settings};
-// use crate::templates::{parse_template_extension, TemplateExtension};
-use crate::doctavious_error::{Result as DoctaviousResult};
-use clap::{ArgEnum, Parser};
+use crate::commands::title_string;
+use crate::constants::DEFAULT_TIL_DIR;
+use crate::doctavious_error::Result as DoctaviousResult;
+use crate::markup_format::{parse_markup_format_extension, MarkupFormat};
+use crate::settings::{load_settings, persist_settings, TilSettings, SETTINGS};
+use crate::{edit, init_dir};
 use chrono::{DateTime, Utc};
+use clap::{ArgEnum, Parser};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
 use std::{fs, io};
 use walkdir::WalkDir;
-use crate::{edit, init_dir};
-use crate::constants::DEFAULT_TIL_DIR;
-use crate::markup_format::{MarkupFormat,parse_markup_format_extension};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers Today I Learned (TIL) management commands")]
@@ -95,7 +94,7 @@ struct TilEntry {
 
 pub(crate) fn init_til(
     directory: Option<String>,
-    extension: MarkupFormat
+    extension: MarkupFormat,
 ) -> DoctaviousResult<()> {
     let mut settings = match load_settings() {
         Ok(settings) => settings,
@@ -116,7 +115,7 @@ pub(crate) fn init_til(
     persist_settings(settings)?;
     init_dir(dir)?;
 
-    return Ok(())
+    return Ok(());
 }
 
 pub(crate) fn new_til(
@@ -125,7 +124,7 @@ pub(crate) fn new_til(
     tags: Option<Vec<String>>,
     extension: MarkupFormat,
     readme: bool,
-    dir: &str
+    dir: &str,
 ) -> DoctaviousResult<()> {
     let file_name = title.to_lowercase();
     let path = Path::new(dir)
@@ -141,8 +140,7 @@ pub(crate) fn new_til(
         let mut starting_content = format!("{} {}\n", leading_char, title);
         if tags.is_some() {
             starting_content.push_str("\ntags: ");
-            starting_content
-                .push_str(tags.unwrap().join(" ").as_str());
+            starting_content.push_str(tags.unwrap().join(" ").as_str());
         }
 
         let edited = edit::edit(&starting_content)?;

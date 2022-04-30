@@ -1,31 +1,28 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use clap::Parser;
-use chrono::Utc;
-use dotavious::{Dot, Edge, GraphBuilder, Node};
-use git2::{Branches, BranchType, Direction, Repository};
-use regex::Regex;
-
-use crate::{edit, init_dir};
-use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH};
-use crate::file_structure::FileStructure;
-use crate::file_structure::parse_file_structure;
-use crate::git;
-use crate::settings::{AdrSettings, load_settings, persist_settings, SETTINGS};
-// use crate::templates::{
-//     parse_template_extension, TemplateExtension,
-// };
-use crate::utils::{build_path, ensure_path, format_number, reserve_number};
-use crate::doctavious_error::Result;
-use tera::{
-    Context as TeraContext,
-    Result as TeraResult,
-    Tera,
-    Value,
-};
 use crate::commands::design_decisions::get_template;
-use crate::markup_format::{MarkupFormat,parse_markup_format_extension,MARKUP_FORMAT_EXTENSIONS};
+use crate::constants::{
+    DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH,
+};
+use crate::doctavious_error::Result;
+use crate::file_structure::parse_file_structure;
+use crate::file_structure::FileStructure;
+use crate::git;
+use crate::markup_format::{
+    parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
+};
+use crate::settings::{load_settings, persist_settings, AdrSettings, SETTINGS};
+use crate::templates::Templates;
+use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::{edit, init_dir};
+use chrono::Utc;
+use clap::Parser;
+use dotavious::{Dot, Edge, GraphBuilder, Node};
+use git2::{BranchType, Branches, Direction, Repository};
+use regex::Regex;
+use serde::Serialize;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers ADR management commands")]
@@ -51,23 +48,23 @@ pub(crate) struct InitADR {
     pub directory: Option<String>,
 
     #[clap(
-    arg_enum,
-    long,
-    short,
-    default_value_t,
-    // possible_values = &FileStructure::variants(),
-    parse(try_from_str = parse_file_structure),
-    help = "How ADRs should be structured"
+        arg_enum,
+        long,
+        short,
+        default_value_t,
+        // possible_values = &FileStructure::variants(),
+        parse(try_from_str = parse_file_structure),
+        help = "How ADRs should be structured"
     )]
     pub structure: FileStructure,
 
     #[clap(
-    arg_enum,
-    long,
-    short,
-    // possible_values = &TemplateExtension::variants(),
-    parse(try_from_str = parse_markup_format_extension),
-    help = "Extension that should be used"
+        arg_enum,
+        long,
+        short,
+        // possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
 }
@@ -84,19 +81,19 @@ pub(crate) struct NewADR {
     pub title: String,
 
     #[clap(
-    // arg_enum,
-    long,
-    short,
-    possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-    parse(try_from_str = parse_markup_format_extension),
-    help = "Extension that should be used"
+        // arg_enum,
+        long,
+        short,
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
 
     #[clap(
-    long,
-    short,
-    help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
+        long,
+        short,
+        help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
     )]
     pub supercede: Option<Vec<String>>,
 
@@ -122,9 +119,9 @@ pub(crate) struct LinkADRs {
 
     // TODO: can we give title index so we dont have to specify --title or -t?
     #[clap(
-    long,
-    short,
-    help = "Description of the link created in the new ADR"
+        long,
+        short,
+        help = "Description of the link created in the new ADR"
     )]
     pub link: String,
 
@@ -132,9 +129,9 @@ pub(crate) struct LinkADRs {
     pub target: i32,
 
     #[clap(
-    long,
-    short,
-    help = "Description of the link created in the existing ADR that will refer to new ADR"
+        long,
+        short,
+        help = "Description of the link created in the existing ADR that will refer to new ADR"
     )]
     pub reverse_link: String,
 }
@@ -193,11 +190,11 @@ pub(crate) struct ReserveADR {
     pub title: String,
 
     #[clap(
-    long,
-    short,
-    // possible_values = &TemplateExtension::variants(),
-    parse(try_from_str = parse_markup_format_extension),
-    help = "Extension that should be used"
+        long,
+        short,
+        // possible_values = &TemplateExtension::variants(),
+        parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
 }
@@ -290,21 +287,19 @@ pub(crate) fn new_adr(
         .replace("<DATE>", &Utc::now().format("%Y-%m-%d").to_string());
     starting_content = starting_content.replace("<STATUS>", "Accepted");
 
-    let mut context = TeraContext::new();
-    context.insert("number", &reserve_number);
-    context.insert("title", &title);
-    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
-    context.insert("status", "Accepted");
+    let mut context = HashMap::new();
+    context.insert("number", reserve_number.to_string());
+    context.insert("title", title);
+    context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
+    context.insert("status", String::from("Accepted"));
 
     // tera.render("template", &TeraContext::from_serialize(release)?)?;
     // Tera::one_off(input, context, autoescape)
-
 
     let edited = edit::edit(&starting_content)?;
     fs::write(&adr_path, edited)?;
     return Ok(adr_path);
 }
-
 
 // implement ADR / RFD reserve command
 // 1. get latest number
@@ -336,24 +331,34 @@ pub(crate) fn reserve_adr(
     // TODO: support more than current directory
     let repo = Repository::open(".")?;
     if git::branch_exists(&repo, reserve_number) {
-        return Err(git2::Error::from_str("branch already exists in remote. Please pull.").into());
+        return Err(git2::Error::from_str(
+            "branch already exists in remote. Please pull.",
+        )
+        .into());
     }
 
     git::checkout_branch(&repo, reserve_number.to_string().as_str());
 
     // TODO: revisit clones. Using it for now to resolve value borrowed here after move
-    let created_result = new_adr(number, title.clone(), extension, DEFAULT_ADR_TEMPLATE_PATH);
+    let created_result =
+        new_adr(number, title.clone(), extension, DEFAULT_ADR_TEMPLATE_PATH);
 
-    let message = format!("{}: Adding placeholder for ADR {}", reserve_number, title.clone());
-    git::add_and_commit(&repo, created_result.unwrap().as_path(), message.as_str());
+    let message = format!(
+        "{}: Adding placeholder for ADR {}",
+        reserve_number,
+        title.clone()
+    );
+    git::add_and_commit(
+        &repo,
+        created_result.unwrap().as_path(),
+        message.as_str(),
+    );
     git::push(&repo);
 
-    return Ok(())
+    return Ok(());
 }
 
-pub(crate) fn generate_csv() {
-
-}
+pub(crate) fn generate_csv() {}
 
 pub(crate) fn graph_adrs() {
     let graph = GraphBuilder::new_named_directed("example")
@@ -366,13 +371,12 @@ pub(crate) fn graph_adrs() {
     let dot = Dot { graph };
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::fs::File;
     use std::io::{self, Read, Write};
 
-    use tempfile::{NamedTempFile, tempdir, tempfile};
+    use tempfile::{tempdir, tempfile, NamedTempFile};
 
     use crate::file_structure::FileStructure;
     use crate::init_adr;

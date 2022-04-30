@@ -1,4 +1,4 @@
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // idea from rusty-hook and left-hook
 // TODO: flush this out more
@@ -27,7 +27,7 @@ const HOOK_NAMES: [&str; 21] = [
     "pre-auto-gc",
     "post-rewrite",
     "sendemail-validate",
-    "post-index-change"
+    "post-index-change",
 ];
 
 #[derive(Debug, Clone, serde_derive::Serialize, serde_derive::Deserialize)]
@@ -51,7 +51,7 @@ pub struct Hook {
 struct Script {
     // used as file name
     name: String,
-    runner: String
+    runner: String,
 }
 
 // select specific file groups
@@ -82,7 +82,6 @@ struct Script {
 //   exclude_tags:
 //     - frontend
 
-
 #[derive(Debug, Clone, serde_derive::Serialize, serde_derive::Deserialize)]
 struct HookCommand {
     name: String,
@@ -91,7 +90,4 @@ struct HookCommand {
     run: String,
 }
 
-
-fn init() {
-
-}
+fn init() {}

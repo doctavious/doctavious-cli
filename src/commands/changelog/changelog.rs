@@ -4,33 +4,26 @@
 // TODO: custom example would be something like cockroachdb
 // TODO: I like cockroachdb's release note and release justification style
 
-use clap::Parser;
-use crate::commands::changelog::{StripParts, ChangelogConfig};
-use std::path::PathBuf;
-use crate::commands::changelog::parse_strip_parts;
-use crate::constants::DEFAULT_CONFIG_NAME;
-use git2::Repository;
-use std::fs::{
-    self,
-    File,
-};
-use std::{io, env};
-use std::collections::HashMap;
-use crate::git;
-use crate::doctavious_error::{
-    DoctaviousError,
-    Result,
-};
-use crate::commands::changelog::release::Release;
 use crate::commands::changelog::commit::Commit;
+use crate::commands::changelog::parse_strip_parts;
+use crate::commands::changelog::release::Release;
+use crate::commands::changelog::{ChangelogConfig, StripParts};
+use crate::constants::DEFAULT_CONFIG_NAME;
+use crate::doctavious_error::{DoctaviousError, Result};
+use crate::git;
 use crate::settings::{
-    load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings, ChangelogSettings,
-    SETTINGS,
+    load_settings, persist_settings, AdrSettings, ChangelogSettings,
+    RFDSettings, TilSettings, SETTINGS,
 };
 use crate::templates::Templates;
+use clap::Parser;
+use git2::Repository;
 use log::warn;
+use std::collections::HashMap;
+use std::fs::{self, File};
 use std::io::Write;
-
+use std::path::PathBuf;
+use std::{env, io};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers Changelog management commands")]
@@ -42,7 +35,7 @@ pub(crate) struct ChangelogOpt {
 #[derive(Parser, Debug)]
 pub(crate) enum ChangelogCommand {
     Init(InitChangelog),
-    Generate(GenerateChangeLog)
+    Generate(GenerateChangeLog),
 }
 
 #[derive(Parser, Debug)]
@@ -81,7 +74,6 @@ pub(crate) struct InitChangelog {
 #[derive(Parser, Debug)]
 #[clap(about = "Generate Changelog")]
 pub(crate) struct GenerateChangeLog {
-
     /// Sets the configuration file.
     #[clap(
         long,
@@ -102,7 +94,12 @@ pub(crate) struct GenerateChangeLog {
     // defaults to current directory. env::current_dir()
 
     // TODO: this can just be a boolean
-    #[clap(long, short, value_name = "PATH", help = "Prepends entries to the given changelog file.")]
+    #[clap(
+        long,
+        short,
+        value_name = "PATH",
+        help = "Prepends entries to the given changelog file."
+    )]
     pub prepend: Option<PathBuf>,
 
     #[clap(
@@ -156,12 +153,15 @@ pub struct Changelog<'a> {
     template: Templates, // TODO: change to Template
     // config:   &'a Config,
     // config: ChangelogConfig
-    config: &'a ChangelogSettings
+    config: &'a ChangelogSettings,
 }
 
 impl<'a> Changelog<'a> {
     /// Constructs a new instance.
-    pub fn new(releases: Vec<Release<'a>>, config: &'a ChangelogSettings) -> Result<Self> {
+    pub fn new(
+        releases: Vec<Release<'a>>,
+        config: &'a ChangelogSettings,
+    ) -> Result<Self> {
         let mut changelog = Self {
             releases,
             template: Templates::new_with_templates({
@@ -200,16 +200,16 @@ impl<'a> Changelog<'a> {
                         Ok(commit) => Some(commit),
                         Err(e) => {
                             log::trace!(
-								"{} - {:?} ({})",
-								commit.id[..7].to_string(),
-								e,
-								commit
-									.message
-									.lines()
-									.next()
-									.unwrap_or_default()
-									.trim()
-							);
+                                "{} - {:?} ({})",
+                                commit.id[..7].to_string(),
+                                e,
+                                commit
+                                    .message
+                                    .lines()
+                                    .next()
+                                    .unwrap_or_default()
+                                    .trim()
+                            );
                             None
                         }
                     }
@@ -230,7 +230,10 @@ impl<'a> Changelog<'a> {
             .filter(|release| {
                 if release.commits.is_empty() {
                     if let Some(version) = release.version.as_ref().cloned() {
-                        log::trace!("Release doesn't have any commits: {}", version);
+                        log::trace!(
+                            "Release doesn't have any commits: {}",
+                            version
+                        );
                     }
                     false
                 } else if let Some(version) = &release.version {
@@ -281,16 +284,9 @@ impl<'a> Changelog<'a> {
     }
 }
 
+pub(crate) fn init_changelog() {}
 
-
-pub(crate) fn init_changelog() {
-
-}
-
-pub(crate) fn generate_changelog(
-    args: GenerateChangeLog,
-) -> Result<()>
-{
+pub(crate) fn generate_changelog(args: GenerateChangeLog) -> Result<()> {
     // TODO: get config/settings default if not present
 
     // TODO: get repository from arg/env
@@ -298,9 +294,11 @@ pub(crate) fn generate_changelog(
     let repository =
         Repository::init(args.repository.unwrap_or(env::current_dir()?))?;
 
-    let config = load_settings()?
-        .changelog_settings
-        .ok_or(DoctaviousError::ChangelogError(String::from("changelog configuration not found")))?;
+    let config = load_settings()?.changelog_settings.ok_or(
+        DoctaviousError::ChangelogError(String::from(
+            "changelog configuration not found",
+        )),
+    )?;
 
     // Parse tags.
     let mut tags = git::tags(&repository, &config.git.tag_pattern)?;
@@ -381,5 +379,4 @@ pub(crate) fn generate_changelog(
     } else {
         changelog.generate(&mut io::stdout())
     }
-
 }

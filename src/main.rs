@@ -2,7 +2,8 @@ use lazy_static::lazy_static;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
-use crate::constants::{DEFAULT_CONFIG_NAME, DEFAULT_ADR_TEMPLATE_PATH};
+use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_CONFIG_NAME};
+use clap::Parser;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
@@ -10,42 +11,48 @@ use std::fs::{self};
 use std::io::ErrorKind;
 use std::io::{self};
 use std::path::{Path, PathBuf};
-use clap::Parser;
 use walkdir::WalkDir;
 
 mod commands;
 mod constants;
+mod doctavious_error;
 mod edit;
 mod file_structure;
+mod frontmatter;
+mod git;
+mod keyring;
+mod markdown;
+mod markup_format;
+mod output;
+mod scm;
 mod settings;
 mod templates;
 mod utils;
-mod git;
-mod output;
-mod doctavious_error;
-mod markdown;
-mod frontmatter;
-mod scm;
-mod keyring;
-mod markup_format;
 
-use crate::commands::design_decisions::adr::{new_adr, ADR, ADRCommand, GenerateAdrsCommand, init_adr, reserve_adr, graph_adrs};
-use crate::commands::design_decisions::rfd::{new_rfd, GenerateRFDsCommand, RFDCommand, RFD, init_rfd, reserve_rfd, graph_rfds};
-use crate::commands::til::{build_til_readme, Til, TilCommand, new_til, init_til};
-use crate::commands::{build_toc};
+use crate::commands::build_toc;
+use crate::commands::design_decisions::adr::{
+    graph_adrs, init_adr, new_adr, reserve_adr, ADRCommand,
+    GenerateAdrsCommand, ADR,
+};
+use crate::commands::design_decisions::rfd::{
+    graph_rfds, init_rfd, new_rfd, reserve_rfd, GenerateRFDsCommand,
+    RFDCommand, RFD,
+};
+use crate::commands::til::{
+    build_til_readme, init_til, new_til, Til, TilCommand,
+};
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
+use crate::doctavious_error::{EnumError, Result as DoctaviousResult};
 use crate::file_structure::FileStructure;
+use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
+use crate::output::{parse_output, print_output, Output};
 use crate::settings::{
     load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings,
     SETTINGS,
 };
-// use crate::templates::{TemplateExtension, TEMPLATE_EXTENSIONS};
+use crate::utils::list;
 use crate::utils::{format_number, is_valid_file, parse_enum};
 use std::error::Error;
-use crate::output::{Output, parse_output, print_output};
-use crate::doctavious_error::{Result as DoctaviousResult, EnumError};
-use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
-use crate::utils::list;
 
 #[derive(Parser, Debug)]
 #[clap(name = "Doctavious")]
@@ -89,10 +96,7 @@ enum Command {
 #[derive(Parser, Debug)]
 #[clap(about = "Presentation commands")]
 struct Presentation {
-    #[clap(
-        long,
-        help = "Output file path (or directory input-dir is passed)"
-    )]
+    #[clap(long, help = "Output file path (or directory input-dir is passed)")]
     output_dir: Option<String>,
 
     #[clap(
@@ -213,9 +217,13 @@ fn main() -> DoctaviousResult<()> {
         Command::Adr(adr) => match adr.adr_command {
             ADRCommand::Init(params) => {
                 // https://stackoverflow.com/questions/32788915/changing-the-return-type-of-a-function-returning-a-result
-                return match init_adr(params.directory, params.structure, params.extension) {
+                return match init_adr(
+                    params.directory,
+                    params.structure,
+                    params.extension,
+                ) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(err)
+                    Err(err) => Err(err),
                 };
             }
 
@@ -240,7 +248,8 @@ fn main() -> DoctaviousResult<()> {
                 match generate.generate_adr_command {
                     GenerateAdrsCommand::Toc(params) => {
                         let dir = SETTINGS.get_adr_dir();
-                        let extension = SETTINGS.get_adr_template_extension(params.format);
+                        let extension =
+                            SETTINGS.get_adr_template_extension(params.format);
 
                         build_toc(
                             dir,
@@ -284,15 +293,22 @@ fn main() -> DoctaviousResult<()> {
             ADRCommand::New(params) => {
                 init_dir(SETTINGS.get_adr_dir())?;
 
-                let extension = SETTINGS.get_adr_template_extension(params.extension);
-                return match new_adr(params.number, params.title, extension, DEFAULT_ADR_TEMPLATE_PATH) {
+                let extension =
+                    SETTINGS.get_adr_template_extension(params.extension);
+                return match new_adr(
+                    params.number,
+                    params.title,
+                    extension,
+                    DEFAULT_ADR_TEMPLATE_PATH,
+                ) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(err)
+                    Err(err) => Err(err),
                 };
             }
 
             ADRCommand::Reserve(params) => {
-                let extension = SETTINGS.get_adr_template_extension(params.extension);
+                let extension =
+                    SETTINGS.get_adr_template_extension(params.extension);
                 return reserve_adr(params.number, params.title, extension);
             }
         },
@@ -312,19 +328,24 @@ fn main() -> DoctaviousResult<()> {
 
         Command::RFD(rfd) => match rfd.rfd_command {
             RFDCommand::Init(params) => {
-                return match init_rfd(params.directory, params.structure, params.extension) {
+                return match init_rfd(
+                    params.directory,
+                    params.structure,
+                    params.extension,
+                ) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(err)
+                    Err(err) => Err(err),
                 };
             }
 
             RFDCommand::New(params) => {
                 init_dir(SETTINGS.get_rfd_dir())?;
 
-                let extension = SETTINGS.get_rfd_template_extension(params.extension);
+                let extension =
+                    SETTINGS.get_rfd_template_extension(params.extension);
                 return match new_rfd(params.number, params.title, extension) {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(err)
+                    Err(err) => Err(err),
                 };
             }
 
@@ -336,7 +357,8 @@ fn main() -> DoctaviousResult<()> {
                 match generate.generate_rfd_command {
                     GenerateRFDsCommand::Toc(params) => {
                         let dir = SETTINGS.get_adr_dir();
-                        let extension= SETTINGS.get_adr_template_extension(params.format);
+                        let extension =
+                            SETTINGS.get_adr_template_extension(params.format);
 
                         build_toc(
                             dir,
@@ -347,16 +369,15 @@ fn main() -> DoctaviousResult<()> {
                         );
                     }
 
-                    GenerateRFDsCommand::Graph(params) => {
-                        graph_rfds()
-                    }
+                    GenerateRFDsCommand::Graph(params) => graph_rfds(),
                     GenerateRFDsCommand::Csv(_) => {}
                     GenerateRFDsCommand::File(_) => {}
                 }
             }
 
             RFDCommand::Reserve(params) => {
-                let extension = SETTINGS.get_rfd_template_extension(params.extension);
+                let extension =
+                    SETTINGS.get_rfd_template_extension(params.extension);
                 return reserve_rfd(params.number, params.title, extension);
             }
         },
@@ -370,9 +391,17 @@ fn main() -> DoctaviousResult<()> {
                 let dir = SETTINGS.get_til_dir();
                 init_dir(&dir)?;
 
-                let extension = SETTINGS.get_til_template_extension(params.extension);
+                let extension =
+                    SETTINGS.get_til_template_extension(params.extension);
 
-                return new_til(params.title, params.category, params.tags, extension, params.readme, dir);
+                return new_til(
+                    params.title,
+                    params.category,
+                    params.tags,
+                    extension,
+                    params.readme,
+                    dir,
+                );
             }
 
             TilCommand::List(_) => {

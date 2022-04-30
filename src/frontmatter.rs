@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use crate::utils::get_files;
+use csv::{ReaderBuilder, Writer};
 use gray_matter::engine::YAML;
 use gray_matter::Matter;
-use crate::utils::get_files;
 use std::fs;
-use csv::{Writer, ReaderBuilder};
+use std::path::PathBuf;
 
 pub(crate) fn generate_csv() {
     // let mut rdr = ReaderBuilder::new()

@@ -3,7 +3,6 @@ use thiserror::Error;
 // #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum DoctaviousError {
-
     /// Error that may occur while I/O operations.
     #[error("IO error: `{0}`")]
     IoError(#[from] std::io::Error),
@@ -72,7 +71,6 @@ pub enum DoctaviousError {
 pub struct EnumError {
     pub message: String,
 }
-
 
 pub type Result<T> = core::result::Result<T, DoctaviousError>;
 // pub type Result<T, E = Error> = std::result::Result<T, E>;

@@ -1,17 +1,16 @@
-use regex::Regex;
-use std::fmt::{Display, Formatter};
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use crate::utils::parse_enum;
+use regex::Regex;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt::{Display, Formatter};
 
+mod changelog;
 mod commit;
 mod release;
-mod changelog;
-use lazy_static::lazy_static;
-use std::collections::HashMap;
-use serde::de::Error;
 use crate::doctavious_error::EnumError;
 use clap::{ArgEnum, PossibleValue};
-
+use lazy_static::lazy_static;
+use serde::de::Error;
+use std::collections::HashMap;
 
 lazy_static! {
     pub static ref STRIP_PARTS: HashMap<&'static str, StripParts> = {
@@ -61,7 +60,6 @@ pub struct CommitParser {
     pub message: Option<Regex>,
 
     // TODO: add description
-
     /// Regex for matching the commit body.
     #[serde(with = "serde_regex", default)]
     pub body: Option<Regex>,
@@ -79,20 +77,17 @@ pub enum StripParts {
 }
 
 impl StripParts {
+    // TODO: certainly dont need both and probably dont need either.
+    // verify help docs generated
+    pub(crate) fn variants() -> [&'static str; 3] {
+        ["header", "footer", "all"]
+    }
+
     pub fn possible_values() -> impl Iterator<Item = PossibleValue<'static>> {
         StripParts::value_variants()
             .iter()
             .filter_map(ArgEnum::to_possible_value)
     }
-}
-
-
-impl StripParts {
-
-    pub(crate) fn variants() -> [&'static str; 3] {
-        ["header", "footer", "all"]
-    }
-
 }
 
 impl Display for StripParts {
@@ -107,8 +102,8 @@ impl Display for StripParts {
 
 impl Serialize for StripParts {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let s = match *self {
             StripParts::Header => "header",
@@ -122,8 +117,8 @@ impl Serialize for StripParts {
 
 impl<'de> Deserialize<'de> for StripParts {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         return match parse_strip_parts(&s) {
@@ -132,12 +127,14 @@ impl<'de> Deserialize<'de> for StripParts {
                 eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
                 // TODO: was having an issue with lifetimes / borrow with using variants.
                 // find a better way to do this.
-                Err(D::Error::unknown_field(e.message.as_str(), &["header", "footer", "all"]))
+                Err(D::Error::unknown_field(
+                    e.message.as_str(),
+                    &["header", "footer", "all"],
+                ))
             }
         };
     }
 }
-
 
 pub(crate) fn parse_strip_parts(src: &str) -> Result<StripParts, EnumError> {
     parse_enum(&STRIP_PARTS, src)

@@ -1,10 +1,9 @@
-use lazy_static::lazy_static;
-use std::collections::HashMap;
-use serde::Serialize;
+use crate::doctavious_error::{EnumError, Result as DoctaviousResult};
 use crate::utils::parse_enum;
-use crate::doctavious_error::{Result as DoctaviousResult, EnumError};
+use lazy_static::lazy_static;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::env;
-
 
 lazy_static! {
     static ref OUTPUT_TYPES: HashMap<&'static str, Output> = {
@@ -14,7 +13,6 @@ lazy_static! {
         map
     };
 }
-
 
 // TODO:
 // should text be the following?
