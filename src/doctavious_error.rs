@@ -3,6 +3,10 @@ use thiserror::Error;
 // #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum DoctaviousError {
+    /// Generic error
+    #[error("{0}")]
+    Msg(String),
+
     /// Error that may occur while I/O operations.
     #[error("IO error: `{0}`")]
     IoError(#[from] std::io::Error),
@@ -45,6 +49,7 @@ pub enum DoctaviousError {
     /// Errors that may occur when deserializing types from TOML format.
     #[error("Cannot parse TOML: `{0}`")]
     DeserializeError(#[from] toml::de::Error),
+
     /// Errors that may occur when serializing types from TOML format.
     #[error("Cannot parse TOML: `{0}`")]
     SerializeError(#[from] toml::ser::Error),
@@ -52,8 +57,10 @@ pub enum DoctaviousError {
     /// Error that may occur while converting to enum.
     #[error("Enum error: `{0}`")]
     EnumError(#[from] EnumError),
+
     #[error("Serde json error: `{0}`")]
     SerdeJson(#[from] serde_json::Error),
+
     /// Error that may occur while reserving ADR/RFD number.
     #[error("{0} has already been reserved")]
     ReservedNumberError(i32),

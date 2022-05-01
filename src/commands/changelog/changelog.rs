@@ -15,7 +15,7 @@ use crate::settings::{
     load_settings, persist_settings, AdrSettings, ChangelogSettings,
     RFDSettings, TilSettings, SETTINGS,
 };
-use crate::templates::Templates;
+use crate::templates::{TemplateContext, Templates};
 use clap::Parser;
 use git2::Repository;
 use log::warn;
@@ -150,7 +150,7 @@ pub(crate) struct GenerateChangeLog {
 #[derive(Debug)]
 pub struct Changelog<'a> {
     releases: Vec<Release<'a>>,
-    template: Templates, // TODO: change to Template
+    template: Templates,
     // config:   &'a Config,
     // config: ChangelogConfig
     config: &'a ChangelogSettings,
@@ -260,7 +260,8 @@ impl<'a> Changelog<'a> {
             write!(out, "{}", header)?;
         }
         for release in &self.releases {
-            write!(out, "{}", self.template.render("release", release)?)?;
+            let s = self.template.render("release", &TemplateContext::from_serialize(release)?)?;
+            write!(out, "{}", s)?;
         }
         if let Some(footer) = &self.config.footer {
             write!(out, "{}", footer)?;

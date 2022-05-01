@@ -5,14 +5,13 @@ use crate::markup_format::{
     parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
 use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
-use crate::templates::Templates;
+use crate::templates::{TemplateContext, Templates};
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use crate::{edit, git, init_dir, FileStructure};
 use chrono::Utc;
 use clap::Parser;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -263,7 +262,7 @@ pub(crate) fn new_rfd(
     extension: MarkupFormat,
 ) -> Result<PathBuf> {
     let dir = SETTINGS.get_rfd_dir();
-    let template = get_template(&dir, extension, DEFAULT_RFD_TEMPLATE_PATH);
+    let template = get_template(&dir, &extension, DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
     let formatted_reserved_number = format_number(reserve_number);
@@ -284,10 +283,10 @@ pub(crate) fn new_rfd(
         &template.to_string_lossy()
     ));
 
-    let mut context = HashMap::new();
-    context.insert("number", reserve_number.to_string());
-    context.insert("title", title);
-    context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
+    let mut context = TemplateContext::new();
+    context.insert("number", &reserve_number);
+    context.insert("title", &title);
+    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
 
     let rendered =
         Templates::one_off(starting_content.as_str(), &context, false)?;

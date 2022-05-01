@@ -7,3 +7,4 @@ pub static DEFAULT_RFD_DIR: &str = "docs/rfd";
 pub static DEFAULT_RFD_TEMPLATE_PATH: &str = "templates/rfd/template";
 // TODO: do we want this to default to the current directory?
 pub static DEFAULT_TIL_DIR: &str = "til";
+pub static DEFAULT_TIL_TEMPLATE_PATH: &str = "templates/til/template";

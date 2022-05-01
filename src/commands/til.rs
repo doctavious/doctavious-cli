@@ -1,17 +1,20 @@
 use crate::commands::title_string;
-use crate::constants::DEFAULT_TIL_DIR;
+use crate::constants::{DEFAULT_TIL_DIR, DEFAULT_TIL_TEMPLATE_PATH};
 use crate::doctavious_error::Result as DoctaviousResult;
-use crate::markup_format::{parse_markup_format_extension, MarkupFormat};
+use crate::markup_format::{parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS};
 use crate::settings::{load_settings, persist_settings, TilSettings, SETTINGS};
 use crate::{edit, init_dir};
 use chrono::{DateTime, Utc};
 use clap::Parser;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap};
 use std::fs::File;
 use std::io::{BufReader, LineWriter, Write};
 use std::path::Path;
-use std::{fs, io};
+use std::{fs};
 use walkdir::WalkDir;
+use crate::commands::design_decisions::{get_template_content};
+use crate::templates::{TemplateContext, Templates};
+use serde::{Serialize};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Gathers Today I Learned (TIL) management commands")]
@@ -34,7 +37,13 @@ pub(crate) struct InitTil {
     #[clap(long, short, help = "Directory to store TILs")]
     pub directory: Option<String>,
 
-    #[clap(arg_enum, long, short, default_value_t, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    #[clap(
+        arg_enum,
+        long,
+        short,
+        default_value_t, parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: MarkupFormat,
 }
 
@@ -61,7 +70,13 @@ pub(crate) struct NewTil {
     )]
     pub tags: Option<Vec<String>>,
 
-    #[clap(arg_enum, long, short, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    #[clap(
+        long,
+        short,
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: Option<MarkupFormat>,
 
     // TODO: should this also be a setting in TilSettings?
@@ -80,11 +95,17 @@ pub(crate) struct ListTils {}
 #[derive(Parser, Debug)]
 #[clap(about = "Build TIL ReadMe")]
 pub(crate) struct BuildTilReadMe {
-    #[clap(arg_enum, long, short, parse(try_from_str = parse_markup_format_extension), help = "Extension that should be used")]
+    #[clap(
+        long,
+        short,
+        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        parse(try_from_str = parse_markup_format_extension),
+        help = "Extension that should be used"
+    )]
     pub extension: Option<MarkupFormat>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize,)]
 struct TilEntry {
     topic: String,
     title: String,
@@ -156,7 +177,7 @@ pub(crate) fn new_til(
     return Ok(());
 }
 
-pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
+pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
     for entry in WalkDir::new(&dir)
         .into_iter()
@@ -210,13 +231,25 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
         til_count += topic_tils.len();
     }
 
+    let ext = SETTINGS.get_til_template_extension(None);
     let readme_path = Path::new(dir)
         .join("README")
-        .with_extension(SETTINGS.get_til_template_extension(None).to_string());
+        .with_extension(&ext.extension());
     let file = File::create(readme_path)?;
 
-    // TODO: better alternative than LineWriter?
+    // TODO: Move to template?
     let mut lw = LineWriter::new(file);
+
+    let ext = MARKUP_FORMAT_EXTENSIONS.get(&ext.extension()).unwrap();
+    let template = get_template_content(&dir, ext, DEFAULT_TIL_TEMPLATE_PATH);
+    let mut context = TemplateContext::new();
+    context.insert("categories_count", &all_tils.keys().len());
+    context.insert("til_count", &til_count);
+    context.insert("tils", &all_tils);
+
+
+    let rendered = Templates::one_off(template.as_str(), &context, false)?;
+    println!("rendering\n{}", rendered);
 
     lw.write_all(b"# TIL\n\n> Today I Learned\n\n")?;
     lw.write_all(
@@ -251,5 +284,36 @@ pub(crate) fn build_til_readme(dir: &str) -> io::Result<()> {
     }
 
     // TODO: handle this
-    return lw.flush();
+    lw.flush()?;
+
+    return Ok(());
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::{tempdir, tempfile, NamedTempFile};
+    use crate::build_til_readme;
+
+    #[test]
+    fn markdown_til() {
+        let dir = tempdir().unwrap();
+
+        let r = build_til_readme("./docs/til/");
+        match r {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("{:?}", e);
+            }
+        }
+
+        // init_adr(
+        //     Some(dir.path().display().to_string()),
+        //     FileStructure::default(),
+        //     Some(MarkupFormat::default()),
+        // );
+
+    }
+
+    #[test]
+    fn asciidoc_til() {}
 }

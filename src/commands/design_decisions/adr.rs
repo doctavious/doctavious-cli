@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -13,7 +12,7 @@ use crate::markup_format::{
     parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
 use crate::settings::{load_settings, persist_settings, AdrSettings, SETTINGS};
-use crate::templates::Templates;
+use crate::templates::{TemplateContext, Templates};
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use crate::{edit, init_dir};
 use chrono::Utc;
@@ -87,7 +86,10 @@ pub(crate) struct NewADR {
     #[clap(
         long,
         short,
-        help = "A reference (number or partial filename) of a previous decision that the new decision supercedes. A Markdown link to the superceded ADR is inserted into the Status section. The status of the superceded ADR is changed to record that it has been superceded by the new ADR."
+        help = "A reference (number or partial filename) of a previous decision that the new \
+                decision supercedes. A Markdown link to the superceded ADR is inserted into the \
+                Status section. The status of the superceded ADR is changed to record that it has \
+                been superceded by the new ADR."
     )]
     pub supercede: Option<Vec<String>>,
 
@@ -237,7 +239,7 @@ pub(crate) fn new_adr(
     // links: Option<Vec<String>>
 ) -> Result<PathBuf> {
     let dir = SETTINGS.get_adr_dir();
-    let template = get_template(&dir, extension, template_path);
+    let template = get_template(&dir, &extension, template_path);
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
     let formatted_reserved_number = format_number(reserve_number);
@@ -276,11 +278,11 @@ pub(crate) fn new_adr(
         &template.to_string_lossy()
     ));
 
-    let mut context = HashMap::new();
-    context.insert("number", reserve_number.to_string());
-    context.insert("title", title);
+    let mut context = TemplateContext::new();
+    context.insert("number", &reserve_number);
+    context.insert("title", &title);
     // TODO: allow date to be customized
-    context.insert("date", Utc::now().format("%Y-%m-%d").to_string());
+    context.insert("date", &Utc::now().format("%Y-%m-%d").to_string());
 
     let rendered =
         Templates::one_off(starting_content.as_str(), &context, false)?;

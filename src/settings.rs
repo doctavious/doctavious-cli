@@ -92,7 +92,6 @@ pub struct AdrSettings {
     pub structure: Option<FileStructure>,
     pub template_extension: Option<MarkupFormat>,
     // TODO: custom date format
-
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -106,6 +105,7 @@ pub struct RFDSettings {
 pub struct TilSettings {
     pub dir: Option<String>,
     pub template_extension: Option<MarkupFormat>,
+    // TODO: custom template either as a string here or file
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -252,7 +252,7 @@ impl Settings {
 }
 
 pub(crate) fn load_settings() -> Result<Settings> {
-    let bytes = std::fs::read(SETTINGS_FILE.as_path())?;
+    let bytes = fs::read(SETTINGS_FILE.as_path())?;
     let settings: Settings = toml::from_slice(&bytes)?;
     Ok(settings)
 }

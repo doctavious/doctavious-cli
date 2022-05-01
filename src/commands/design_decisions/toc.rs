@@ -4,11 +4,10 @@
 // {%- endfor -%}
 
 use crate::markup_format::MarkupFormat;
-use crate::templates::Templates;
+use crate::templates::{TemplateContext, Templates};
 use csv::ReaderBuilder;
 use indexmap::IndexMap;
-use serde_json::{json, to_value, Value};
-use std::collections::HashMap;
+use serde_json::{json};
 use std::path::PathBuf;
 use std::string::String;
 
@@ -55,11 +54,11 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
     let mut rdr =
         ReaderBuilder::new().has_headers(true).from_path(path).unwrap();
 
-    let mut context: HashMap<&str, Value> = HashMap::new();
+    let mut context = TemplateContext::new();
 
     let headers = rdr.headers().unwrap().clone();
     let headers_vec: Vec<String> = headers.deserialize(None).unwrap();
-    context.insert("headers", json!(&headers_vec));
+    context.insert("headers", &headers_vec);
 
     let mut output: Vec<IndexMap<String, String>> = Vec::new();
     for record in rdr.records() {
@@ -79,7 +78,7 @@ pub(crate) fn render_toc(path: PathBuf, template: &str) -> String {
         output.push(map);
     }
     // to_value(val).unwrap()
-    context.insert("data", to_value(&output).unwrap());
+    context.insert("data", &output);
     println!("{:?}", &output);
     println!("{:?}", json!(&context));
 
