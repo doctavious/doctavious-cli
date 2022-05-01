@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use std::collections::{BTreeMap};
 use std::fs::File;
-use std::io::{BufReader, LineWriter, Write};
+use std::io::{BufReader};
 use std::path::Path;
 use std::{fs};
 use walkdir::WalkDir;
@@ -177,6 +177,7 @@ pub(crate) fn new_til(
     return Ok(());
 }
 
+// TODO: this should just build the content and return and not write
 pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
     for entry in WalkDir::new(&dir)
@@ -235,10 +236,6 @@ pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
     let readme_path = Path::new(dir)
         .join("README")
         .with_extension(&ext.extension());
-    let file = File::create(readme_path)?;
-
-    // TODO: Move to template?
-    let mut lw = LineWriter::new(file);
 
     let ext = MARKUP_FORMAT_EXTENSIONS.get(&ext.extension()).unwrap();
     let template = get_template_content(&dir, ext, DEFAULT_TIL_TEMPLATE_PATH);
@@ -247,45 +244,8 @@ pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
     context.insert("til_count", &til_count);
     context.insert("tils", &all_tils);
 
-
     let rendered = Templates::one_off(template.as_str(), &context, false)?;
-    println!("rendering\n{}", rendered);
-
-    lw.write_all(b"# TIL\n\n> Today I Learned\n\n")?;
-    lw.write_all(
-        format!("* Categories: {}\n", all_tils.keys().len()).as_bytes(),
-    )?;
-    lw.write_all(format!("* TILs: {}\n", til_count).as_bytes())?;
-    lw.write_all(b"\n")?;
-
-    // TODO: do we want to list categories?
-
-    for category in all_tils.keys().cloned() {
-        lw.write_all(format!("## {}\n\n", &category).as_bytes())?;
-        let mut tils = all_tils.get(&category).unwrap().to_vec();
-        tils.sort_by_key(|e| e.title.clone());
-        for til in tils {
-            // TODO: should we just use title instead of file_name for link?
-            lw.write_all(
-                format!(
-                    "* [{}]({}/{}) {} ({})",
-                    til.file_name,
-                    category,
-                    til.file_name,
-                    til.title,
-                    til.date.format("%Y-%m-%d")
-                )
-                .as_bytes(),
-            )?;
-            lw.write_all(b"\n")?;
-        }
-
-        lw.write_all(b"\n")?;
-    }
-
-    // TODO: handle this
-    lw.flush()?;
-
+    fs::write(readme_path.as_path(), rendered)?;
     return Ok(());
 }
 

@@ -1,6 +1,6 @@
 # TIL
 
-> Today I Learned
+My Today I Learned snippets
 
 * Categories: {{categories_count}}
 * TILs: {{til_count}}
