@@ -1,0 +1,6 @@
+WARN  2022-05-01T12:15:18.497 79242 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1
+WARN  2022-05-01T14:43:31.269 86298 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1
+WARN  2022-05-01T15:10:06.364 86772 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1
+WARN  2022-05-01T15:37:36.104 87340 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1
+WARN  2022-05-01T15:38:05.741 87377 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1
+WARN  2022-05-01T15:39:55.814 87480 log_path_init:96: Failed to create directory /Users/seancarroll/.cache/nvim for writing logs: Unknown system error 1

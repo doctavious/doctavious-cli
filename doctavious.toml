@@ -1,19 +1,13 @@
 [adr]
-dir = "/var/folders/jm/1m24fjf96xv_458bclbpd1xh0000gn/T/.tmp9CM5at"
+dir = "/var/folders/jm/1m24fjf96xv_458bclbpd1xh0000gn/T/.tmpK9JVDs"
 structure = "flat"
 template_extension = "md"
 
 [rfd]
-dir = "docs/rfd"
+dir = "tests/resources/docs/rfd"
 structure = "flat"
 template_extension = "md"
 
 [til]
-dir = "docs/til"
-template_extension = "md"
-
-# snippets
-
-# scm
-
-
+dir = "./tests/resources/docs/til"
+template_extension = "adoc"

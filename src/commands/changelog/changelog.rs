@@ -26,9 +26,9 @@ use std::path::PathBuf;
 use std::{env, io};
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers Changelog management commands")]
+#[command(about = "Gathers Changelog management commands")]
 pub(crate) struct ChangelogOpt {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub changelog_command: ChangelogCommand,
 }
 
@@ -39,30 +39,30 @@ pub(crate) enum ChangelogCommand {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Init Changelog")]
+#[command(about = "Init Changelog")]
 pub(crate) struct InitChangelog {
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Header text that will be added to the beginning of the changelog."
     )]
     pub header: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Body template that represents a single release in the changelog."
     )]
     pub body: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Footer text that will be added to the end of the changelog."
     )]
     pub footer: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "If set to true, leading and trailing whitespaces are removed from the body."
@@ -72,10 +72,10 @@ pub(crate) struct InitChangelog {
 
 // rename_all_env = "screaming-snake"
 #[derive(Parser, Debug)]
-#[clap(about = "Generate Changelog")]
+#[command(about = "Generate Changelog")]
 pub(crate) struct GenerateChangeLog {
     /// Sets the configuration file.
-    #[clap(
+    #[arg(
         long,
         short,
         default_value = DEFAULT_CONFIG_NAME,
@@ -84,17 +84,17 @@ pub(crate) struct GenerateChangeLog {
     pub config: PathBuf,
 
     /// Sets the working directory.
-    #[clap(short, long, value_name = "PATH")]
+    #[arg(short, long, value_name = "PATH")]
     pub workdir: Option<PathBuf>,
 
     // TODO: support multiple
     /// Sets the repository to parse commits from.
-    #[clap(short, long, value_name = "PATH")]
+    #[arg(short, long, value_name = "PATH")]
     pub repository: Option<PathBuf>,
     // defaults to current directory. env::current_dir()
 
     // TODO: this can just be a boolean
-    #[clap(
+    #[arg(
         long,
         short,
         value_name = "PATH",
@@ -102,7 +102,7 @@ pub(crate) struct GenerateChangeLog {
     )]
     pub prepend: Option<PathBuf>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         value_name = "PATH",
@@ -111,10 +111,10 @@ pub(crate) struct GenerateChangeLog {
     pub file: Option<PathBuf>,
 
     // Sets the tag for the latest version [env: TAG=]
-    #[clap(long, short, help = "The tag to use for the latest version")]
+    #[arg(long, short, help = "The tag to use for the latest version")]
     pub tag: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         value_name = "TEMPLATE",
@@ -123,26 +123,27 @@ pub(crate) struct GenerateChangeLog {
     pub body: Option<String>,
 
     // TODO: include possible values
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         long,
         short,
         // possible_values = StripParts::possible_values(),
-        parse(try_from_str = parse_strip_parts),
+        value_parser,
+        // value_parser = parse_strip_parts,
         help = "The configuration file to use."
     )]
     pub strip: Option<StripParts>,
 
     /// Processes the commits starting from the latest tag.
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub latest: bool,
 
     /// Processes the commits that do not belong to a tag.
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub unreleased: bool,
 
     /// Sets the commit range to process.
-    #[clap(value_name = "RANGE")]
+    #[arg(value_name = "RANGE")]
     pub range: Option<String>,
 }
 

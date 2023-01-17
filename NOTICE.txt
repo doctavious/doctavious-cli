@@ -1,0 +1,3 @@
+
+This product includes software from the kardeiz/sanitize-filename project
+https://github.com/kardeiz/sanitize-filename

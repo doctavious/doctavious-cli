@@ -54,9 +54,12 @@ pub enum DoctaviousError {
     #[error("Cannot parse TOML: `{0}`")]
     SerializeError(#[from] toml::ser::Error),
 
+    // /// Error that may occur while converting to enum.
+    // #[error("Enum error: `{0}`")]
+    // EnumError(String),
     /// Error that may occur while converting to enum.
     #[error("Enum error: `{0}`")]
-    EnumError(#[from] EnumError),
+    EnumParseStringError(#[from] EnumError),
 
     #[error("Serde json error: `{0}`")]
     SerdeJson(#[from] serde_json::Error),

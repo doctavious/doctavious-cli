@@ -6,11 +6,13 @@ use std::fmt::{Display, Formatter};
 mod changelog;
 mod commit;
 mod release;
-use crate::doctavious_error::EnumError;
-use clap::{ArgEnum, PossibleValue};
+use clap::{ValueEnum};
 use lazy_static::lazy_static;
 use serde::de::Error;
 use std::collections::HashMap;
+use clap::builder::PossibleValue;
+use crate::doctavious_error::EnumError;
+use crate::DoctaviousResult;
 
 lazy_static! {
     pub static ref STRIP_PARTS: HashMap<&'static str, StripParts> = {
@@ -69,24 +71,44 @@ pub struct CommitParser {
     pub skip: Option<bool>,
 }
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum StripParts {
     Header,
     Footer,
     All,
 }
 
-impl StripParts {
-    // TODO: certainly dont need both and probably dont need either.
-    // verify help docs generated
-    pub(crate) fn variants() -> [&'static str; 3] {
-        ["header", "footer", "all"]
+// impl StripParts {
+//     // TODO: certainly dont need both and probably dont need either.
+//     // verify help docs generated
+//     pub(crate) fn variants() -> [&'static str; 3] {
+//         ["header", "footer", "all"]
+//     }
+//
+//     pub fn possible_values() -> impl Iterator<Item = PossibleValue> {
+//         StripParts::value_variants()
+//             .iter()
+//             .filter_map(ValueEnum::to_possible_value)
+//     }
+// }
+
+impl ValueEnum for StripParts {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[StripParts::Header, StripParts::Footer, StripParts::All]
     }
 
-    pub fn possible_values() -> impl Iterator<Item = PossibleValue<'static>> {
-        StripParts::value_variants()
-            .iter()
-            .filter_map(ArgEnum::to_possible_value)
+    // fn from_str(input: &str, ignore_case: bool) -> Result<Self, String> {
+    //     todo!()
+    // }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(match self {
+            //Mode::Fast => PossibleValue::new("fast").help("Run swiftly"),
+            //Mode::Slow => PossibleValue::new("slow").help("Crawl slowly but steadily"),
+            StripParts::Header => PossibleValue::new("header"),
+            StripParts::Footer => PossibleValue::new("footer"),
+            StripParts::All => PossibleValue::new("all"),
+        })
     }
 }
 
@@ -124,10 +146,10 @@ impl<'de> Deserialize<'de> for StripParts {
         return match parse_strip_parts(&s) {
             Ok(v) => Ok(v),
             Err(e) => {
-                eprintln!("Error when parsing {}, fallback to default settings. Error: {}\n", s, e);
+                eprintln!("Error when parsing {}, fallback to default settings. Error: {:?}\n", s, e);
                 // TODO: was having an issue with lifetimes / borrow with using variants.
                 // find a better way to do this.
-                Err(D::Error::unknown_field(
+                Err(Error::unknown_field(
                     e.message.as_str(),
                     &["header", "footer", "all"],
                 ))

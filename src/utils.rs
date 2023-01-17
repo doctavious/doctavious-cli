@@ -5,9 +5,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
-use crate::doctavious_error::{
-    DoctaviousError, EnumError, Result as DoctavousResult,
-};
+use crate::doctavious_error::{DoctaviousError, EnumError, Result as DoctavousResult};
 use crate::file_structure::FileStructure;
 use crate::markup_format::MarkupFormat;
 use crate::output::{get_output, print_output, Output};
@@ -26,11 +24,11 @@ pub(crate) fn parse_enum<A: Copy>(
         Some(p) => Ok(*p),
         None => {
             let supported: Vec<&&str> = env.keys().collect();
-            Err(EnumError {
+            Err(EnumError{
                 message: format!(
                     "Unsupported value: \"{}\". Supported values: {:?}",
                     src, supported
-                ),
+                )
             })
         }
     }
@@ -311,7 +309,7 @@ pub(crate) fn list(dir: &str, opt_output: Option<Output>) {
 pub(crate) fn get_files(dir: &str) -> Vec<String> {
     let mut f: Vec<_> = WalkDir::new(&dir)
         .into_iter()
-        .filter_map(Result::ok)
+        .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
         .filter(|f| is_valid_file(&f.path()))
         .map(|f| String::from(strip_current_dir(&f.path()).to_str().unwrap()))

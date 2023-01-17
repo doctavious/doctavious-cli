@@ -9,7 +9,7 @@ use crate::doctavious_error::Result;
 use crate::file_structure::FileStructure;
 use crate::git;
 use crate::markup_format::{
-    parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
+    MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
 use crate::settings::{load_settings, persist_settings, AdrSettings, SETTINGS};
 use crate::templates::{TemplateContext, Templates};
@@ -19,11 +19,12 @@ use chrono::Utc;
 use clap::Parser;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
+use crate::file_structure::parse_file_structure;
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers ADR management commands")]
+#[command(about = "Gathers ADR management commands")]
 pub(crate) struct ADR {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub adr_command: ADRCommand,
 }
 
@@ -38,26 +39,27 @@ pub(crate) enum ADRCommand {
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "init", about = "Init ADR")]
+#[command(name = "init", about = "Init ADR")]
 pub(crate) struct InitADR {
-    #[clap(long, short, help = "Directory to store ADRs")]
+    #[arg(long, short, help = "Directory to store ADRs")]
     pub directory: Option<String>,
 
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         long,
         short,
         default_value_t,
-        parse(try_from_str = parse_file_structure),
+        value_parser = parse_file_structure,
         help = "How ADRs should be structured"
     )]
     pub structure: FileStructure,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // value_parser = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // value_parser = parse_markup_format_extension,
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
@@ -65,25 +67,26 @@ pub(crate) struct InitADR {
 
 // TODO: should number just be a string and allow people to add their own conventions like leading zeros?
 #[derive(Parser, Debug)]
-#[clap(name = "new", about = "New ADR")]
+#[command(name = "new", about = "New ADR")]
 pub(crate) struct NewADR {
-    #[clap(long, short, help = "ADR Number")]
+    #[arg(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[clap(long, short, help = "title of ADR")]
+    #[arg(long, short, help = "title of ADR")]
     pub title: String,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // value_parser = parse_markup_format_extension,
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "A reference (number or partial filename) of a previous decision that the new \
@@ -99,32 +102,32 @@ pub(crate) struct NewADR {
     // LINK is the description of the link created in the new ADR.
     // REVERSE-LINK is the description of the link created in the
     // existing ADR that will refer to the new ADR.
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "list", about = "List ADRs")]
+#[command(name = "list", about = "List ADRs")]
 pub(crate) struct ListADRs {}
 
 #[derive(Parser, Debug)]
-#[clap(name = "link", about = "Link ADRs")]
+#[command(name = "link", about = "Link ADRs")]
 pub(crate) struct LinkADRs {
-    #[clap(long, short, help = "Reference number of source ADR")]
+    #[arg(long, short, help = "Reference number of source ADR")]
     pub source: i32,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Description of the link created in the new ADR"
     )]
     pub link: String,
 
-    #[clap(long, short, help = "Reference number of target ADR")]
+    #[arg(long, short, help = "Reference number of target ADR")]
     pub target: i32,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Description of the link created in the existing ADR that will refer to new ADR"
@@ -133,9 +136,9 @@ pub(crate) struct LinkADRs {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers generate ADR commands")]
+#[command(about = "Gathers generate ADR commands")]
 pub(crate) struct GenerateADRs {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub generate_adr_command: GenerateAdrsCommand,
 }
 
@@ -146,50 +149,57 @@ pub(crate) enum GenerateAdrsCommand {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Generates ADR table of contents (Toc) to stdout")]
+#[command(about = "Generates ADR table of contents (Toc) to stdout")]
 pub(crate) struct AdrToc {
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub intro: Option<String>,
 
-    #[clap(long, help = "")]
+    #[arg(long, help = "")]
     pub outro: Option<String>,
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[clap(long, short, parse(try_from_str = parse_markup_format_extension), help = "Output format")]
+    #[arg(
+        long,
+        short,
+        // value_parser = parse_markup_format_extension,
+        value_parser,
+        help = "Output format"
+    )]
     pub format: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Create ADR Graph")]
+#[command(about = "Create ADR Graph")]
 pub(crate) struct AdrGraph {
-    #[clap(long, short, help = "Directory of ADRs")]
+    #[arg(long, short, help = "Directory of ADRs")]
     pub directory: Option<String>,
 
     // TODO: what to default to?
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_extension: Option<String>,
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_prefix: Option<String>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "reserve", about = "Reserve ADR")]
+#[command(name = "reserve", about = "Reserve ADR")]
 pub(crate) struct ReserveADR {
-    #[clap(long, short, help = "ADR Number")]
+    #[arg(long, short, help = "ADR Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[clap(long, short, help = "title of ADR")]
+    #[arg(long, short, help = "title of ADR")]
     pub title: String,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // value_parser = parse_markup_format_extension,
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
@@ -239,7 +249,7 @@ pub(crate) fn new_adr(
     // links: Option<Vec<String>>
 ) -> Result<PathBuf> {
     let dir = SETTINGS.get_adr_dir();
-    let template = get_template(&dir, &extension, template_path);
+    let template = get_template(&dir, &extension.extension(), template_path);
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_adr_structure())?;
     let formatted_reserved_number = format_number(reserve_number);

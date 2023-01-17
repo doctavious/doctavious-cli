@@ -106,6 +106,7 @@ pub struct TilSettings {
     pub dir: Option<String>,
     pub template_extension: Option<MarkupFormat>,
     // TODO: custom template either as a string here or file
+    // output_directory
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

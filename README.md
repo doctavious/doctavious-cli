@@ -16,6 +16,11 @@ cargo build
 
 https://oxide.computer/blog/rfd-1-requests-for-discussion/#changing-the-rfd-process
 
+examples 
+- https://github.com/vectordotdev/vector/tree/master/rfcs
+- https://github.com/TritonDataCenter/rfd
+- https://github.com/apache/couchdb-documentation/tree/main/rfcs
+
 ## Today I Learned
 
 ## Changelog
@@ -130,3 +135,11 @@ what about MRs? is there a way to bump version numbers when merging where you ar
 
 
 generate Fig completions for clap based CLIs https://github.com/clap-rs/clap/tree/24a2f3a90153bbb7a7c362818aef8149f7a01722/clap_complete_fig
+
+
+
+cockroachdb x-anchor-telemetry github tag which means there is code that points to that issue
+
+line width
+80 for comments
+120 for code

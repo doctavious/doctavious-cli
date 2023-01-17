@@ -1,7 +1,7 @@
 use crate::commands::title_string;
 use crate::constants::{DEFAULT_TIL_DIR, DEFAULT_TIL_TEMPLATE_PATH};
 use crate::doctavious_error::Result as DoctaviousResult;
-use crate::markup_format::{parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS};
+use crate::markup_format::{MarkupFormat, MARKUP_FORMAT_EXTENSIONS};
 use crate::settings::{load_settings, persist_settings, TilSettings, SETTINGS};
 use crate::{edit, init_dir};
 use chrono::{DateTime, Utc};
@@ -11,15 +11,17 @@ use std::fs::File;
 use std::io::{BufReader};
 use std::path::Path;
 use std::{fs};
-use walkdir::WalkDir;
+use std::str::FromStr;
+use walkdir::{DirEntry, WalkDir};
 use crate::commands::design_decisions::{get_template_content};
 use crate::templates::{TemplateContext, Templates};
 use serde::{Serialize};
+use crate::files::{friendly_filename, sanitize};
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers Today I Learned (TIL) management commands")]
+#[command(about = "Gathers Today I Learned (TIL) management commands")]
 pub(crate) struct Til {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub til_command: TilCommand,
 }
 
@@ -32,55 +34,68 @@ pub(crate) enum TilCommand {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Init TIL")]
+#[command(about = "Init TIL")]
 pub(crate) struct InitTil {
-    #[clap(long, short, help = "Directory to store TILs")]
+    #[arg(long, short, help = "Directory of TILs")]
     pub directory: Option<String>,
 
-    #[clap(
-        arg_enum,
+    // TODO: path to readme template or template string. two fields? one and we determine if its a path?
+    // what do others do? Terraform has `var` and `var-file`
+
+    #[arg(
+        // value_enum,
         long,
         short,
-        default_value_t, parse(try_from_str = parse_markup_format_extension),
+        default_value = MarkupFormat::default().extension(),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // parse(try_from_str = parse_markup_format_extension),
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: MarkupFormat,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "New TIL")]
+#[command(about = "New TIL")]
 pub(crate) struct NewTil {
-    // TODO: what should the short be? We cant use the default 't' as it conflicts with title
-    // TODO: change to category
-    #[clap(
+    #[arg(
         short,
         long,
         help = "TIL category. Represents the directory to place TIL entry under"
     )]
     pub category: String,
 
-    #[clap(long, short, help = "title of the TIL entry")]
+    #[arg(long, short, help = "title of the TIL entry")]
     pub title: String,
 
     // TODO: what should the short be? We cant use the default 't' as it conflicts with title
-    #[clap(
+    #[arg(
         short = 'T',
         long,
         help = "Additional tags associated with the TIL entry"
     )]
     pub tags: Option<Vec<String>>,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
-        help = "Extension that should be used"
+        help = "File name that should be used. If extension is included will take precedence over \
+                extension argument and configuration file."
+    )]
+    pub file_name: Option<String>,
+
+    #[arg(
+        long,
+        short,
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // value_parser = parse_markup_format_extension,
+        value_parser,
+        help = "Extension that should be used. This overrides value from configuration file."
     )]
     pub extension: Option<MarkupFormat>,
 
     // TODO: should this also be a setting in TilSettings?
-    #[clap(
+    #[arg(
         short,
         long,
         help = "Whether to build a README after a new TIL is added"
@@ -89,17 +104,24 @@ pub(crate) struct NewTil {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "List TILs")]
+#[command(about = "List TILs")]
 pub(crate) struct ListTils {}
 
 #[derive(Parser, Debug)]
-#[clap(about = "Build TIL ReadMe")]
+#[command(about = "Build TIL ReadMe")]
 pub(crate) struct BuildTilReadMe {
-    #[clap(
+    #[arg(long, short, help = "Directory where TILs are stored")]
+    pub directory: Option<String>,
+
+    // TOOD: optional path to template.
+
+
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // value_parser = parse_markup_format_extension,
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
@@ -143,20 +165,32 @@ pub(crate) fn new_til(
     title: String,
     category: String,
     tags: Option<Vec<String>>,
-    extension: MarkupFormat,
+    file_name: Option<String>,
+    markup_format: MarkupFormat,
     readme: bool,
     dir: &str,
 ) -> DoctaviousResult<()> {
-    let file_name = title.to_lowercase();
+    // https://stackoverflow.com/questions/7406102/create-sane-safe-filename-from-any-unsafe-string
+    // https://docs.rs/sanitize-filename/latest/sanitize_filename/
+    // TODO: convert to a better file name
+    // spaces to hyphens
+    // special characters?
+    let file_name = if let Some(file_name) = file_name {
+        file_name.trim().to_string()
+    } else {
+        friendly_filename(&title)
+    };
+
     let path = Path::new(dir)
         .join(category)
         .join(file_name)
-        .with_extension(extension.to_string());
+        .with_extension(markup_format.extension());
 
     if path.exists() {
+        // TODO: this should return the error
         eprintln!("File {} already exists", path.to_string_lossy());
     } else {
-        let leading_char = extension.leading_header_character();
+        let leading_char = markup_format.leading_header_character();
 
         let mut starting_content = format!("{} {}\n", leading_char, title);
         if tags.is_some() {
@@ -170,7 +204,7 @@ pub(crate) fn new_til(
         fs::write(&path, edited)?;
 
         if readme {
-            build_til_readme(&dir)?;
+            build_til_readme(&dir, markup_format.extension())?;
         }
     }
 
@@ -178,11 +212,12 @@ pub(crate) fn new_til(
 }
 
 // TODO: this should just build the content and return and not write
-pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
+pub(crate) fn build_til_readme(dir: &str, readme_extension: &str) -> DoctaviousResult<String> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
     for entry in WalkDir::new(&dir)
         .into_iter()
-        .filter_map(Result::ok)
+        .filter_entry(|e| !is_hidden(e))
+        .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
     {
         // skip files that are under til dir
@@ -207,17 +242,17 @@ pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
 
         let file_name =
             entry.path().file_name().unwrap().to_str().unwrap().to_string();
-        let extension = parse_markup_format_extension(
-            entry.path().extension().unwrap().to_str().unwrap(),
-        )
-        .unwrap();
+        let markup_format = MarkupFormat::from_str(
+            entry.path().extension().unwrap().to_str().unwrap()
+        ).unwrap();
         let file = match File::open(&entry.path()) {
             Ok(file) => file,
             Err(_) => panic!("Unable to read title from {:?}", entry.path()),
         };
 
         let buffer = BufReader::new(file);
-        let title = title_string(buffer, extension);
+        // TODO: should this use extension to get title? Would allow for users to mix/match file types
+        let title = title_string(buffer, markup_format);
 
         all_tils.get_mut(&topic).unwrap().push(TilEntry {
             topic,
@@ -232,45 +267,40 @@ pub(crate) fn build_til_readme(dir: &str) -> DoctaviousResult<()> {
         til_count += topic_tils.len();
     }
 
-    let ext = SETTINGS.get_til_template_extension(None);
-    let readme_path = Path::new(dir)
-        .join("README")
-        .with_extension(&ext.extension());
-
-    let ext = MARKUP_FORMAT_EXTENSIONS.get(&ext.extension()).unwrap();
-    let template = get_template_content(&dir, ext, DEFAULT_TIL_TEMPLATE_PATH);
+    let template = get_template_content(&dir, readme_extension, DEFAULT_TIL_TEMPLATE_PATH);
     let mut context = TemplateContext::new();
     context.insert("categories_count", &all_tils.keys().len());
     context.insert("til_count", &til_count);
     context.insert("tils", &all_tils);
 
     let rendered = Templates::one_off(template.as_str(), &context, false)?;
-    fs::write(readme_path.as_path(), rendered)?;
-    return Ok(());
+    return Ok(rendered);
+}
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry.file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
 mod tests {
     use tempfile::{tempdir, tempfile, NamedTempFile};
     use crate::build_til_readme;
+    use crate::markup_format::MarkupFormat::Markdown;
 
     #[test]
     fn markdown_til() {
         let dir = tempdir().unwrap();
 
-        let r = build_til_readme("./docs/til/");
+        let r = build_til_readme("./docs/til/", Markdown.extension());
         match r {
             Ok(_) => {}
             Err(e) => {
                 eprintln!("{:?}", e);
             }
         }
-
-        // init_adr(
-        //     Some(dir.path().display().to_string()),
-        //     FileStructure::default(),
-        //     Some(MarkupFormat::default()),
-        // );
 
     }
 

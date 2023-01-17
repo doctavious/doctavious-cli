@@ -2,27 +2,29 @@ use crate::commands::design_decisions::get_template;
 use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
 use crate::doctavious_error::Result;
 use crate::markup_format::{
-    parse_markup_format_extension, MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
+    MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
 use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
 use crate::templates::{TemplateContext, Templates};
 use crate::utils::{build_path, ensure_path, format_number, reserve_number};
 use crate::{edit, git, init_dir, FileStructure};
 use chrono::Utc;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
 use std::fs;
 use std::path::PathBuf;
+use crate::file_structure::parse_file_structure;
+
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers RFD management commands")]
+#[command(about = "Gathers RFD management commands")]
 pub(crate) struct RFD {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub rfd_command: RFDCommand,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Subcommand, Debug)]
 pub(crate) enum RFDCommand {
     Init(InitRFD),
     New(NewRFD),
@@ -32,60 +34,62 @@ pub(crate) enum RFDCommand {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Init RFD")]
+#[command(about = "Init RFD")]
 pub(crate) struct InitRFD {
-    #[clap(long, short, help = "Directory to store RFDs")]
+    #[arg(long, short, help = "Directory to store RFDs")]
     pub directory: Option<String>,
 
     // TODO: should we default here?
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         long,
         short,
         default_value_t,
-        parse(try_from_str = parse_file_structure),
+        value_parser = parse_file_structure,
         help = "How RFDs should be structured"
     )]
     pub structure: FileStructure,
 
-    #[clap(
+    #[arg(
         long,
         short,
         default_value_t,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // parse(try_from_str = parse_markup_format_extension),
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: MarkupFormat,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "New RFD")]
+#[command(about = "New RFD")]
 pub(crate) struct NewRFD {
-    #[clap(long, short, help = "RFD number")]
+    #[arg(long, short, help = "RFD number")]
     pub number: Option<i32>,
 
-    #[clap(long, short, help = "title of RFD")]
+    #[arg(long, short, help = "title of RFD")]
     pub title: String,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // parse(try_from_str = parse_markup_format_extension),
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "List RFDs")]
+#[command(about = "List RFDs")]
 pub(crate) struct ListRFDs {}
 
 #[derive(Parser, Debug)]
-#[clap(about = "Gathers generate RFD commands")]
+#[command(about = "Gathers generate RFD commands")]
 pub(crate) struct GenerateRFDs {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub generate_rfd_command: GenerateRFDsCommand,
 }
 
@@ -108,29 +112,30 @@ pub(crate) enum GenerateRFDsCommand {
 // add overwrite flag to not modify existing
 // remote? commit message?
 #[derive(Parser, Debug)]
-#[clap(about = "Generates RFD CSV")]
+#[command(about = "Generates RFD CSV")]
 pub(crate) struct RFDCsv {
-    #[clap(long, short, help = "Directory of RFDs")]
+    #[arg(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
+    // #[clap(parse(from_os_str)] -> #[clap(value_parser)]
     // output_path
-    #[clap(long, short, parse(from_os_str), help = "")]
+    #[arg(value_parser, long, short, help = "")]
     pub path: Option<PathBuf>, // where to write file to. stdout if not provided
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub fields: Vec<String>, // which fields to include? default to all (*). should this just be a comma separate list?
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub overwrite: bool,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Generates RFD File")]
+#[command(about = "Generates RFD File")]
 pub(crate) struct RFDFile {
-    #[clap(long, short, help = "Directory of RFDs")]
+    #[arg(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Template that will be used to generate file. \
@@ -140,10 +145,10 @@ pub(crate) struct RFDFile {
     pub template: Option<String>, // optional. use config, use provided here. use default
 
     // output_path
-    #[clap(
+    #[arg(
         long,
         short,
-        parse(from_os_str),
+        value_parser,
         help = "Path to file which to write table of contents to. File must contain snippet. \
                 If not present ToC will be written to stdout"
     )]
@@ -151,12 +156,12 @@ pub(crate) struct RFDFile {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Generates RFD table of contents (Toc) to stdout")]
+#[command(about = "Generates RFD table of contents (Toc) to stdout")]
 pub(crate) struct RFDToc {
-    #[clap(long, short, help = "Directory of RFDs")]
+    #[arg(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "Template that will be used to generate file. \
@@ -165,63 +170,65 @@ pub(crate) struct RFDToc {
     )]
     pub template: Option<String>, // optional. use config, use provided here. use default
 
-    #[clap(
+    #[arg(
         long,
         short,
-        parse(from_os_str),
+        value_parser,
         help = "Path to file which to write table of contents to. File must contain snippet. \
                 If not present ToC will be written to stdout"
     )]
     pub output_path: PathBuf, // where to write file to. required
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub intro: Option<String>,
 
-    #[clap(long, help = "")]
+    #[arg(long, help = "")]
     pub outro: Option<String>,
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_prefix: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // parse(try_from_str = parse_markup_format_extension),
+        value_parser,
         help = "Output format"
     )]
     pub format: Option<MarkupFormat>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Create RFD Graph")]
+#[command(about = "Create RFD Graph")]
 pub(crate) struct RFDGraph {
-    #[clap(long, short, help = "Directory of RFDs")]
+    #[arg(long, short, help = "Directory of RFDs")]
     pub directory: Option<String>,
 
     // TODO: what to default to?
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_extension: Option<String>,
 
-    #[clap(long, short, help = "")]
+    #[arg(long, short, help = "")]
     pub link_prefix: Option<String>,
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = "reserve", about = "Reserve RFD")]
+#[command(name = "reserve", about = "Reserve RFD")]
 pub(crate) struct ReserveRFD {
-    #[clap(long, short, help = "RFD Number")]
+    #[arg(long, short, help = "RFD Number")]
     pub number: Option<i32>,
 
     // TODO: can we give title index so we dont have to specify --title or -t?
-    #[clap(long, short, help = "title of RFD")]
+    #[arg(long, short, help = "title of RFD")]
     pub title: String,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
-        parse(try_from_str = parse_markup_format_extension),
+        // possible_values = MARKUP_FORMAT_EXTENSIONS.keys(),
+        // parse(try_from_str = parse_markup_format_extension),
+        value_parser,
         help = "Extension that should be used"
     )]
     pub extension: Option<MarkupFormat>,
@@ -262,7 +269,7 @@ pub(crate) fn new_rfd(
     extension: MarkupFormat,
 ) -> Result<PathBuf> {
     let dir = SETTINGS.get_rfd_dir();
-    let template = get_template(&dir, &extension, DEFAULT_RFD_TEMPLATE_PATH);
+    let template = get_template(&dir, &extension.extension(), DEFAULT_RFD_TEMPLATE_PATH);
     let reserve_number =
         reserve_number(&dir, number, SETTINGS.get_rfd_structure())?;
     let formatted_reserved_number = format_number(reserve_number);

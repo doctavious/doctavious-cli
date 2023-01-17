@@ -1,5 +1,11 @@
-- Create TemplateContext and use instead of `let mut context: HashMap<dyn Serialize + ?Sized, dyn Into<String>> = HashMap::new();` 
-- Move ADR / RFDs to template engine
+- should this use TIL entry file extension to get title? Would allow for users to mix/match file types
+- friendly file name for TIL
+- allow users to specify TIL filename (this should take precedence)
+- Update TIL Configurations to allow to customize readme template
+- we should probably use `.jinja2` as the file extension for templates - given its not really a jinja2 template maybe something more generic like tmpl?
+- Move to ADR / RFD template by allowing explicit configuration instead of the implicit by looking for "template" in directory
+- Create CSV of ADRs and RFDs
+- Create Graphs for ADRs and RFDs
 - support environment variables for commands
 - logging verbosity more than just debug?
 - look at Strum for enums to reduce boilerplate code
@@ -108,3 +114,22 @@ How to support variety of languages and things like maven pom vs gradle
 - https://docs.github.com/en/rest/reference/repos#releases
 - https://docs.gitlab.com/ee/api/releases/
 - https://try.gitea.io/api/swagger#/repository/repoCreateRelease
+
+
+Review https://markdoc.io/ which powers stripe documentation
+
+
+Commands
+- link / unlink git repo
+- deploy site
+
+With Netlify CLI, you can:
+
+- Use netlify init to create a new site on Netlify connected to an existing Git repository.
+- Create a site from a template.
+- Use netlify deploy to manually deploy a project without continuous deployment.
+
+With Netlify API, you can:
+
+Create a new project configured for continuous deployment.
+Manually deploy a project.

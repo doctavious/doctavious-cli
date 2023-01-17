@@ -83,15 +83,15 @@ pub(crate) fn build_toc(
     print!("{}", content);
 }
 
-pub(crate) fn title_string<R>(rdr: R, extension: MarkupFormat) -> String
+pub(crate) fn title_string<R>(rdr: R, markup_format: MarkupFormat) -> String
 where
     R: BufRead,
 {
     // TODO: swap this implementation for AST when ready
-    let leading_char = extension.leading_header_character();
+    let leading_char = markup_format.leading_header_character();
     for line in rdr.lines() {
         let line = line.unwrap();
-        if line.starts_with(&format!("{} ", leading_char)) {
+        if line.starts_with(leading_char) {
             let last_hash = line
                 .char_indices()
                 .skip_while(|&(_, c)| c == leading_char)
@@ -103,5 +103,6 @@ where
         }
     }
 
+    // TODO: dont panic. default to filename if cant get title
     panic!("Unable to find title for file");
 }

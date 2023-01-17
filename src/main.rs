@@ -28,6 +28,7 @@ mod scm;
 mod settings;
 mod templates;
 mod utils;
+mod files;
 
 use crate::commands::build_toc;
 use crate::commands::design_decisions::adr::{
@@ -42,7 +43,7 @@ use crate::commands::til::{
     build_til_readme, init_til, new_til, Til, TilCommand,
 };
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
-use crate::doctavious_error::{EnumError, Result as DoctaviousResult};
+use crate::doctavious_error::{Result as DoctaviousResult};
 use crate::file_structure::FileStructure;
 use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
 use crate::output::{parse_output, print_output, Output};
@@ -55,25 +56,25 @@ use crate::utils::{format_number, is_valid_file, parse_enum};
 use std::error::Error;
 
 #[derive(Parser, Debug)]
-#[clap(name = "Doctavious")]
+#[command(name = "Doctavious")]
 pub struct Opt {
-    #[clap(
+    #[arg(
         long,
         help = "Prints a verbose output during the program execution",
         global = true
     )]
     debug: bool,
 
-    #[clap(
+    #[arg(
         long,
         short,
-        parse(try_from_str = parse_output),
+        value_parser = parse_output,
         help = "How a command output should be rendered",
         global = true
     )]
     pub(crate) output: Option<Output>,
 
-    #[clap(subcommand)]
+    #[command(subcommand)]
     cmd: Command,
 }
 
@@ -94,12 +95,12 @@ enum Command {
 }
 
 #[derive(Parser, Debug)]
-#[clap(about = "Presentation commands")]
+#[command(about = "Presentation commands")]
 struct Presentation {
-    #[clap(long, help = "Output file path (or directory input-dir is passed)")]
+    #[arg(long, help = "Output file path (or directory input-dir is passed)")]
     output_dir: Option<String>,
 
-    #[clap(
+    #[arg(
         long,
         short,
         help = "The base directory to find markdown and theme CSS"
@@ -129,13 +130,13 @@ struct Presentation {
     //                                            [string]
     // --no-config-file, --no-config  Prevent looking up for a configuration file
     //                                           [boolean]
-    #[clap(long, short, help = "Watch input markdowns for changes")]
+    #[arg(long, short, help = "Watch input markdowns for changes")]
     watch: bool,
 
-    #[clap(long, short, help = "Enable server mode")]
+    #[arg(long, short, help = "Enable server mode")]
     server: bool,
 
-    #[clap(long, short, help = "Open preview window")]
+    #[arg(long, short, help = "Open preview window")]
     preview: bool,
 }
 
@@ -391,6 +392,7 @@ fn main() -> DoctaviousResult<()> {
                 let dir = SETTINGS.get_til_dir();
                 init_dir(&dir)?;
 
+                // TODO: see if params.file_name contains extension
                 let extension =
                     SETTINGS.get_til_template_extension(params.extension);
 
@@ -398,6 +400,7 @@ fn main() -> DoctaviousResult<()> {
                     params.title,
                     params.category,
                     params.tags,
+                    params.file_name,
                     extension,
                     params.readme,
                     dir,
@@ -408,8 +411,15 @@ fn main() -> DoctaviousResult<()> {
                 list(SETTINGS.get_til_dir(), opt.output);
             }
 
-            TilCommand::Readme(_) => {
-                build_til_readme(SETTINGS.get_til_dir())?;
+            TilCommand::Readme(params) => {
+                // TODO: incorporate params.directory to determine where to look for TILs
+                let til_dir = SETTINGS.get_til_dir();
+                let format = SETTINGS.get_til_template_extension(params.extension);
+                let til_readme = build_til_readme(til_dir, &format.extension())?;
+                let readme_path = Path::new(til_dir)
+                    .join("README")
+                    .with_extension(&format.extension());
+                fs::write(readme_path.as_path(), til_readme)?;
             }
         },
     };

@@ -1,11 +1,14 @@
 use crate::markup_format::MarkupFormat::{Asciidoc, Markdown};
-use crate::{parse_enum, EnumError};
-use clap::ArgEnum;
+use crate::{parse_enum, DoctaviousResult};
+use clap::ValueEnum;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
+use std::str::FromStr;
+use clap::builder::PossibleValue;
+use crate::doctavious_error::{DoctaviousError, EnumError};
 
 lazy_static! {
     pub static ref MARKUP_FORMAT_EXTENSIONS: HashMap<&'static str, MarkupFormat> = {
@@ -17,7 +20,7 @@ lazy_static! {
     };
 }
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[non_exhaustive]
 pub enum MarkupFormat {
     Asciidoc,
@@ -42,6 +45,36 @@ impl MarkupFormat {
             Asciidoc => '=',
             Markdown => '#',
         };
+    }
+}
+
+impl ValueEnum for MarkupFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Asciidoc, Markdown]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(match self {
+            Asciidoc => PossibleValue::new("adoc"),
+            Markdown => PossibleValue::new("md"),
+        })
+    }
+}
+
+// impl FromStr for MarkupFormat {
+//     type Err = DoctaviousError;
+//
+//     fn from_str(input: &str) -> DoctaviousResult<MarkupFormat> {
+//         parse_enum(&MARKUP_FORMAT_EXTENSIONS, input)
+//     }
+// }
+
+// part of valueEnum
+impl FromStr for MarkupFormat {
+    type Err = EnumError;
+
+    fn from_str(input: &str) -> Result<MarkupFormat, Self::Err> {
+        parse_enum(&MARKUP_FORMAT_EXTENSIONS, input)
     }
 }
 
@@ -73,19 +106,13 @@ impl<'de> Deserialize<'de> for MarkupFormat {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let extension = match parse_markup_format_extension(&s) {
+        let markup_format = match <MarkupFormat as FromStr>::from_str(&s) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("Error when parsing {}, fallback to default settings. Error: {:?}\n", s, e);
                 MarkupFormat::default()
             }
         };
-        Ok(extension)
+        Ok(markup_format)
     }
-}
-
-pub(crate) fn parse_markup_format_extension(
-    src: &str,
-) -> Result<MarkupFormat, EnumError> {
-    parse_enum(&MARKUP_FORMAT_EXTENSIONS, src)
 }

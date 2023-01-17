@@ -11,11 +11,11 @@ mod toc;
 // does it need to take in name?
 pub(crate) fn get_template(
     dir: &str,
-    extension: &MarkupFormat,
+    extension: &str,
     default_template_path: &str,
 ) -> PathBuf {
     let custom_template =
-        Path::new(dir).join("template").with_extension(extension.to_string());
+        Path::new(dir).join("template").with_extension(extension);
 
     let template = if custom_template.exists() {
         custom_template
@@ -30,7 +30,7 @@ pub(crate) fn get_template(
 
 pub(crate) fn get_template_content(
     dir: &str,
-    extension: &MarkupFormat,
+    extension: &str,
     default_template_path: &str,
 ) -> String {
     let template_path = get_template(dir, extension, default_template_path);

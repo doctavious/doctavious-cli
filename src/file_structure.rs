@@ -1,12 +1,13 @@
-use crate::doctavious_error::EnumError;
 use crate::utils::parse_enum;
 use crate::FileStructure::{Flat, Nested};
-use clap::ArgEnum;
+use clap::ValueEnum;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
+use crate::doctavious_error::EnumError;
+use crate::DoctaviousResult;
 
 lazy_static! {
     pub static ref FILE_STRUCTURES: HashMap<&'static str, FileStructure> = {
@@ -18,7 +19,7 @@ lazy_static! {
     };
 }
 
-#[derive(ArgEnum, Clone, Copy, Debug)]
+#[derive(ValueEnum, Clone, Copy, Debug)]
 pub enum FileStructure {
     Flat,
     Nested,

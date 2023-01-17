@@ -11,8 +11,8 @@ categories = ["documentation"]
 
 [dependencies]
 chrono = {version="0.4",features = ["serde"]}
-clap = { version = "3.1.12", features = ["derive"] }
-comfy-table = "1.1.1"
+clap = { version = "4.0.32", features = ["derive"] }
+comfy-table = "6.1.4"
 # TODO: look at config and see if it can help. specifically with the need to merge in env vars
 # default-features = false
 # features = ["toml", "yaml"]
@@ -21,9 +21,9 @@ csv = "1.1"
 dirs = "4.0.0"
 # dirs-next = "2.0.0"
 dotavious = { path = "../dotavious" }
-env_logger = "0.9"
-git2 = "0.14.2"
-git-conventional = { version = "0.11.3", features = ["serde"] }
+env_logger = "0.10.0"
+git2 = "0.16.0"
+git-conventional = { version = "0.12.1", features = ["serde"] }
 glob = "0.3.0"
 gray_matter = "0.2"
 indexmap = { version = "1.8.1", features = ["serde"] }
