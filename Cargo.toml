@@ -8,6 +8,9 @@ keywords = ["cli", "documentation", "rfc", "adr", "changelog", "snippets", "gith
 categories = ["documentation"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "doctavious"
+path = "src/main.rs"
 
 [dependencies]
 chrono = {version="0.4",features = ["serde"]}
@@ -56,7 +59,7 @@ which = "4.2.5"
 # markdown2html-converter = "1.1.2"
 # Pulldown-cmark vs comrak
 # need to work on rust-asciidoctor-parser
-# mdbook = "0.4.4" --> see how they convert markdown. they have init, build, watch, serve
+# mdbook = "0.4.4" --> see how they convert markdown. they have init, build_mod, watch, serve
 # Maud is an HTML template crate
 # Syntect is a color syntax highlighting crate
 # rust doesnt have a puppeteer so
@@ -64,7 +67,7 @@ which = "4.2.5"
 # https://github.com/atroche/rust-headless-chrome
 # https://docs.rs/pandoc/0.8.0/pandoc/
 # marpit uses https://github.com/gitbrent/PptxGenJS which creates Open Office XML (OOXML) Presentations
-# what about pptx via OpenDocument formats - we might have to build our own crate
+# what about pptx via OpenDocument formats - we might have to build_mod our own crate
 # what else do we need to do presentations?
 # https://github.com/FreeMasen/mdbook-presentation-preprocessor
 
