@@ -20,6 +20,8 @@ mod software_template;
 mod tag;
 pub mod telemetry;
 pub mod til;
+mod deploy;
+mod build;
 
 // TODO: not a fan of the list ToC for ADRs and RFDs
 // TODO: pass in header

@@ -98,7 +98,7 @@ pub(crate) struct NewTil {
     #[arg(
         short,
         long,
-        help = "Whether to build a README after a new TIL is added"
+        help = "Whether to build_mod a README after a new TIL is added"
     )]
     pub readme: bool,
 }
@@ -211,7 +211,7 @@ pub(crate) fn new_til(
     return Ok(());
 }
 
-// TODO: this should just build the content and return and not write
+// TODO: this should just build_mod the content and return and not write
 pub(crate) fn build_til_readme(dir: &str, readme_extension: &str) -> DoctaviousResult<String> {
     let mut all_tils: BTreeMap<String, Vec<TilEntry>> = BTreeMap::new();
     for entry in WalkDir::new(&dir)

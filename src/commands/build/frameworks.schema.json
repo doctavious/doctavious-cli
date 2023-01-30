@@ -1,0 +1,160 @@
+{
+    "$id": "https://example.com/address.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "description": "An address similar to http://microformats.org/wiki/h-card",
+    "title": "",
+    "type": "object",
+    "properties": {
+        "name": {
+            "description": "Name of the framework",
+            "type": "string"
+        },
+        "website": {
+            "description": "A URL to the official website of the framework",
+            "type": "string"
+        },
+        "description": {
+            "description": "Short description of the framework",
+            "type": "string"
+        },
+        "envPrefix": {
+            "type": "string"
+        },
+        "detectors": {
+            "description": "Detectors used to find out the framework",
+            "type": "array",
+            "items": {
+                "$ref": "/schemas/frameworkDetector"
+            }
+
+        }
+
+//             "description": "Collection of detectors that must be matched for the framework to be detected.",
+//
+//        /**
+//         * Collection of detectors that must be matched for the framework
+//         * to be detected.
+//         */
+//        every?: FrameworkDetectionItem[];
+///**
+// * Collection of detectors where one match triggers the framework
+// * to be detected.
+// */
+//some?: FrameworkDetectionItem[];
+
+//        /**
+//         * Default Install Command or a placeholder
+//         */
+//        installCommand: Setting;
+//        /**
+//         * Default Build Command or a placeholder
+//         */
+//        buildCommand: SettingValue;
+//        /**
+//         * Default Development Command or a placeholder
+//         */
+//        devCommand: SettingValue;
+//        /**
+//         * Default Output Directory
+//         */
+//        outputDirectory: Setting;
+
+
+
+//        export interface FrameworkDetectionItem {
+//    /**
+//     * A file path to detect.
+//     * If specified, "matchPackage" cannot be specified.
+//     * @example "some-framework.config.json"
+//     */
+//    path?: string;
+//    /**
+//     * A matcher for the entire file.
+//     * If specified, "matchPackage" cannot be specified.
+//     * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+//     */
+//    matchContent?: string;
+//    /**
+//     * A matcher for a package specifically found in a "package.json" file.
+//     * If specified, "path" and "matchContext" cannot be specified.
+//     * If specified in multiple detectors, the first one will be used to resolve the framework version.
+//     * @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
+//     */
+//    matchPackage?: string;
+//}
+
+        // We want to support more than package.json
+
+
+    },
+    "required": [ "locality", "region", "country-name" ],
+    "dependentRequired": {
+        "post-office-box": [ "street-address" ],
+        "extended-address": [ "street-address" ]
+    },
+
+    "$defs": {
+        "frameworkDetector": {
+            "$id": "/schemas/frameworkDetector",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                // every / some  maybe all / any ? or every and any?
+                // path / matchPackage / matchContent
+                "street_address": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "state": {
+                    "description": "",
+                    "$ref": "#/definitions/state"
+                }
+            },
+            "required": [
+                "street_address",
+                "city",
+                "state"
+            ],
+            "definitions": {
+                "state": {
+                    "enum": [
+                        "CA",
+                        "NY",
+                        "... etc ..."
+                    ]
+                },
+                "foo": {
+                    "enum": [
+                        "path",
+                        "matchPackage",
+                        "matchContent"
+                    ]
+                }
+            }
+        },
+        "settings": {
+            "$id": "/schemas/frameworkDetector",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "installCommand": {
+                    "description": "Default Install Command",
+                    "type": "string"
+                },
+                "buildCommand": {
+                    "description": "Default Build Command",
+                    "type": "string"
+                },
+                "outputDirectory": {
+                    "description": "Default Output Directory",
+                    "type": "string"
+                }
+            }
+        },
+
+        // location: environment, file (is this "file" or a path?)
+        // key
+    }
+}

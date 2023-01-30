@@ -14,6 +14,9 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+// This is primary went to avoid having to re-parse settings but an alternative might be to have
+// a context object that gets passed around. We might do down that route anyway when we introduce
+// an HTTP client to talk to doctavious API
 lazy_static! {
     // TODO: doctavious config will live in project directory
     // do we also want a default settings file
@@ -47,13 +50,9 @@ pub struct Settings {
     #[serde(alias = "adr")]
     pub adr_settings: Option<AdrSettings>,
 
-    #[serde(rename(serialize = "rfd"))]
-    #[serde(alias = "rfd")]
-    pub rfd_settings: Option<RFDSettings>,
-
-    #[serde(rename(serialize = "til"))]
-    #[serde(alias = "til")]
-    pub til_settings: Option<TilSettings>,
+    #[serde(rename(serialize = "build"))]
+    #[serde(alias = "build")]
+    pub build_settings: Option<BuildSettings>,
 
     #[serde(rename(serialize = "changelog"))]
     #[serde(alias = "changelog")]
@@ -62,6 +61,19 @@ pub struct Settings {
     #[serde(rename(serialize = "githook"))]
     #[serde(alias = "githook")]
     pub githook_settings: Option<ChangelogSettings>,
+
+    #[serde(rename(serialize = "rfd"))]
+    #[serde(alias = "rfd")]
+    pub rfd_settings: Option<RFDSettings>,
+
+    #[serde(rename(serialize = "snippet"))]
+    #[serde(alias = "snippet")]
+    pub snippet_settings: Option<SnippetSettings>,
+
+    #[serde(rename(serialize = "til"))]
+    #[serde(alias = "til")]
+    pub til_settings: Option<TilSettings>,
+
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -133,6 +145,11 @@ pub struct SnippetSource {
     pub starting_point: Option<String>,
     pub directory: Option<String>, // default to "."
     pub files: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct BuildSettings {
+    pub command: String
 }
 
 impl Settings {

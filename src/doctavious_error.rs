@@ -64,12 +64,19 @@ pub enum DoctaviousError {
     #[error("Serde json error: `{0}`")]
     SerdeJson(#[from] serde_json::Error),
 
+    #[error("Serde yaml error: `{0}`")]
+    SerdeYaml(#[from] serde_yaml::Error),
+
     /// Error that may occur while reserving ADR/RFD number.
     #[error("{0} has already been reserved")]
     ReservedNumberError(i32),
 
     #[error("walkdir error")]
     WalkdirError(#[from] walkdir::Error),
+
+    // // TODO: figure out what to do here
+    // #[error("not sure")]
+    // AnyhowError(#[from] anyhow::Error),
 
     // TODO: fix this
     #[error("{0}")]

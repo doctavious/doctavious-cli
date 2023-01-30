@@ -213,7 +213,7 @@ mod test {
         // Release note (enterprise change): cloud storage sinks are no longer experimental
 
         // no release note
-        // RegexBuilder::new("^[rR]elease [nN]otes?: *[Nn]one").multi_line(true).build()
+        // RegexBuilder::new("^[rR]elease [nN]otes?: *[Nn]one").multi_line(true).build_mod()
         // Captures :? (xxx) ?: yyy
         // form1 = Regex::new(":? *\((?P<cat1>[^)]*)\) *:?").ok()
         // Captures : xxx: yyy - this must be careful not to capture too much, we just accept one or two words
@@ -224,7 +224,7 @@ mod test {
         // formt3 = Regex::new(":(?P<cat3>)").ok()
         // relnote = re.compile(r'(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r') *(?P<note>.*)$', flags=re.S)
         // release_note =
-        // RegexBuilder::new("(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r").dot_matches_new_line(true).build()
+        // RegexBuilder::new("(?:^|[\n\r])[rR]elease [nN]otes? *(?:' + form1 + '|' + form2 + '|' + form3 + r").dot_matches_new_line(true).build_mod()
         // commit_parsers:       Some(vec![
         //     CommitParser {
         //         message: Regex::new("^[rR]elease [nN]otes?: *[Nn]one").ok(),
