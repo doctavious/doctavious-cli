@@ -1,3 +1,8 @@
+// docfx.json
+// "docfx <docfx_project>/docfx.json"
+// _site
+// docfx build [-o:<output_path>] [-t:<template folder>]
+
 use serde::{Serialize, Deserialize, de};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
 
@@ -50,7 +55,7 @@ mod tests {
         };
 
         let output = docfx.get_output_dir();
-        println!("{}", output);
+        assert_eq!(output, "dist")
     }
 
 }

@@ -3,7 +3,7 @@
 // change be changed via destination
 
 // destination: DIR
-// -d, --destination DIR
+// jekyll build -d, --destination DIR
 
 use serde::{Serialize, Deserialize, de};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};

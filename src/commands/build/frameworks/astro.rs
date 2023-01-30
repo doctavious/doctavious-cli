@@ -1,3 +1,10 @@
+// astro.config.mjs
+// "npm run build"
+// astro build
+// outDir: './my-custom-build-directory'
+// defaults to "./dist"
+
+
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::{Lit, ModuleDecl, Program};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
@@ -284,7 +291,7 @@ mod tests {
         };
 
         let output = astro.get_output_dir();
-        println!("{}", output);
+        assert_eq!(output, "./build")
     }
 
 }

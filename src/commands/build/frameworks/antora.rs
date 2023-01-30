@@ -1,3 +1,11 @@
+// antora-playbook.yml
+// antora antora-playbook.yml or npx antora antora-playbook.yml
+// build/site
+// change change via dir
+
+// antora generate <playbook> --to-dir <dir>
+
+
 use serde::{Serialize, Deserialize, de};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
 
@@ -27,24 +35,6 @@ impl FrameworkSupport for Antora {
                     println!("{}", e.to_string());
                 }
             }
-
-            // for config in configs {
-            //     // TODO: this might be better to parse into struct
-            //     println!("{}", config);
-            //     if let Ok(contents) = fs::read_to_string(config) {
-            //         match serde_yaml::from_str::<AntoraConfig>(contents.as_str()) {
-            //             Ok(c) => {
-            //                 return c.output.dir
-            //             }
-            //             Err(e) => {
-            //                 // log warning/error
-            //                 println!("{}", e.to_string());
-            //             }
-            //         }
-            //     } else {
-            //         println!("could not read file {}", config);
-            //     }
-            // }
         }
 
         //self.info.build.outputdir
