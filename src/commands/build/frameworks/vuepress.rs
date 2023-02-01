@@ -1,0 +1,142 @@
+// .vuepress/config.js
+// inside docs directory
+// which should export a JavaScript object:
+// You can also use YAML (.vuepress/config.yml) or TOML (.vuepress/config.toml) formats for the configuration file.
+// package.json -> "docs:build": "vuepress build docs"
+
+// vuepress build [targetDir] -d, --dest <dest>
+
+// .vuepress/dist
+// can be configured via the dest field
+
+// .vuepress/config.js
+// .vuepress/config.yml
+// .vuepress/config.toml
+// .vuepress/config.ts
+
+
+use serde::{Serialize, Deserialize, de};
+use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
+use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
+use swc_ecma_ast::Stmt::{Decl, Expr};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::doctavious_error::DoctaviousError;
+use crate::doctavious_error::{Result as DoctaviousResult};
+
+#[derive(Deserialize)]
+struct VuePressConfig { dest: Option<String> }
+
+pub struct VuePress { info: FrameworkInfo }
+impl FrameworkSupport for VuePress {
+    fn get_info(&self) -> &FrameworkInfo {
+        &self.info
+    }
+
+    fn get_output_dir(&self) -> String {
+        if let Some(configs) = &self.info.configs {
+            match read_config_files::<VuePressConfig>(configs) {
+                Ok(c) => {
+                    if let Some(dest) = c.dest {
+                        return dest;
+                    }
+                }
+                Err(e) => {
+                    // log warning/error
+                    println!("{}", e.to_string());
+                }
+            }
+        }
+
+        //self.info.build.outputdir
+        String::default()
+    }
+}
+
+impl ConfigurationFileDeserialization for VuePressConfig {
+
+    fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
+        // TODO: try and simplify
+        println!("{}", serde_json::to_string(program)?);
+        if let Some(module) = program.as_module() {
+            for item in &module.body {
+                if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
+                    // callee value "defineConfig"
+                    if let Some(call) = export_expression.expr.as_call() {
+                        for call_arg in &call.args {
+                            if let Some(obj) = call_arg.expr.as_object() {
+                                for props in &obj.props {
+                                    if let Some(dir_prop) = props.as_prop() {
+                                        if let Some(kv) = (*dir_prop).as_key_value() {
+                                            if let Some(ident) = kv.key.as_ident() {
+                                                if ident.sym.as_ref() == "dest" {
+                                                    if let Some(Lit::Str(s)) = &kv.value.as_lit() {
+                                                        return Ok(Self {
+                                                            dest: Some(s.value.to_string())
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if let Some(Expr(stmt)) = item.as_stmt() {
+                    let expression = &*stmt.expr;
+                    if let Some(assign) = expression.as_assign() {
+                        let rhs = &*assign.right;
+                        if let Some(obj) = rhs.as_object() {
+                            for prop in &obj.props {
+                                if let Some(p) = prop.as_prop() {
+                                    if let Some(kv) = p.as_key_value() {
+                                        if let Some(ident) = kv.key.as_ident() {
+                                            if ident.sym.as_ref() == "dest" {
+                                                if let Some(Lit::Str(s)) = &kv.value.as_lit() {
+                                                    return Ok(Self {
+                                                        dest: Some(s.value.to_string())
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(DoctaviousError::Msg("invalid config".to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use super::VuePress;
+
+    #[test]
+    fn test_vuepress() {
+        let configs = [
+            "tests/resources/framework_configs/vuepress/config.js",
+            "tests/resources/framework_configs/vuepress/config.toml",
+            "tests/resources/framework_configs/vuepress/config.ts"
+        ];
+        for config in configs {
+            let vuepress = VuePress {
+                info: FrameworkInfo {
+                    name: "".to_string(),
+                    website: None,
+                    configs: Some(vec![config.to_string()]),
+                    project_file: None,
+                },
+            };
+
+            let output = vuepress.get_output_dir();
+            assert_eq!(output, String::from("build"))
+        }
+
+    }
+
+}
