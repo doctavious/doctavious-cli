@@ -32,7 +32,7 @@ mod tests {
     use super::Sphinx;
 
     #[test]
-    fn test_jekyll() {
+    fn test_sphinx() {
         let sphinx = Sphinx {
             info: FrameworkInfo {
                 name: "".to_string(),
@@ -48,18 +48,20 @@ mod tests {
 
     #[test]
     fn should_use_env_var_when_present() {
-        env::set_var("BUILDDIR", "build");
-        let sphinx = Sphinx {
-            info: FrameworkInfo {
-                name: "".to_string(),
-                website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/sphinx/config.py")]),
-                project_file: None,
-            },
-        };
+        temp_env::with_var("BUILDDIR", Some("build"), || {
+            let sphinx = Sphinx {
+                info: FrameworkInfo {
+                    name: "".to_string(),
+                    website: None,
+                    configs: Some(vec![String::from("tests/resources/framework_configs/sphinx/config.py")]),
+                    project_file: None,
+                },
+            };
 
-        let output = sphinx.get_output_dir();
-        assert_eq!(output, "build")
+            let output = sphinx.get_output_dir();
+            assert_eq!(output, "build")
+        });
+
     }
 
 }
