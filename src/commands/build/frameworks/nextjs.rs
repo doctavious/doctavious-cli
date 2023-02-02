@@ -2,7 +2,7 @@
 // this is a regular Node.js module
 // could also look at package.json -> scripts -> "build": "next build",
 
-// .next
+// .next -> default directory
 // change be changed via distDir
 
 use serde::{Serialize, Deserialize, de};
