@@ -270,8 +270,8 @@ impl Settings {
 }
 
 pub(crate) fn load_settings() -> Result<Settings> {
-    let bytes = fs::read(SETTINGS_FILE.as_path())?;
-    let settings: Settings = toml::from_slice(&bytes)?;
+    let contents = fs::read_to_string(SETTINGS_FILE.as_path())?;
+    let settings: Settings = toml::from_str(contents.as_str())?;
     Ok(settings)
 }
 
