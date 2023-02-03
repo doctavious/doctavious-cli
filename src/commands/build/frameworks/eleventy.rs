@@ -19,6 +19,21 @@ use crate::doctavious_error::{Result as DoctaviousResult};
 struct EleventyConfig { output: String }
 
 pub struct Eleventy { info: FrameworkInfo }
+
+impl Default for Eleventy {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Eleventy",
+                website: Some("https://www.11ty.dev/"),
+                configs: Some(Vec::from([".eleventy.js", "eleventy.config.js", "eleventy.config.cjs"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
+
 impl FrameworkSupport for Eleventy {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -129,9 +144,9 @@ mod tests {
     fn test_eleventy() {
         let eleventy = Eleventy {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/eleventy/.eleventy.js")]),
+                configs: Some(vec!["tests/resources/framework_configs/eleventy/.eleventy.js"]),
                 project_file: None,
             },
         };

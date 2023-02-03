@@ -10,6 +10,20 @@ use crate::commands::build::frameworks::framework::{ConfigurationFileDeserializa
 
 
 pub struct Sphinx { info: FrameworkInfo }
+
+impl Default for Sphinx {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Sphinx",
+                website: Some("https://www.sphinx-doc.org/en/master/"),
+                configs: Some(vec!["conf.py"]),
+                project_file: None,
+            },
+        }
+    }
+}
+
 impl FrameworkSupport for Sphinx {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -35,9 +49,9 @@ mod tests {
     fn test_sphinx() {
         let sphinx = Sphinx {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/sphinx/config.py")]),
+                configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
                 project_file: None,
             },
         };
@@ -51,9 +65,9 @@ mod tests {
         temp_env::with_var("BUILDDIR", Some("build"), || {
             let sphinx = Sphinx {
                 info: FrameworkInfo {
-                    name: "".to_string(),
+                    name: "",
                     website: None,
-                    configs: Some(vec![String::from("tests/resources/framework_configs/sphinx/config.py")]),
+                    configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
                     project_file: None,
                 },
             };
@@ -61,7 +75,6 @@ mod tests {
             let output = sphinx.get_output_dir();
             assert_eq!(output, "build")
         });
-
     }
 
 }

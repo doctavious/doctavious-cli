@@ -16,6 +16,21 @@ use crate::commands::build::frameworks::framework::{ConfigurationFileDeserializa
 struct HugoConfig { publish_dir: Option<String> }
 
 pub struct Hugo { info: FrameworkInfo }
+
+impl Default for Hugo {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Hexo",
+                website: Some("https://gohugo.io/"),
+                configs: Some(Vec::from(["config.toml", "config.yaml", "config.json"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
+
 impl FrameworkSupport for Hugo {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -52,9 +67,9 @@ mod tests {
     fn test_hugo() {
         let hugo = Hugo {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/hugo/config.toml")]),
+                configs: Some(vec!["tests/resources/framework_configs/hugo/config.toml"]),
                 project_file: None,
             }
         };

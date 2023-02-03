@@ -12,6 +12,20 @@ use crate::commands::build::frameworks::framework::{ConfigurationFileDeserializa
 struct HexoConfig { public_dir: Option<String> }
 
 pub struct Hexo { info: FrameworkInfo }
+
+impl Default for Hexo {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Hexo",
+                website: Some("https://hexo.io/"),
+                configs: Some(Vec::from(["_config.yml"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for Hexo {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -48,9 +62,9 @@ mod tests {
     fn test_hexo() {
         let hexo = Hexo {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/hexo/_config.yml")]),
+                configs: Some(vec!["tests/resources/framework_configs/hexo/_config.yml"]),
                 project_file: None,
             }
         };

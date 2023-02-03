@@ -13,6 +13,20 @@ struct DocFxConfigBuild { dest: String }
 struct DocFxConfig { build: DocFxConfigBuild }
 
 pub struct DocFx { info: FrameworkInfo }
+
+impl Default for DocFx {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "DocFX",
+                website: Some("https://dotnet.github.io/docfx/"),
+                configs: Some(Vec::from(["docfx.json"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for DocFx {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -47,9 +61,9 @@ mod tests {
     fn test_docfx() {
         let docfx = DocFx {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/docfx/docfx.json")]),
+                configs: Some(vec!["tests/resources/framework_configs/docfx/docfx.json"]),
                 project_file: None,
             }
         };

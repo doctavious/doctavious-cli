@@ -19,6 +19,20 @@ use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 struct SvelteKitConfig { output: Option<String> }
 
 pub struct SvelteKit { info: FrameworkInfo }
+
+impl Default for SvelteKit {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "SvelteKit",
+                website: Some("https://kit.svelte.dev/"),
+                configs: Some(vec![".svelte-kit"]),
+                project_file: None,
+            },
+        }
+    }
+}
+
 impl FrameworkSupport for SvelteKit {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -117,9 +131,9 @@ mod tests {
     fn test_sveltekit() {
         let sveltekit = SvelteKit {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/sveltekit/svelte.config.js")]),
+                configs: Some(vec!["tests/resources/framework_configs/sveltekit/svelte.config.js"]),
                 project_file: None,
             }
         };

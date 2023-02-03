@@ -17,6 +17,19 @@ struct AntoraConfigOutputKeys { dir: Option<String> }
 struct AntoraConfig { output: Option<AntoraConfigOutputKeys> }
 
 pub struct Antora { info: FrameworkInfo }
+impl Default for Antora {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Antora",
+                website: Some("https://antora.org/"),
+                configs: Some(Vec::from(["antora-playbook.yaml"])),
+                project_file: None,
+            },
+        }
+    }
+}
+
 impl FrameworkSupport for Antora {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -55,9 +68,9 @@ mod tests {
     fn test_antora() {
         let antora = Antora {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/antora/antora-playbook.yaml")]),
+                configs: Some(vec!["tests/resources/framework_configs/antora/antora-playbook.yaml"]),
                 project_file: None,
             },
         };

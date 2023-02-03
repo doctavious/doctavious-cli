@@ -41,6 +41,20 @@ use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 struct DocusaurusV2Config { output: String }
 
 pub struct DocusaurusV2 { info: FrameworkInfo }
+
+impl Default for DocusaurusV2 {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Docusaurus 2",
+                website: Some("https://docusaurus.io/"),
+                configs: Some(Vec::from(["docusaurus.config.js"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for DocusaurusV2 {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -70,9 +84,9 @@ mod tests {
     fn test_docusaurus() {
         let docusaurus = DocusaurusV2 {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/docusaurus2/docusaurus.config.js")]),
+                configs: Some(vec!["tests/resources/framework_configs/docusaurus2/docusaurus.config.js"]),
                 project_file: None,
             }
         };

@@ -18,6 +18,20 @@ use crate::doctavious_error::{Result as DoctaviousResult};
 struct VitePressConfig { output: Option<String> }
 
 pub struct VitePress { info: FrameworkInfo }
+
+impl Default for VitePress {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "VitePress",
+                website: Some("https://vitepress.vuejs.org/"),
+                configs: Some(vec![".vitepress/config.js"]),
+                project_file: None,
+            },
+        }
+    }
+}
+
 impl FrameworkSupport for VitePress {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -119,9 +133,9 @@ mod tests {
         for config in configs {
             let vitepress = VitePress {
                 info: FrameworkInfo {
-                    name: "".to_string(),
+                    name: "",
                     website: None,
-                    configs: Some(vec![config.to_string()]),
+                    configs: Some(vec![config]),
                     project_file: None,
                 },
             };

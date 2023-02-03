@@ -16,6 +16,20 @@ use crate::doctavious_error::{Result as DoctaviousResult};
 struct NextJSConfig { output: String }
 
 pub struct NextJS { info: FrameworkInfo }
+
+impl Default for NextJS {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Next.js",
+                website: Some("https://nextjs.org/"),
+                configs: Some(Vec::from(["next.config.js", "next.config.mjs"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for NextJS {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -111,9 +125,9 @@ mod tests {
         for config in ["tests/resources/framework_configs/nextjs/next_js_v1.mjs", "tests/resources/framework_configs/nextjs/next_js_v2.mjs"] {
             let nextjs = NextJS {
                 info: FrameworkInfo {
-                    name: "".to_string(),
+                    name: "",
                     website: None,
-                    configs: Some(vec![config.to_string()]),
+                    configs: Some(vec![config]),
                     project_file: None,
                 },
             };

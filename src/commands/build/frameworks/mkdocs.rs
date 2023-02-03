@@ -10,6 +10,21 @@ use crate::commands::build::frameworks::framework::{ConfigurationFileDeserializa
 struct MKDocsConfig { site_dir: Option<String> }
 
 pub struct MKDocs { info: FrameworkInfo }
+
+impl Default for MKDocs {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "MkDocs",
+                website: Some("https://www.mkdocs.org/"),
+                configs: Some(Vec::from(["mkdocs.yml"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
+
 impl FrameworkSupport for MKDocs {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -46,9 +61,9 @@ mod tests {
     fn test_hugo() {
         let mkdocs = MKDocs {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/mkdocs/mkdocs.yml")]),
+                configs: Some(vec!["tests/resources/framework_configs/mkdocs/mkdocs.yml"]),
                 project_file: None,
             }
         };

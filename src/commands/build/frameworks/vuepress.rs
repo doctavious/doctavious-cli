@@ -27,6 +27,25 @@ use crate::doctavious_error::{Result as DoctaviousResult};
 struct VuePressConfig { dest: Option<String> }
 
 pub struct VuePress { info: FrameworkInfo }
+
+impl Default for VuePress{
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "VuePress",
+                website: Some("https://vuepress.vuejs.org/"),
+                configs: Some(vec![
+                    ".vuepress/config.js",
+                    ".vuepress/config.yml",
+                    ".vuepress/config.toml", ".vuepress/config.ts"
+                ]),
+                project_file: None,
+            },
+        }
+    }
+}
+
+
 impl FrameworkSupport for VuePress {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -126,9 +145,9 @@ mod tests {
         for config in configs {
             let vuepress = VuePress {
                 info: FrameworkInfo {
-                    name: "".to_string(),
+                    name: "",
                     website: None,
-                    configs: Some(vec![config.to_string()]),
+                    configs: Some(vec![config]),
                     project_file: None,
                 },
             };

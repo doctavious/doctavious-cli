@@ -12,6 +12,20 @@ use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
 
 pub struct Astro { info: FrameworkInfo }
+
+impl Default for Astro {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Astro",
+                website: Some("https://astro.build"),
+                configs: Some(Vec::from(["astro.config.mjs"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for Astro {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -283,9 +297,9 @@ mod tests {
     fn test_astro() {
         let astro = Astro {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/astro/astro.config.mjs")]),
+                configs: Some(vec!["tests/resources/framework_configs/astro/astro.config.mjs"]),
                 project_file: None,
             },
         };

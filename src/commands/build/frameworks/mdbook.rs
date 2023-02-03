@@ -13,6 +13,20 @@ struct MDBookBuildOptions { build_dir: Option<String> }
 struct MDBookConfig { build: Option<MDBookBuildOptions> }
 
 pub struct MDBook { info: FrameworkInfo }
+
+impl Default for MDBook {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "mdBook",
+                website: Some("https://rust-lang.github.io/mdBook/"),
+                configs: Some(Vec::from(["book.toml"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for MDBook {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -49,9 +63,9 @@ mod tests {
     fn test_mdbook() {
         let book = MDBook {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/mdbook/book.toml")]),
+                configs: Some(vec!["tests/resources/framework_configs/mdbook/book.toml"]),
                 project_file: None,
             }
         };

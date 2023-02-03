@@ -16,6 +16,30 @@ use crate::doctavious_error::{Result as DoctaviousResult};
 struct NuxtJSConfig { output: Option<String> }
 
 pub struct NuxtJS { info: FrameworkInfo }
+
+impl Default for NuxtJS {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Nuxt",
+                website: Some("https://nuxtjs.org/"),
+                configs: Some(Vec::from(["nuxt.config.js"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
+// NUXTJS: NuxtJS = NuxtJS {
+//     info: FrameworkInfo {
+//         name: "Nuxt",
+//         website: Some("https://nuxtjs.org/"),
+//         configs: Some(Vec::from(["nuxt.config.js"])),
+//         project_file: None,
+//     },
+// };
+
+
 impl FrameworkSupport for NuxtJS {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -83,9 +107,9 @@ mod tests {
         for config in ["tests/resources/framework_configs/nuxtjs/nuxt.config.js"] {
             let nuxtjs = NuxtJS {
                 info: FrameworkInfo {
-                    name: "".to_string(),
+                    name: "",
                     website: None,
-                    configs: Some(vec![config.to_string()]),
+                    configs: Some(vec![config]),
                     project_file: None,
                 },
             };

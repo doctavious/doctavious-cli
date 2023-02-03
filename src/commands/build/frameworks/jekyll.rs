@@ -13,6 +13,21 @@ use crate::commands::build::frameworks::framework::{ConfigurationFileDeserializa
 struct JekyllConfig { destination: Option<String> }
 
 pub struct Jekyll { info: FrameworkInfo }
+
+impl Default for Jekyll {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Jekyll",
+                website: Some("https://jekyllrb.com/"),
+                configs: Some(Vec::from(["_config.yml", "_config.toml"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
+
 impl FrameworkSupport for Jekyll {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -50,9 +65,9 @@ mod tests {
     fn test_jekyll() {
         let jekyll = Jekyll {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/jekyll/_config.yml")]),
+                configs: Some(vec!["tests/resources/framework_configs/jekyll/_config.yml"]),
                 project_file: None,
             },
         };

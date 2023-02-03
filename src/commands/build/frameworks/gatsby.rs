@@ -20,6 +20,20 @@ use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 struct GatsbyConfig { output: String }
 
 pub struct Gatsby { info: FrameworkInfo }
+
+impl Default for Gatsby {
+    fn default() -> Self {
+        Self {
+            info: FrameworkInfo {
+                name: "Gatsby",
+                website: Some("https://www.gatsbyjs.com/"),
+                configs: Some(Vec::from(["gatsby-config.js", "gatsby-config.ts"])),
+                project_file: None,
+            }
+        }
+    }
+}
+
 impl FrameworkSupport for Gatsby {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
@@ -135,9 +149,9 @@ mod tests {
     fn test_gatsby() {
         let gatsby = Gatsby {
             info: FrameworkInfo {
-                name: "".to_string(),
+                name: "",
                 website: None,
-                configs: Some(vec![String::from("tests/resources/framework_configs/gatsby/gatsby-config.js")]),
+                configs: Some(vec!["tests/resources/framework_configs/gatsby/gatsby-config.js"]),
                 project_file: None,
             }
         };

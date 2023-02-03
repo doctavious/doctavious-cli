@@ -21,13 +21,13 @@ pub struct FrameworkInfo {
     ///
     /// # Examples
     /// Next.js
-    pub name: String,
+    pub name: &'static str,
 
     /// A URL to the official website of the framework
     ///
     /// # Examples
     /// https://nextjs.org
-    pub website: Option<String>,
+    pub website: Option<&'static str>,
 
     // Short description of the framework
     // pub description: String,
@@ -39,16 +39,18 @@ pub struct FrameworkInfo {
     // /// NEXT_PUBLIC_
     // pub envPrefix: Option<String>,
 
-    // TODO: could be a glob?
+    // TODO: could string be a glob?
+    // TODO: does this really need to be an Option? How about just empty?
     /// List of potential config files
-    pub configs: Option<Vec<String>>,
+    pub configs: Option<Vec<&'static str>>,
 
+    // TODO: maybe this should be language which then has package managers?
     /// The file contains descriptive and functional metadata about a project
     /// specifically dependencies
     ///
     /// # Examples
     /// package.json, .csproj
-    pub project_file: Option<String>,
+    pub project_file: Option<&'static str>,
 
     // /// Detectors used to find out the framework
     // pub detection: FrameworkDetector,
@@ -142,7 +144,7 @@ pub trait ConfigurationFileDeserialization: for<'a> Deserialize<'a> {
 //     return Err(DoctaviousError::Msg("".to_string()));
 // }
 
-pub(crate) fn read_config_files<T>(files: &Vec<String>) -> DoctaviousResult<T>
+pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResult<T>
     where T: ConfigurationFileDeserialization
 {
     for file in files {
