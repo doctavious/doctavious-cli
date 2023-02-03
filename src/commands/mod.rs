@@ -5,9 +5,12 @@ use std::fs;
 use std::io::{BufRead, BufReader, ErrorKind};
 use walkdir::WalkDir;
 
+
+pub mod build;
 mod bump;
 mod cdg;
 pub mod changelog;
+mod deploy;
 pub mod design_decisions;
 pub mod githooks;
 pub mod init;
@@ -20,8 +23,7 @@ mod software_template;
 mod tag;
 pub mod telemetry;
 pub mod til;
-mod deploy;
-mod build;
+
 
 // TODO: not a fan of the list ToC for ADRs and RFDs
 // TODO: pass in header

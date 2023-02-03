@@ -19,6 +19,7 @@ use crate::settings::{SETTINGS, SETTINGS_FILE};
 #[command(about = "Build on your local machine")]
 pub(crate) struct BuildCommand {
     // Dry run: show instructions without running them (default: false)
+    // should this just find framework and show command it will run?
     pub dry: bool
     // context Specify a build_mod context or branch (contexts: "production", "deploy-preview", "branch-deploy", "dev") (default: "production")
 
