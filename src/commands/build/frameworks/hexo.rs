@@ -24,6 +24,7 @@ impl Default for Hexo {
                 build: FrameworkBuildSettings {
                     command: "hexo generate",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",
                             long: "--config" })),

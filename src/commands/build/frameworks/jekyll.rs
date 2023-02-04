@@ -26,6 +26,7 @@ impl Default for Jekyll {
                     // bundle exec jekyll build
                     command: "jekyll build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",
                             long: "--config",

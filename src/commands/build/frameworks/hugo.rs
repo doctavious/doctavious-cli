@@ -31,6 +31,7 @@ impl Default for Hugo {
                 build: FrameworkBuildSettings {
                     command: "hugo",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",
                             long: "--config"

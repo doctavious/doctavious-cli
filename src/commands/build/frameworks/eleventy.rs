@@ -31,6 +31,7 @@ impl Default for Eleventy {
                 build: FrameworkBuildSettings {
                     command: "eleventy",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: None,
                         output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",

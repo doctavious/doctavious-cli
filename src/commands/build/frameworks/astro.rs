@@ -24,6 +24,7 @@ impl Default for Astro {
                 build: FrameworkBuildSettings {
                     command: "astro build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",
                             long: "--config",

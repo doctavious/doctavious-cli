@@ -53,6 +53,7 @@ impl Default for DocusaurusV2 {
                 build: FrameworkBuildSettings {
                     command: "docusaurus build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",
                             long: "--config",

@@ -37,7 +37,7 @@ impl Default for VitePress {
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "vitepress build docs",
-                    command_args: None,
+                    command_args: None, // TODO: check
                     output_directory: "docs/.vitepress/dist",
                 },
             },

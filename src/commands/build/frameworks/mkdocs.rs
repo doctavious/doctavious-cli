@@ -22,6 +22,7 @@ impl Default for MKDocs {
                 build: FrameworkBuildSettings {
                     command: "mkdocs build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "-f",
                             long: "--config-file"

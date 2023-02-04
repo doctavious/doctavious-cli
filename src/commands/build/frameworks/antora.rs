@@ -28,8 +28,12 @@ impl Default for Antora {
                 build: FrameworkBuildSettings {
                     command: "antora generate",
                     command_args: Some(FrameworkBuildArgs {
-                        config: Some(FrameworkBuildArg::Arg(1)),
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption { short: "", long: "--to-dir" })),
+                        source: None,
+                        config: Some(FrameworkBuildArg::Arg(1, None)),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--to-dir"
+                        })),
                     }),
                     output_directory: "build/site",
                 },

@@ -25,6 +25,7 @@ impl Default for DocFx {
                 build: FrameworkBuildSettings {
                     command: "docfx build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: None,
                         output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "-o",

@@ -31,6 +31,7 @@ impl Default for SvelteKit {
                 build: FrameworkBuildSettings {
                     command: "vite build",
                     command_args: Some(FrameworkBuildArgs {
+                        source: None,
                         config: None,
                         output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
                             short: "",

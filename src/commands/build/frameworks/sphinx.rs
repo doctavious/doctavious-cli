@@ -25,11 +25,12 @@ impl Default for Sphinx {
                     // docs docs/_build
                     command: "sphinx-build", // TODO: source has to be passed in? Default here?
                     command_args: Some(FrameworkBuildArgs {
+                        source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
                         config: None,
-                        output: Some(FrameworkBuildArg::Arg(2))
+                        output: Some(FrameworkBuildArg::Arg(2, None))
                     }),
                     // TODO: must be passed in to command which presents a problem if we dont know where the build script is
-                    output_directory: "",
+                    output_directory: "docs/_build",
                 },
             },
         }

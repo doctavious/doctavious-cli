@@ -63,20 +63,20 @@ pub struct FrameworkInfo {
 }
 
 pub struct FrameworkBuildSettings {
-
     pub command: &'static str,
     pub command_args: Option<FrameworkBuildArgs>,
     pub output_directory: &'static str
 }
 
 pub struct FrameworkBuildArgs {
+    pub source: Option<FrameworkBuildArg>,
     pub config: Option<FrameworkBuildArg>,
     pub output: Option<FrameworkBuildArg>
 }
 
 pub enum FrameworkBuildArg {
     /// 0-based index of argument
-    Arg(i8),
+    Arg(i8, Option<&'static str>),
     Option(FrameworkBuildOption) // TODO: do we care short or long? how about use vec/array?
 }
 
