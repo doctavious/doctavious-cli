@@ -30,6 +30,9 @@ mod templates;
 mod utils;
 mod files;
 
+use crate::commands::build::{
+    BuildCommand, build
+};
 use crate::commands::build_toc;
 use crate::commands::design_decisions::adr::{
     graph_adrs, init_adr, new_adr, reserve_adr, ADRCommand,
@@ -88,10 +91,11 @@ lazy_static! {
 
 #[derive(Parser, Debug)]
 enum Command {
-    RFD(RFD),
     Adr(ADR),
-    Til(Til),
+    Build(BuildCommand),
     Presentation(Presentation),
+    RFD(RFD),
+    Til(Til),
 }
 
 #[derive(Parser, Debug)]
@@ -312,6 +316,10 @@ fn main() -> DoctaviousResult<()> {
                     SETTINGS.get_adr_template_extension(params.extension);
                 return reserve_adr(params.number, params.title, extension);
             }
+        }
+
+        Command::Build(cmd) => {
+            return build(None);
         },
 
         Command::Presentation(params) => {
@@ -325,7 +333,7 @@ fn main() -> DoctaviousResult<()> {
                 None => "",
                 Some(ref i) => i,
             };
-        }
+        },
 
         Command::RFD(rfd) => match rfd.rfd_command {
             RFDCommand::Init(params) => {
