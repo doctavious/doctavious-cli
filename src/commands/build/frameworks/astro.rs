@@ -8,6 +8,7 @@
 use serde::{Deserialize};
 use swc_ecma_ast::{Lit, ModuleDecl, Program};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_call_expression, get_call_string_property};
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
 
@@ -66,36 +67,43 @@ struct AstroConfig { output: String }
 impl ConfigurationFileDeserialization for AstroConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: can this be simplified?
-        if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(ModuleDecl::ExportDefaultExpr(e)) = item.as_module_decl() {
-                    let expression = &*e.expr;
-                    if let Some(call) = expression.as_call() {
-                        for call_args in &call.args {
-                            let call_args_expression = &*call_args.expr;
-                            if let Some(obj) = call_args_expression.as_object() {
-                                for prop in &obj.props {
-                                    if let Some(p) = prop.as_prop() {
-                                        if let Some(kv) = (*p).as_key_value() {
-                                            if let Some(ident) = kv.key.as_ident() {
-                                                if ident.sym.as_ref() == "outDir" {
-                                                    if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                        return Ok(Self {
-                                                            output: s.value.to_string()
-                                                        });
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        let define_config = get_call_expression(program, "defineConfig");
+        if let Some(define_config) = define_config {
+            if let Some(val) = get_call_string_property(&define_config, "outDir") {
+                return Ok(Self {
+                    output: val
+                });
             }
         }
+        // if let Some(module) = program.as_module() {
+        //     for item in &module.body {
+        //         if let Some(ModuleDecl::ExportDefaultExpr(e)) = item.as_module_decl() {
+        //             let expression = &*e.expr;
+        //             if let Some(call) = expression.as_call() {
+        //                 for call_args in &call.args {
+        //                     let call_args_expression = &*call_args.expr;
+        //                     if let Some(obj) = call_args_expression.as_object() {
+        //                         for prop in &obj.props {
+        //                             if let Some(p) = prop.as_prop() {
+        //                                 if let Some(kv) = (*p).as_key_value() {
+        //                                     if let Some(ident) = kv.key.as_ident() {
+        //                                         if ident.sym.as_ref() == "outDir" {
+        //                                             if let Some(Lit::Str(s)) = &kv.value.as_lit() {
+        //                                                 return Ok(Self {
+        //                                                     output: s.value.to_string()
+        //                                                 });
+        //                                             }
+        //                                         }
+        //                                     }
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }
 }
