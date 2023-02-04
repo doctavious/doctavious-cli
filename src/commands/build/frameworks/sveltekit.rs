@@ -4,10 +4,9 @@
 // dependency - adapter-static
 
 
-use serde::{Serialize, Deserialize, de};
-use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, Stmt};
-use swc_ecma_ast::Expr::{Array, Object, Tpl};
-use swc_ecma_ast::Stmt::{Decl, Expr};
+use serde::{Deserialize};
+use swc_ecma_ast::{Lit, Program};
+use swc_ecma_ast::Stmt::{Decl};
 
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};

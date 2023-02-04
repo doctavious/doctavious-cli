@@ -5,8 +5,8 @@
 // .next -> default directory
 // change be changed via distDir
 
-use serde::{Serialize, Deserialize, de};
-use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
+use serde::{Deserialize};
+use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;

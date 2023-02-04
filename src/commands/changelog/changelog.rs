@@ -4,26 +4,28 @@
 // TODO: custom example would be something like cockroachdb
 // TODO: I like cockroachdb's release note and release justification style
 
-use crate::commands::changelog::commit::Commit;
-use crate::commands::changelog::parse_strip_parts;
-use crate::commands::changelog::release::Release;
-use crate::commands::changelog::{ChangelogConfig, StripParts};
-use crate::constants::DEFAULT_CONFIG_NAME;
-use crate::doctavious_error::{DoctaviousError, Result};
-use crate::git;
-use crate::settings::{
-    load_settings, persist_settings, AdrSettings, ChangelogSettings,
-    RFDSettings, TilSettings, SETTINGS,
-};
-use crate::templates::{TemplateContext, Templates};
-use clap::Parser;
-use git2::Repository;
-use log::warn;
+use std::{env, io};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use std::{env, io};
+
+use clap::Parser;
+use git2::Repository;
+use log::warn;
+
+use crate::commands::changelog::{ChangelogConfig, StripParts};
+use crate::commands::changelog::commit::Commit;
+use crate::commands::changelog::parse_strip_parts;
+use crate::commands::changelog::release::Release;
+use crate::constants::DEFAULT_CONFIG_NAME;
+use crate::doctavious_error::{DoctaviousError, Result};
+use crate::git;
+use crate::settings::{
+    AdrSettings, ChangelogSettings, load_settings, persist_settings,
+    RFDSettings, SETTINGS, TilSettings,
+};
+use crate::templates::{TemplateContext, Templates};
 
 #[derive(Parser, Debug)]
 #[command(about = "Gathers Changelog management commands")]

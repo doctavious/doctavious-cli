@@ -1,18 +1,15 @@
-use std::any::{Any, TypeId};
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use crate::DoctaviousResult;
-use serde::{Serialize, Deserialize, de};
-use crate::doctavious_error::DoctaviousError;
 
-use swc_ecma_ast::{EsVersion, *};
-use swc_common::{errors::{ColorConfig, Handler}, SourceMap, GLOBALS, FileName};
-use swc::{self, config::Options, try_with_handler, HandlerOpts};
+use serde::{Deserialize};
+use swc::{self, config::Options, HandlerOpts, try_with_handler};
+use swc_common::{errors::{ColorConfig, Handler}, FileName, GLOBALS, SourceMap};
+use swc_ecma_ast::{*, EsVersion};
 use swc_ecma_parser::{EsConfig, Syntax};
 
+use crate::doctavious_error::DoctaviousError;
+use crate::DoctaviousResult;
 
 pub struct FrameworkInfo {
     // id: String,
@@ -75,7 +72,7 @@ pub struct FrameworkBuildArgs {
 }
 
 pub enum FrameworkBuildArg {
-    /// 0-based index of argument
+    /// 0-based index of argument and default value
     Arg(i8, Option<&'static str>),
     // TODO: do we care short or long? how about use vec/array?
     Option { short: &'static str, long: &'static str }

@@ -1,23 +1,24 @@
-use crate::commands::design_decisions::get_template;
-use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
-use crate::doctavious_error::Result;
-use crate::markup_format::{
-    MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
-};
-use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
-use crate::templates::{TemplateContext, Templates};
-use crate::utils::{build_path, ensure_path, format_number, list, reserve_number};
-use crate::{edit, git, init_dir, FileStructure};
+use std::fs;
+use std::path::PathBuf;
+
 use chrono::Utc;
 use clap::{Parser, Subcommand};
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
-use std::fs;
-use std::path::PathBuf;
-use crate::commands::build_toc;
-use crate::file_structure::parse_file_structure;
-use crate::output::Output;
 
+use crate::{edit, FileStructure, git, init_dir};
+use crate::commands::build_toc;
+use crate::commands::design_decisions::get_template;
+use crate::constants::{DEFAULT_RFD_DIR, DEFAULT_RFD_TEMPLATE_PATH};
+use crate::doctavious_error::Result;
+use crate::file_structure::parse_file_structure;
+use crate::markup_format::{
+    MARKUP_FORMAT_EXTENSIONS, MarkupFormat,
+};
+use crate::output::Output;
+use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
+use crate::templates::{TemplateContext, Templates};
+use crate::utils::{build_path, ensure_path, format_number, list, reserve_number};
 
 #[derive(Parser, Debug)]
 #[command(about = "Gathers RFD management commands")]

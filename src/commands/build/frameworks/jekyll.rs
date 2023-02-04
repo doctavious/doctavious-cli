@@ -5,9 +5,8 @@
 // destination: DIR
 // jekyll build -d, --destination DIR
 
-use serde::{Serialize, Deserialize, de};
+use serde::{Deserialize};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
-
 
 #[derive(Deserialize)]
 struct JekyllConfig { destination: Option<String> }
@@ -74,6 +73,7 @@ impl ConfigurationFileDeserialization for JekyllConfig {}
 #[cfg(test)]
 mod tests {
     use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+
     use super::Jekyll;
 
     #[test]

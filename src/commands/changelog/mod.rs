@@ -1,18 +1,20 @@
-use crate::utils::parse_enum;
+use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+
+use clap::ValueEnum;
+use clap::builder::PossibleValue;
+use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt::{Display, Formatter};
+use serde::de::Error;
+
+use crate::doctavious_error::EnumError;
+use crate::DoctaviousResult;
+use crate::utils::parse_enum;
 
 mod changelog;
 mod commit;
 mod release;
-use clap::{ValueEnum};
-use lazy_static::lazy_static;
-use serde::de::Error;
-use std::collections::HashMap;
-use clap::builder::PossibleValue;
-use crate::doctavious_error::EnumError;
-use crate::DoctaviousResult;
 
 lazy_static! {
     pub static ref STRIP_PARTS: HashMap<&'static str, StripParts> = {

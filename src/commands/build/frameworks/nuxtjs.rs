@@ -8,13 +8,13 @@
 // nuxt generate
 // dist/
 
-use serde::{Serialize, Deserialize, de};
-use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
+use serde::{Deserialize};
+use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
-use swc_ecma_ast::Stmt::{Decl, Expr};
+
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::doctavious_error::Result as DoctaviousResult;
 use crate::doctavious_error::DoctaviousError;
-use crate::doctavious_error::{Result as DoctaviousResult};
 
 #[derive(Deserialize)]
 struct NuxtJSConfig { output: Option<String> }
@@ -108,6 +108,7 @@ impl ConfigurationFileDeserialization for NuxtJSConfig {
 #[cfg(test)]
 mod tests {
     use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+
     use super::NuxtJS;
 
     #[test]

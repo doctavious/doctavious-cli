@@ -26,13 +26,9 @@
 
 // TODO: support monorepo
 
-use serde::{Serialize, Deserialize, de};
-use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, Stmt};
-use swc_ecma_ast::Expr::{Array, Object, Tpl};
-use swc_ecma_ast::Stmt::{Decl, Expr};
+use serde::{Deserialize};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
-use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
 // and ConfigurationFileDeserialization?

@@ -6,7 +6,7 @@
 // antora generate <playbook> --to-dir <dir>
 
 
-use serde::{Serialize, Deserialize, de};
+use serde::{Deserialize};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 

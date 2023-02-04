@@ -5,7 +5,7 @@
 // defaults to "./dist"
 
 
-use serde::{Serialize, Deserialize, de};
+use serde::{Deserialize};
 use swc_ecma_ast::{Lit, ModuleDecl, Program};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;

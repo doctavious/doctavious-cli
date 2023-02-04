@@ -1,27 +1,28 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use chrono::Utc;
+use clap::Parser;
+use dotavious::{Dot, Edge, GraphBuilder, Node};
+use git2::Repository;
+
+use crate::{get_content, git};
+use crate::{edit, init_dir};
+use crate::commands::build_toc;
 use crate::commands::design_decisions::get_template;
 use crate::constants::{
     DEFAULT_ADR_DIR, DEFAULT_ADR_TEMPLATE_PATH, INIT_ADR_TEMPLATE_PATH,
 };
 use crate::doctavious_error::Result;
 use crate::file_structure::FileStructure;
-use crate::{get_content, git};
+use crate::file_structure::parse_file_structure;
 use crate::markup_format::{
-    MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
+    MARKUP_FORMAT_EXTENSIONS, MarkupFormat,
 };
-use crate::settings::{load_settings, persist_settings, AdrSettings, SETTINGS};
+use crate::output::Output;
+use crate::settings::{AdrSettings, load_settings, persist_settings, SETTINGS};
 use crate::templates::{TemplateContext, Templates};
 use crate::utils::{build_path, ensure_path, format_number, list, reserve_number};
-use crate::{edit, init_dir};
-use chrono::Utc;
-use clap::Parser;
-use dotavious::{Dot, Edge, GraphBuilder, Node};
-use git2::Repository;
-use crate::commands::build_toc;
-use crate::file_structure::parse_file_structure;
-use crate::output::Output;
 
 // TODO: this should probably be ADRCommand and below should be ADRSubCommands
 #[derive(Parser, Debug)]
@@ -484,7 +485,7 @@ mod tests {
     use std::fs::File;
     use std::io::{self, Read, Write};
 
-    use tempfile::{tempdir, tempfile, NamedTempFile};
+    use tempfile::{NamedTempFile, tempdir, tempfile};
 
     use crate::file_structure::FileStructure;
     use crate::init_adr;
