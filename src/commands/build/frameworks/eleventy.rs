@@ -11,7 +11,7 @@
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
 use swc_ecma_ast::Stmt::Expr;
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -28,6 +28,17 @@ impl Default for Eleventy {
                 website: Some("https://www.11ty.dev/"),
                 configs: Some(Vec::from([".eleventy.js", "eleventy.config.js", "eleventy.config.cjs"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "eleventy",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: None,
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--output"
+                        }))
+                    }),
+                    output_directory: "_site",
+                },
             }
         }
     }
@@ -137,7 +148,7 @@ impl ConfigurationFileDeserialization for EleventyConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Eleventy;
 
     #[test]
@@ -148,6 +159,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/eleventy/.eleventy.js"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         };
 

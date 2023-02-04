@@ -8,7 +8,7 @@
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
 use swc_ecma_ast::Stmt::{Decl, Expr};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -25,6 +25,11 @@ impl Default for NextJS {
                 website: Some("https://nextjs.org/"),
                 configs: Some(Vec::from(["next.config.js", "next.config.mjs"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "next build",
+                    command_args: None,
+                    output_directory: ".next",
+                },
             }
         }
     }
@@ -117,7 +122,7 @@ impl ConfigurationFileDeserialization for NextJSConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::NextJS;
 
     #[test]
@@ -129,6 +134,11 @@ mod tests {
                     website: None,
                     configs: Some(vec![config]),
                     project_file: None,
+                    build: FrameworkBuildSettings {
+                        command: "",
+                        command_args: None,
+                        output_directory: "",
+                    },
                 },
             };
 

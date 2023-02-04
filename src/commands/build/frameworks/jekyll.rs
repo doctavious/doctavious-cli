@@ -6,7 +6,7 @@
 // jekyll build -d, --destination DIR
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 #[derive(Deserialize)]
@@ -22,6 +22,21 @@ impl Default for Jekyll {
                 website: Some("https://jekyllrb.com/"),
                 configs: Some(Vec::from(["_config.yml", "_config.toml"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    // bundle exec jekyll build
+                    command: "jekyll build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--config",
+                        })),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-d",
+                            long: "--destination"
+                        }))
+                    }),
+                    output_directory: "_site",
+                },
             }
         }
     }
@@ -58,7 +73,7 @@ impl ConfigurationFileDeserialization for JekyllConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Jekyll;
 
     #[test]
@@ -69,6 +84,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/jekyll/_config.yml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         };
 

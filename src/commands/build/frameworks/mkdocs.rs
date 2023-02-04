@@ -3,7 +3,7 @@
 // change be changed via site_dir
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 #[derive(Deserialize)]
@@ -19,6 +19,20 @@ impl Default for MKDocs {
                 website: Some("https://www.mkdocs.org/"),
                 configs: Some(Vec::from(["mkdocs.yml"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "mkdocs build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-f",
+                            long: "--config-file"
+                        })),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-d",
+                            long: "--site-dir"
+                        }))
+                    }),
+                    output_directory: "site",
+                },
             }
         }
     }
@@ -54,7 +68,7 @@ impl ConfigurationFileDeserialization for MKDocsConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::MKDocs;
 
     #[test]
@@ -65,6 +79,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/mkdocs/mkdocs.yml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

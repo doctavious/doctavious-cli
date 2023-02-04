@@ -10,7 +10,7 @@ use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, St
 use swc_ecma_ast::Expr::{Array, Object, Tpl};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -29,6 +29,11 @@ impl Default for Gatsby {
                 website: Some("https://www.gatsbyjs.com/"),
                 configs: Some(Vec::from(["gatsby-config.js", "gatsby-config.ts"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "gatsby build",
+                    command_args: None,
+                    output_directory: "/public",
+                },
             }
         }
     }
@@ -142,7 +147,7 @@ impl ConfigurationFileDeserialization for GatsbyConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Gatsby;
 
     #[test]
@@ -153,6 +158,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/gatsby/gatsby-config.js"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

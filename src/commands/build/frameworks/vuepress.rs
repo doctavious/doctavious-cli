@@ -19,7 +19,7 @@ use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::{Lit, ModuleDecl, ModuleItem, Program, Stmt};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
 use swc_ecma_ast::Stmt::{Decl, Expr};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -37,9 +37,24 @@ impl Default for VuePress{
                 configs: Some(vec![
                     ".vuepress/config.js",
                     ".vuepress/config.yml",
-                    ".vuepress/config.toml", ".vuepress/config.ts"
+                    ".vuepress/config.toml",
+                    ".vuepress/config.ts"
                 ]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "vuepress build", // TODO: needs source dir
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-c",
+                            long: "--config"
+                        })),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-d",
+                            long: "--dest"
+                        }))
+                    }),
+                    output_directory: ".vuepress/dist",
+                },
             },
         }
     }
@@ -132,7 +147,7 @@ impl ConfigurationFileDeserialization for VuePressConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::VuePress;
 
     #[test]
@@ -149,6 +164,11 @@ mod tests {
                     website: None,
                     configs: Some(vec![config]),
                     project_file: None,
+                    build: FrameworkBuildSettings {
+                        command: "",
+                        command_args: None,
+                        output_directory: "",
+                    },
                 },
             };
 

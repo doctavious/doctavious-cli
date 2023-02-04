@@ -17,3 +17,4 @@ mod statiq;
 mod sveltekit;
 mod vitepress;
 mod vuepress;
+mod nuxt_v3;

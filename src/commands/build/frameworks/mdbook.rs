@@ -3,7 +3,7 @@
 // change be changed via build.build-dir
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -22,6 +22,17 @@ impl Default for MDBook {
                 website: Some("https://rust-lang.github.io/mdBook/"),
                 configs: Some(Vec::from(["book.toml"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "mdbook build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: None,
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-d",
+                            long: "--dest-dir"
+                        }))
+                    }),
+                    output_directory: "./book",
+                },
             }
         }
     }
@@ -56,7 +67,7 @@ impl ConfigurationFileDeserialization for MDBookConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::MDBook;
 
     #[test]
@@ -67,6 +78,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/mdbook/book.toml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

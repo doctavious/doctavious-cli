@@ -54,12 +54,35 @@ pub struct FrameworkInfo {
 
     // /// Detectors used to find out the framework
     // pub detection: FrameworkDetector,
-    //
-    // pub build: FrameworkBuildSettings,
+
+    pub build: FrameworkBuildSettings,
 
     // pub install_command: Box<dyn Fn(&Self) -> String>,
     // pub output_dir_name: Box<dyn Fn(&Self) -> String>,
     // pub build_command: Box<dyn Fn(&Self) -> String>
+}
+
+pub struct FrameworkBuildSettings {
+
+    pub command: &'static str,
+    pub command_args: Option<FrameworkBuildArgs>,
+    pub output_directory: &'static str
+}
+
+pub struct FrameworkBuildArgs {
+    pub config: Option<FrameworkBuildArg>,
+    pub output: Option<FrameworkBuildArg>
+}
+
+pub enum FrameworkBuildArg {
+    /// 0-based index of argument
+    Arg(i8),
+    Option(FrameworkBuildOption) // TODO: do we care short or long? how about use vec/array?
+}
+
+pub struct FrameworkBuildOption {
+    pub short: &'static str,
+    pub long: &'static str
 }
 
 pub trait FrameworkSupport {

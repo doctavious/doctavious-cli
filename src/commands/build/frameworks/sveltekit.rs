@@ -9,7 +9,7 @@ use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, St
 use swc_ecma_ast::Expr::{Array, Object, Tpl};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -26,8 +26,22 @@ impl Default for SvelteKit {
             info: FrameworkInfo {
                 name: "SvelteKit",
                 website: Some("https://kit.svelte.dev/"),
-                configs: Some(vec![".svelte-kit"]),
+                configs: Some(vec!["svelte.config.js"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "vite build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: None,
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--outDir"
+                        }))
+                    }),
+                    // TODO: validate
+                    // according to the following https://github.com/netlify/build/pull/4823
+                    // .svelte-kit is the internal build dir, not the publish dir.
+                    output_directory: "build" //".svelte-kit",
+                },
             },
         }
     }
@@ -124,7 +138,7 @@ impl ConfigurationFileDeserialization for SvelteKitConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::SvelteKit;
 
     #[test]
@@ -135,6 +149,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/sveltekit/svelte.config.js"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

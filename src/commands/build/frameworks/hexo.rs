@@ -6,7 +6,7 @@
 // hexo --config custom.yml
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 struct HexoConfig { public_dir: Option<String> }
@@ -21,6 +21,16 @@ impl Default for Hexo {
                 website: Some("https://hexo.io/"),
                 configs: Some(Vec::from(["_config.yml"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "hexo generate",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--config" })),
+                        output: None
+                    }),
+                    output_directory: "public",
+                },
             }
         }
     }
@@ -55,7 +65,7 @@ impl ConfigurationFileDeserialization for HexoConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Hexo;
 
     #[test]
@@ -66,6 +76,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/hexo/_config.yml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

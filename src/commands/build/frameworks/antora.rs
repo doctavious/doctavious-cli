@@ -7,7 +7,7 @@
 
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 #[derive(Deserialize)]
@@ -25,6 +25,14 @@ impl Default for Antora {
                 website: Some("https://antora.org/"),
                 configs: Some(Vec::from(["antora-playbook.yaml"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "antora generate",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Arg(1)),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption { short: "", long: "--to-dir" })),
+                    }),
+                    output_directory: "build/site",
+                },
             },
         }
     }
@@ -60,7 +68,7 @@ impl ConfigurationFileDeserialization for AntoraConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Antora;
 
     // assert!(env::set_current_dir(&root).is_ok());
@@ -72,6 +80,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/antora/antora-playbook.yaml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         };
 

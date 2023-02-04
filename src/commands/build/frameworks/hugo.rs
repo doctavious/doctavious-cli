@@ -9,7 +9,7 @@
 // can be changed via publishDir
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,8 +23,25 @@ impl Default for Hugo {
             info: FrameworkInfo {
                 name: "Hexo",
                 website: Some("https://gohugo.io/"),
-                configs: Some(Vec::from(["config.toml", "config.yaml", "config.json"])),
+                configs: Some(Vec::from([
+                    "config.json", "config.toml", "config.yaml",
+                    "hugo.json", "hugo.toml", "hugo.yaml"
+                ])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "hugo",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--config"
+                        })),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--destination",
+                        }))
+                    }),
+                    output_directory: "/public",
+                },
             }
         }
     }
@@ -60,7 +77,7 @@ impl ConfigurationFileDeserialization for HugoConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Hugo;
 
     #[test]
@@ -71,6 +88,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/hugo/config.toml"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

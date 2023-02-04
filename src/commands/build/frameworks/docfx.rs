@@ -4,7 +4,7 @@
 // docfx build [-o:<output_path>] [-t:<template folder>]
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 struct DocFxConfigBuild { dest: String }
@@ -22,6 +22,17 @@ impl Default for DocFx {
                 website: Some("https://dotnet.github.io/docfx/"),
                 configs: Some(Vec::from(["docfx.json"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "docfx build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: None,
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "-o",
+                            long: ""
+                        }))
+                    }),
+                    output_directory: "_site",
+                },
             }
         }
     }
@@ -54,7 +65,7 @@ impl ConfigurationFileDeserialization for DocFxConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use crate::commands::build::frameworks::docfx::DocFx;
 
     #[test]
@@ -65,6 +76,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/docfx/docfx.json"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

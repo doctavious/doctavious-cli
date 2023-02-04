@@ -1,4 +1,4 @@
-// conf.py
+// conf.py -- <sourcedir>/conf.py
 // sphinx package
 // i dont see a way to configure this outside env var
 // we could just default it ourselves
@@ -6,7 +6,7 @@
 
 use serde::{Serialize, Deserialize, de};
 use std::env;
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 pub struct Sphinx { info: FrameworkInfo }
@@ -17,8 +17,20 @@ impl Default for Sphinx {
             info: FrameworkInfo {
                 name: "Sphinx",
                 website: Some("https://www.sphinx-doc.org/en/master/"),
+                // this is relative to source and i dont think we need it as it doesnt help with build
+                // TODO: should we remove?
                 configs: Some(vec!["conf.py"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    // docs docs/_build
+                    command: "sphinx-build", // TODO: source has to be passed in? Default here?
+                    command_args: Some(FrameworkBuildArgs {
+                        config: None,
+                        output: Some(FrameworkBuildArg::Arg(2))
+                    }),
+                    // TODO: must be passed in to command which presents a problem if we dont know where the build script is
+                    output_directory: "",
+                },
             },
         }
     }
@@ -42,7 +54,7 @@ impl FrameworkSupport for Sphinx {
 #[cfg(test)]
 mod tests {
     use std::env;
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Sphinx;
 
     #[test]
@@ -53,6 +65,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         };
 
@@ -69,6 +86,11 @@ mod tests {
                     website: None,
                     configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
                     project_file: None,
+                    build: FrameworkBuildSettings {
+                        command: "",
+                        command_args: None,
+                        output_directory: "",
+                    },
                 },
             };
 

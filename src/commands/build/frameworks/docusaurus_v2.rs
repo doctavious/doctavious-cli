@@ -31,7 +31,7 @@ use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, St
 use swc_ecma_ast::Expr::{Array, Object, Tpl};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -50,6 +50,20 @@ impl Default for DocusaurusV2 {
                 website: Some("https://docusaurus.io/"),
                 configs: Some(Vec::from(["docusaurus.config.js"])),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "docusaurus build",
+                    command_args: Some(FrameworkBuildArgs {
+                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--config",
+                        })),
+                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                            short: "",
+                            long: "--out-dir",
+                        }))
+                    }),
+                    output_directory: "build",
+                },
             }
         }
     }
@@ -77,7 +91,7 @@ impl ConfigurationFileDeserialization for DocusaurusV2Config {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::DocusaurusV2;
 
     #[test]
@@ -88,6 +102,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/docusaurus2/docusaurus.config.js"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             }
         };
 

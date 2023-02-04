@@ -13,7 +13,7 @@
 
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::Program;
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 // #[derive(Deserialize)]
@@ -32,6 +32,11 @@ impl Default for Statiq {
                 website: Some("https://www.statiq.dev/"),
                 configs: None,
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         }
     }
@@ -65,7 +70,7 @@ impl ConfigurationFileDeserialization for StatiqConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Statiq;
 
     #[test]
@@ -76,6 +81,11 @@ mod tests {
                 website: None,
                 configs: Some(vec!["tests/resources/framework_configs/statiq/statiq.json"]),
                 project_file: None,
+                build: FrameworkBuildSettings {
+                    command: "",
+                    command_args: None,
+                    output_directory: "",
+                },
             },
         };
 
