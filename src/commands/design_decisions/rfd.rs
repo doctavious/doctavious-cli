@@ -6,7 +6,7 @@ use crate::markup_format::{
 };
 use crate::settings::{load_settings, persist_settings, RFDSettings, SETTINGS};
 use crate::templates::{TemplateContext, Templates};
-use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::utils::{build_path, ensure_path, format_number, list, reserve_number};
 use crate::{edit, git, init_dir, FileStructure};
 use chrono::Utc;
 use clap::{Parser, Subcommand};
@@ -14,7 +14,9 @@ use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
 use std::fs;
 use std::path::PathBuf;
+use crate::commands::build_toc;
 use crate::file_structure::parse_file_structure;
+use crate::output::Output;
 
 
 #[derive(Parser, Debug)]
@@ -233,6 +235,67 @@ pub(crate) struct ReserveRFD {
     )]
     pub extension: Option<MarkupFormat>,
 }
+
+pub(crate) fn handle_rfd_command(command: RFD, output: Option<Output>) -> Result<()> {
+    match command.rfd_command {
+        RFDCommand::Init(params) => {
+            return match init_rfd(
+                params.directory,
+                params.structure,
+                params.extension,
+            ) {
+                Ok(_) => Ok(()),
+                Err(err) => Err(err),
+            };
+        }
+
+        RFDCommand::New(params) => {
+            init_dir(SETTINGS.get_rfd_dir())?;
+
+            let extension =
+                SETTINGS.get_rfd_template_extension(params.extension);
+            return match new_rfd(params.number, params.title, extension) {
+                Ok(_) => Ok(()),
+                Err(err) => Err(err),
+            };
+        }
+
+        RFDCommand::List(_) => {
+            list(SETTINGS.get_rfd_dir(), output);
+        }
+
+        RFDCommand::Generate(generate) => {
+            match generate.generate_rfd_command {
+                GenerateRFDsCommand::Toc(params) => {
+                    let dir = SETTINGS.get_adr_dir();
+                    let extension =
+                        SETTINGS.get_adr_template_extension(params.format);
+
+                    build_toc(
+                        dir,
+                        extension,
+                        params.intro,
+                        params.outro,
+                        params.link_prefix,
+                    );
+                }
+
+                GenerateRFDsCommand::Graph(params) => graph_rfds(),
+                GenerateRFDsCommand::Csv(_) => {}
+                GenerateRFDsCommand::File(_) => {}
+            }
+        }
+
+        RFDCommand::Reserve(params) => {
+            let extension =
+                SETTINGS.get_rfd_template_extension(params.extension);
+            return reserve_rfd(params.number, params.title, extension);
+        }
+    }
+
+    Ok(())
+}
+
 
 pub(crate) fn init_rfd(
     directory: Option<String>,

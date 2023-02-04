@@ -17,6 +17,8 @@ use crate::commands::design_decisions::{get_template_content};
 use crate::templates::{TemplateContext, Templates};
 use serde::{Serialize};
 use crate::files::{friendly_filename, sanitize};
+use crate::output::Output;
+use crate::utils::list;
 
 #[derive(Parser, Debug)]
 #[command(about = "Gathers Today I Learned (TIL) management commands")]
@@ -133,6 +135,50 @@ struct TilEntry {
     title: String,
     file_name: String,
     date: DateTime<Utc>,
+}
+
+pub(crate) fn handle_til_command(til: Til, output: Option<Output>) -> DoctaviousResult<()> {
+    match til.til_command {
+        TilCommand::Init(params) => {
+            return init_til(params.directory, params.extension);
+        }
+
+        TilCommand::New(params) => {
+            let dir = SETTINGS.get_til_dir();
+            init_dir(&dir)?;
+
+            // TODO: see if params.file_name contains extension
+            let extension =
+                SETTINGS.get_til_template_extension(params.extension);
+
+            return new_til(
+                params.title,
+                params.category,
+                params.tags,
+                params.file_name,
+                extension,
+                params.readme,
+                dir,
+            );
+        }
+
+        TilCommand::List(_) => {
+            list(SETTINGS.get_til_dir(), output);
+        }
+
+        TilCommand::Readme(params) => {
+            // TODO: incorporate params.directory to determine where to look for TILs
+            let til_dir = SETTINGS.get_til_dir();
+            let format = SETTINGS.get_til_template_extension(params.extension);
+            let til_readme = build_til_readme(til_dir, &format.extension())?;
+            let readme_path = Path::new(til_dir)
+                .join("README")
+                .with_extension(&format.extension());
+            fs::write(readme_path.as_path(), til_readme)?;
+        }
+    }
+
+    Ok(())
 }
 
 pub(crate) fn init_til(

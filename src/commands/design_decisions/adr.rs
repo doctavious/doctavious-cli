@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::commands::design_decisions::get_template;
 use crate::constants::{
@@ -7,20 +7,23 @@ use crate::constants::{
 };
 use crate::doctavious_error::Result;
 use crate::file_structure::FileStructure;
-use crate::git;
+use crate::{get_content, git};
 use crate::markup_format::{
     MarkupFormat, MARKUP_FORMAT_EXTENSIONS,
 };
 use crate::settings::{load_settings, persist_settings, AdrSettings, SETTINGS};
 use crate::templates::{TemplateContext, Templates};
-use crate::utils::{build_path, ensure_path, format_number, reserve_number};
+use crate::utils::{build_path, ensure_path, format_number, list, reserve_number};
 use crate::{edit, init_dir};
 use chrono::Utc;
 use clap::Parser;
 use dotavious::{Dot, Edge, GraphBuilder, Node};
 use git2::Repository;
+use crate::commands::build_toc;
 use crate::file_structure::parse_file_structure;
+use crate::output::Output;
 
+// TODO: this should probably be ADRCommand and below should be ADRSubCommands
 #[derive(Parser, Debug)]
 #[command(about = "Gathers ADR management commands")]
 pub(crate) struct ADR {
@@ -204,6 +207,110 @@ pub(crate) struct ReserveADR {
     )]
     pub extension: Option<MarkupFormat>,
 }
+
+pub(crate) fn handle_adr_command(command: ADR, output: Option<Output>) -> Result<()> {
+    match command.adr_command {
+        ADRCommand::Init(params) => {
+            // https://stackoverflow.com/questions/32788915/changing-the-return-type-of-a-function-returning-a-result
+            return match init_adr(
+                params.directory,
+                params.structure,
+                params.extension,
+            ) {
+                Ok(_) => Ok(()),
+                Err(err) => Err(err),
+            };
+        }
+
+        ADRCommand::List(_) => {
+            list(SETTINGS.get_adr_dir(), output);
+        }
+
+        ADRCommand::Link(params) => {
+            // get file. needs to support both structures and extensions
+            let source_content = get_content(
+                SETTINGS.get_adr_dir(),
+                &format_number(params.source),
+                SETTINGS.get_adr_structure(),
+            );
+
+            let z = Path::new(SETTINGS.get_adr_dir())
+                .join("temp-link")
+                .with_extension("md");
+        }
+
+        ADRCommand::Generate(generate) => {
+            match generate.generate_adr_command {
+                GenerateAdrsCommand::Toc(params) => {
+                    let dir = SETTINGS.get_adr_dir();
+                    let extension =
+                        SETTINGS.get_adr_template_extension(params.format);
+
+                    build_toc(
+                        dir,
+                        extension,
+                        params.intro,
+                        params.outro,
+                        params.link_prefix,
+                    );
+                }
+
+                GenerateAdrsCommand::Graph(params) => {
+                    graph_adrs();
+                    // Generates a visualisation of the links between decision records in
+                    // Graphviz format.  This can be piped into the graphviz tools to
+                    // generate a an image file.
+
+                    // Each node in the graph represents a decision record and is linked to
+                    // the decision record document.
+
+                    // Options:
+
+                    // -e LINK-EXTENSION
+                    //         the file extension of the documents to which generated links refer.
+                    //         Defaults to `.html`.
+
+                    // -p LINK_PREFIX
+                    //         prefix each decision file link with LINK_PREFIX.
+
+                    // E.g. to generate a graph visualisation of decision records in SVG format:
+
+                    //     adr generate graph | dot -Tsvg > graph.svg
+
+                    // E.g. to generate a graph visualisation in PDF format, in which all links
+                    // are to .pdf files:
+
+                    //    adr generate graph -e .pdf | dot -Tpdf > graph.pdf
+                }
+            }
+        }
+
+        ADRCommand::New(params) => {
+            init_dir(SETTINGS.get_adr_dir())?;
+
+            let extension =
+                SETTINGS.get_adr_template_extension(params.extension);
+            return match new_adr(
+                params.number,
+                params.title,
+                extension,
+                DEFAULT_ADR_TEMPLATE_PATH,
+            ) {
+                Ok(_) => Ok(()),
+                Err(err) => Err(err),
+            };
+        }
+
+        ADRCommand::Reserve(params) => {
+            let extension =
+                SETTINGS.get_adr_template_extension(params.extension);
+            return reserve_adr(params.number, params.title, extension);
+        }
+    }
+
+    Ok(())
+}
+
 
 pub(crate) fn init_adr(
     directory: Option<String>,

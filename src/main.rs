@@ -34,17 +34,12 @@ use crate::commands::build::{
     BuildCommand, build
 };
 use crate::commands::build_toc;
-use crate::commands::design_decisions::adr::{
-    graph_adrs, init_adr, new_adr, reserve_adr, ADRCommand,
-    GenerateAdrsCommand, ADR,
-};
+use crate::commands::design_decisions::adr::{graph_adrs, init_adr, new_adr, reserve_adr, ADRCommand, GenerateAdrsCommand, ADR, handle_adr_command};
 use crate::commands::design_decisions::rfd::{
-    graph_rfds, init_rfd, new_rfd, reserve_rfd, GenerateRFDsCommand,
+    graph_rfds, init_rfd, new_rfd, reserve_rfd, GenerateRFDsCommand, handle_rfd_command,
     RFDCommand, RFD,
 };
-use crate::commands::til::{
-    build_til_readme, init_til, new_til, Til, TilCommand,
-};
+use crate::commands::til::{build_til_readme, handle_til_command, init_til, new_til, Til, TilCommand};
 use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
 use crate::doctavious_error::{Result as DoctaviousResult};
 use crate::file_structure::FileStructure;
@@ -218,105 +213,9 @@ fn main() -> DoctaviousResult<()> {
         env_logger::init();
     }
 
+    // TODO: could handle be a trait?
     match opt.cmd {
-        Command::Adr(adr) => match adr.adr_command {
-            ADRCommand::Init(params) => {
-                // https://stackoverflow.com/questions/32788915/changing-the-return-type-of-a-function-returning-a-result
-                return match init_adr(
-                    params.directory,
-                    params.structure,
-                    params.extension,
-                ) {
-                    Ok(_) => Ok(()),
-                    Err(err) => Err(err),
-                };
-            }
-
-            ADRCommand::List(_) => {
-                list(SETTINGS.get_adr_dir(), opt.output);
-            }
-
-            ADRCommand::Link(params) => {
-                // get file. needs to support both structures and extensions
-                let source_content = get_content(
-                    SETTINGS.get_adr_dir(),
-                    &format_number(params.source),
-                    SETTINGS.get_adr_structure(),
-                );
-
-                let z = Path::new(SETTINGS.get_adr_dir())
-                    .join("temp-link")
-                    .with_extension("md");
-            }
-
-            ADRCommand::Generate(generate) => {
-                match generate.generate_adr_command {
-                    GenerateAdrsCommand::Toc(params) => {
-                        let dir = SETTINGS.get_adr_dir();
-                        let extension =
-                            SETTINGS.get_adr_template_extension(params.format);
-
-                        build_toc(
-                            dir,
-                            extension,
-                            params.intro,
-                            params.outro,
-                            params.link_prefix,
-                        );
-                    }
-
-                    GenerateAdrsCommand::Graph(params) => {
-                        graph_adrs();
-                        // Generates a visualisation of the links between decision records in
-                        // Graphviz format.  This can be piped into the graphviz tools to
-                        // generate a an image file.
-
-                        // Each node in the graph represents a decision record and is linked to
-                        // the decision record document.
-
-                        // Options:
-
-                        // -e LINK-EXTENSION
-                        //         the file extension of the documents to which generated links refer.
-                        //         Defaults to `.html`.
-
-                        // -p LINK_PREFIX
-                        //         prefix each decision file link with LINK_PREFIX.
-
-                        // E.g. to generate a graph visualisation of decision records in SVG format:
-
-                        //     adr generate graph | dot -Tsvg > graph.svg
-
-                        // E.g. to generate a graph visualisation in PDF format, in which all links
-                        // are to .pdf files:
-
-                        //    adr generate graph -e .pdf | dot -Tpdf > graph.pdf
-                    }
-                }
-            }
-
-            ADRCommand::New(params) => {
-                init_dir(SETTINGS.get_adr_dir())?;
-
-                let extension =
-                    SETTINGS.get_adr_template_extension(params.extension);
-                return match new_adr(
-                    params.number,
-                    params.title,
-                    extension,
-                    DEFAULT_ADR_TEMPLATE_PATH,
-                ) {
-                    Ok(_) => Ok(()),
-                    Err(err) => Err(err),
-                };
-            }
-
-            ADRCommand::Reserve(params) => {
-                let extension =
-                    SETTINGS.get_adr_template_extension(params.extension);
-                return reserve_adr(params.number, params.title, extension);
-            }
-        }
+        Command::Adr(adr) => return handle_adr_command(adr, opt.output),
 
         Command::Build(cmd) => {
             return build(None);
@@ -335,101 +234,9 @@ fn main() -> DoctaviousResult<()> {
             };
         },
 
-        Command::RFD(rfd) => match rfd.rfd_command {
-            RFDCommand::Init(params) => {
-                return match init_rfd(
-                    params.directory,
-                    params.structure,
-                    params.extension,
-                ) {
-                    Ok(_) => Ok(()),
-                    Err(err) => Err(err),
-                };
-            }
+        Command::RFD(rfd) => return handle_rfd_command(rfd, opt.output),
 
-            RFDCommand::New(params) => {
-                init_dir(SETTINGS.get_rfd_dir())?;
-
-                let extension =
-                    SETTINGS.get_rfd_template_extension(params.extension);
-                return match new_rfd(params.number, params.title, extension) {
-                    Ok(_) => Ok(()),
-                    Err(err) => Err(err),
-                };
-            }
-
-            RFDCommand::List(_) => {
-                list(SETTINGS.get_rfd_dir(), opt.output);
-            }
-
-            RFDCommand::Generate(generate) => {
-                match generate.generate_rfd_command {
-                    GenerateRFDsCommand::Toc(params) => {
-                        let dir = SETTINGS.get_adr_dir();
-                        let extension =
-                            SETTINGS.get_adr_template_extension(params.format);
-
-                        build_toc(
-                            dir,
-                            extension,
-                            params.intro,
-                            params.outro,
-                            params.link_prefix,
-                        );
-                    }
-
-                    GenerateRFDsCommand::Graph(params) => graph_rfds(),
-                    GenerateRFDsCommand::Csv(_) => {}
-                    GenerateRFDsCommand::File(_) => {}
-                }
-            }
-
-            RFDCommand::Reserve(params) => {
-                let extension =
-                    SETTINGS.get_rfd_template_extension(params.extension);
-                return reserve_rfd(params.number, params.title, extension);
-            }
-        },
-
-        Command::Til(til) => match til.til_command {
-            TilCommand::Init(params) => {
-                return init_til(params.directory, params.extension);
-            }
-
-            TilCommand::New(params) => {
-                let dir = SETTINGS.get_til_dir();
-                init_dir(&dir)?;
-
-                // TODO: see if params.file_name contains extension
-                let extension =
-                    SETTINGS.get_til_template_extension(params.extension);
-
-                return new_til(
-                    params.title,
-                    params.category,
-                    params.tags,
-                    params.file_name,
-                    extension,
-                    params.readme,
-                    dir,
-                );
-            }
-
-            TilCommand::List(_) => {
-                list(SETTINGS.get_til_dir(), opt.output);
-            }
-
-            TilCommand::Readme(params) => {
-                // TODO: incorporate params.directory to determine where to look for TILs
-                let til_dir = SETTINGS.get_til_dir();
-                let format = SETTINGS.get_til_template_extension(params.extension);
-                let til_readme = build_til_readme(til_dir, &format.extension())?;
-                let readme_path = Path::new(til_dir)
-                    .join("README")
-                    .with_extension(&format.extension());
-                fs::write(readme_path.as_path(), til_readme)?;
-            }
-        },
+        Command::Til(til) => return handle_til_command(til, opt.output),
     };
 
     Ok(())
