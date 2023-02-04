@@ -69,8 +69,7 @@ impl FrameworkSupport for Hugo {
             }
         }
 
-        //self.info.build.outputdir
-        String::default()
+        self.info.build.output_directory.to_string()
     }
 }
 

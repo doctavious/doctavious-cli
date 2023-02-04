@@ -53,8 +53,7 @@ impl FrameworkSupport for NextJS {
             }
         }
 
-        //self.info.build.outputdir
-        String::default()
+        self.info.build.output_directory.to_string()
     }
 }
 

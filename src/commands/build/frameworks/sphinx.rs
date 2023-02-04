@@ -47,8 +47,7 @@ impl FrameworkSupport for Sphinx {
             return build_dir;
         }
 
-        // TODO: return actual default
-        String::default()
+        self.info.build.output_directory.to_string()
     }
 }
 
