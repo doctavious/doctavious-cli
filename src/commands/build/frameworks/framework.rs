@@ -77,12 +77,8 @@ pub struct FrameworkBuildArgs {
 pub enum FrameworkBuildArg {
     /// 0-based index of argument
     Arg(i8, Option<&'static str>),
-    Option(FrameworkBuildOption) // TODO: do we care short or long? how about use vec/array?
-}
-
-pub struct FrameworkBuildOption {
-    pub short: &'static str,
-    pub long: &'static str
+    // TODO: do we care short or long? how about use vec/array?
+    Option { short: &'static str, long: &'static str }
 }
 
 pub trait FrameworkSupport {

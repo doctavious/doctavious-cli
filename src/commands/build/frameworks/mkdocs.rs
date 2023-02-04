@@ -3,7 +3,7 @@
 // change be changed via site_dir
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 #[derive(Deserialize)]
@@ -23,14 +23,14 @@ impl Default for MKDocs {
                     command: "mkdocs build",
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
-                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        config: Some(FrameworkBuildArg::Option {
                             short: "-f",
                             long: "--config-file"
-                        })),
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        }),
+                        output: Some(FrameworkBuildArg::Option {
                             short: "-d",
                             long: "--site-dir"
-                        }))
+                        })
                     }),
                     output_directory: "site",
                 },

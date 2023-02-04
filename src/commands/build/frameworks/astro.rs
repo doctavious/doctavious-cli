@@ -7,7 +7,7 @@
 
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::{Lit, ModuleDecl, Program};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
 
@@ -25,10 +25,10 @@ impl Default for Astro {
                     command: "astro build",
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
-                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        config: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--config",
-                        })),
+                        }),
                         output: None,
                     }),
                     output_directory: "./dist",

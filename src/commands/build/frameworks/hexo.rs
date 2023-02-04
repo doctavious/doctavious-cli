@@ -6,7 +6,7 @@
 // hexo --config custom.yml
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 struct HexoConfig { public_dir: Option<String> }
@@ -25,9 +25,10 @@ impl Default for Hexo {
                     command: "hexo generate",
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
-                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        config: Some(FrameworkBuildArg::Option {
                             short: "",
-                            long: "--config" })),
+                            long: "--config"
+                        }),
                         output: None
                     }),
                     output_directory: "public",

@@ -31,7 +31,7 @@ use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, St
 use swc_ecma_ast::Expr::{Array, Object, Tpl};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -54,14 +54,14 @@ impl Default for DocusaurusV2 {
                     command: "docusaurus build",
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
-                        config: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        config: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--config",
-                        })),
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        }),
+                        output: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--out-dir",
-                        }))
+                        })
                     }),
                     output_directory: "build",
                 },

@@ -4,7 +4,7 @@
 // docfx build [-o:<output_path>] [-t:<template folder>]
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 struct DocFxConfigBuild { dest: String }
@@ -27,10 +27,10 @@ impl Default for DocFx {
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
                         config: None,
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        output: Some(FrameworkBuildArg::Option {
                             short: "-o",
                             long: ""
-                        }))
+                        })
                     }),
                     output_directory: "_site",
                 },

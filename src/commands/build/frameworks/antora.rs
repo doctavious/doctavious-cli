@@ -7,7 +7,7 @@
 
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 
 #[derive(Deserialize)]
@@ -30,10 +30,10 @@ impl Default for Antora {
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
                         config: Some(FrameworkBuildArg::Arg(1, None)),
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        output: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--to-dir"
-                        })),
+                        })
                     }),
                     output_directory: "build/site",
                 },

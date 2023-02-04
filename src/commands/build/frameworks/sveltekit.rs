@@ -9,7 +9,7 @@ use swc_ecma_ast::{ArrayLit, Lit, ModuleDecl, ModuleItem, ObjectLit, Program, St
 use swc_ecma_ast::Expr::{Array, Object, Tpl};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -33,10 +33,10 @@ impl Default for SvelteKit {
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
                         config: None,
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        output: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--outDir"
-                        }))
+                        })
                     }),
                     // TODO: validate
                     // according to the following https://github.com/netlify/build/pull/4823

@@ -3,7 +3,7 @@
 // change be changed via build.build-dir
 
 use serde::{Serialize, Deserialize, de};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildOption, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -27,10 +27,10 @@ impl Default for MDBook {
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
                         config: None,
-                        output: Some(FrameworkBuildArg::Option(FrameworkBuildOption {
+                        output: Some(FrameworkBuildArg::Option {
                             short: "-d",
                             long: "--dest-dir"
-                        }))
+                        })
                     }),
                     output_directory: "./book",
                 },
