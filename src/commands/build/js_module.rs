@@ -1,7 +1,7 @@
 /// This contains a set of helper functions for traversing JS program modules
 
-use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr};
-use swc_ecma_ast::Stmt::{Decl};
+use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit};
+use swc_ecma_ast::Stmt::{Decl, Expr as ExprStmt};
 
 pub(crate) fn get_variable_declaration<'a>(program: &'a Program, ident: &'static str) -> Option<&'a VarDeclarator> {
     if let Some(module) = program.as_module() {
@@ -43,11 +43,59 @@ pub(crate) fn get_call_expression<'a>(program: &'a Program, ident: &'static str)
 }
 
 
+pub(crate) fn get_assignment_function(program: &Program) -> Option<&Function> {
+    if let Some(module) = program.as_module() {
+        for item in &module.body {
+            if let Some(ExprStmt(stmt)) = item.as_stmt() {
+                let expression = &*stmt.expr;
+                if let Some(assign) = expression.as_assign() {
+                    let rhs = &*assign.right;
+                    if let Some(func) = rhs.as_fn_expr() {
+                        return Some(&*func.function);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+pub(crate) fn get_function_return_obj(func: &Function) -> Option<&ObjectLit> {
+    if let Some(fn_body) = &func.body {
+        for statement in &fn_body.stmts {
+            if let Some(return_statement) = statement.as_return_stmt() {
+                if let Some(return_statement_args) = &return_statement.arg {
+                    let args = &**return_statement_args;
+                    return args.as_object();
+                }
+            }
+        }
+    }
+
+    None
+}
+
 pub(crate) fn get_call_string_property(call: &CallExpr, property: &'static str) -> Option<String> {
     for call_args in &call.args {
         let call_args_expression = &*call_args.expr;
         if let Some(obj) = call_args_expression.as_object() {
             return get_string_property_value(&obj.props, property);
+        }
+    }
+
+    None
+}
+
+pub(crate) fn get_obj_property<'a>(obj: &'a ObjectLit, property_ident: &'static str) -> Option<&'a ObjectLit> {
+    for prop in &obj.props {
+        if let Some(p) = prop.as_prop() {
+            if let Some(kv) = (*p).as_key_value() {
+                if let Some(key_ident) = kv.key.as_ident() {
+                    if key_ident.sym.as_ref() == property_ident {
+                        return kv.value.as_object();
+                    }
+                }
+            }
         }
     }
 

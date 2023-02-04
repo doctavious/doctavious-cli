@@ -12,6 +12,7 @@ use serde::{Deserialize};
 use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::Expr;
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_assignment_function, get_function_return_obj, get_obj_property, get_string_property_value};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -89,59 +90,19 @@ impl FrameworkSupport for Eleventy {
 impl ConfigurationFileDeserialization for EleventyConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: try and simplify
-        if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(Expr(stmt)) = item.as_stmt() {
-                    let expression = &*stmt.expr;
-                    if let Some(assign) = expression.as_assign() {
-                        let rhs = &*assign.right;
-                        if let Some(func) = rhs.as_fn_expr() {
-                            let fn_expr = &*func.function;
-                            if let Some(fn_body) = &fn_expr.body {
-                                for statement in &fn_body.stmts {
-                                    if let Some(return_statement) = statement.as_return_stmt() {
-                                        if let Some(return_statement_args) = &return_statement.arg {
-                                            let args = &**return_statement_args;
-                                            if let Some(obj_expression) = args.as_object() {
-                                                for prop in &obj_expression.props {
-                                                    if let Some(p) = prop.as_prop() {
-                                                        if let Some(kv) = (*p).as_key_value() {
-                                                            if let Some(ident) = kv.key.as_ident() {
-                                                                if ident.sym.as_ref() == "dir" {
-                                                                    if let Some(dir_obj) = kv.value.as_object() {
-                                                                        for dir_prop in &dir_obj.props {
-                                                                            if let Some(dir_prop) = dir_prop.as_prop() {
-                                                                                if let Some(kv) = (*dir_prop).as_key_value() {
-                                                                                    if let Some(ident) = kv.key.as_ident() {
-                                                                                        if ident.sym.as_ref() == "output" {
-                                                                                            if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                                                                return Ok(Self {
-                                                                                                    output: s.value.to_string()
-                                                                                                });
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
+        if let Some(func) = get_assignment_function(program) {
+            if let Some(return_obj) = get_function_return_obj(&func) {
+                if let Some(dir_prop) = get_obj_property(&return_obj, "dir") {
+                    if let Some(output) = get_string_property_value(&dir_prop.props, "output") {
+                        return Ok(Self {
+                            output
+                        });
                     }
                 }
             }
         }
+
+
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }
 }
