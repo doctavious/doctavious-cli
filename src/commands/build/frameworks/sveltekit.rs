@@ -9,6 +9,7 @@ use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::{Decl};
 
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -73,64 +74,18 @@ impl FrameworkSupport for SvelteKit {
 
 impl ConfigurationFileDeserialization for SvelteKitConfig {
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
-        if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(Decl(decl)) = item.as_stmt() {
-                    if let Some(variable_decl) = decl.as_var() {
-                        for declaration in &variable_decl.decls {
-                            if let Some(decl_ident) = declaration.name.as_ident() {
-                                if decl_ident.sym.as_ref() != "config" {
-                                    continue;
-                                }
-                            }
-                            if let Some(init_decl) = &declaration.init {
-                                if let Some(init_decl_obj) = init_decl.as_object() {
-                                    for props in &init_decl_obj.props {
-                                        if let Some(dir_prop) = props.as_prop() {
-                                            if let Some(kv) = (*dir_prop).as_key_value() {
-                                                if let Some(ident) = kv.key.as_ident() {
-                                                    if ident.sym.as_ref() == "kit" {
-                                                        if let Some(obj) = kv.value.as_object() {
-                                                            for props in &obj.props {
-                                                                if let Some(dir_prop) = props.as_prop() {
-                                                                    if let Some(kv) = (*dir_prop).as_key_value() {
-                                                                        if let Some(ident) = kv.key.as_ident() {
-                                                                            if ident.sym.as_ref() == "outDir" {
-                                                                                if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                                                    return Ok(Self {
-                                                                                        output: Some(s.value.to_string())
-                                                                                    });
-                                                                                } else if let Some(template) = kv.value.as_tpl() {
-                                                                                    for q in &template.quasis {
-                                                                                        // TODO: when would I not accept the first
-                                                                                        if let Some(cooked) = &q.cooked {
-                                                                                            return Ok(Self {
-                                                                                                output: Some(cooked.to_string())
-                                                                                            });
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        let var = get_variable_declaration(program, "config");
+        if let Some(var) = var {
+            let properties = get_variable_properties(var, "kit");
+            if let Some(properties) = properties {
+                let val = get_string_property_value(properties, "outDir");
+                if let Some(val) = val {
+                    return Ok(Self {
+                        output: Some(val)
+                    });
                 }
             }
         }
-
 
         return Err(DoctaviousError::Msg("".to_string()));
     }
