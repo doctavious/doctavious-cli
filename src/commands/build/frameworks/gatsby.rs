@@ -10,6 +10,7 @@ use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::{Expr};
 
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{find_array_element, get_array_property, get_assignment_obj, get_obj_property, get_string_property_value};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -62,83 +63,19 @@ impl FrameworkSupport for Gatsby {
 
 impl ConfigurationFileDeserialization for GatsbyConfig {
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
-        if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(Expr(stmt)) = item.as_stmt() {
-                    let expression = &*stmt.expr;
-                    if let Some(assign) = expression.as_assign() {
-                        let rhs = &*assign.right;
-                        if let Some(obj) = rhs.as_object() {
-                            for prop in &obj.props {
-                                if let Some(p) = prop.as_prop() {
-                                    if let Some(kv) = p.as_key_value() {
-                                        if let Some(ident) = kv.key.as_ident() {
-                                            if ident.sym.as_ref() == "plugins" {
-                                                if let Some(arr) = kv.value.as_array() {
-                                                    for elem in &arr.elems {
-                                                        if let Some(exp) = elem {
-                                                            if let Some(o) = exp.expr.as_object() {
-                                                                for op in &o.props {
-                                                                    if let Some(op2) = op.as_prop() {
-                                                                        if let Some(kv) = op2.as_key_value() {
-                                                                            if let Some(ident) = kv.key.as_ident() {
-                                                                                if ident.sym.as_ref() == "resolve" {
-                                                                                    // TODO: could this also be a literal?
-                                                                                    if let Some(template) = kv.value.as_tpl() {
-                                                                                        for q in &template.quasis {
-                                                                                            if let Some(cooked) = &q.cooked {
-                                                                                                // TODO: if dont have plugin then default
-                                                                                                if cooked == "gatsby-plugin-output" {
-
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                } else if ident.sym.as_ref() == "options" {
-                                                                                    if let Some(o3) = &kv.value.as_object() {
-                                                                                        for p2 in &o3.props {
-                                                                                            if let Some(p) = p2.as_prop() {
-                                                                                                if let Some(kv) = p.as_key_value() {
-                                                                                                    if let Some(ident) = kv.key.as_ident() {
-                                                                                                        if ident.sym.as_ref() == "publicPath" {
-                                                                                                            if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                                                                                return Ok(Self {
-                                                                                                                    output: s.value.to_string()
-                                                                                                                });
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                    return Ok(Self {
-                                                        output: s.value.to_string()
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+        if let Some(obj) = get_assignment_obj(program) {
+            if let Some(plugins) = get_array_property(&obj, "plugins") {
+                if let Some(resolve_elem) = find_array_element(&plugins, "resolve", "gatsby-plugin-output") {
+                    if let Some(options) = get_obj_property(resolve_elem, "options") {
+                        if let Some(output) = get_string_property_value(&options.props, "publicPath") {
+                            return Ok(Self {
+                                output
+                            });
                         }
                     }
                 }
             }
         }
-
 
         return Err(DoctaviousError::Msg("".to_string()));
     }
