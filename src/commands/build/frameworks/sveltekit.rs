@@ -78,10 +78,10 @@ impl ConfigurationFileDeserialization for SvelteKitConfig {
         if let Some(var) = var {
             let properties = get_variable_properties(var, "kit");
             if let Some(properties) = properties {
-                let val = get_string_property_value(properties, "outDir");
-                if let Some(val) = val {
+                let output = get_string_property_value(properties, "outDir");
+                if output.is_some() {
                     return Ok(Self {
-                        output: Some(val)
+                        output
                     });
                 }
             }
