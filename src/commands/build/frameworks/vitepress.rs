@@ -13,6 +13,7 @@ use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
 use swc_ecma_ast::Stmt::{Decl};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_call_string_property, get_variable_property_as_string, is_call_ident};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -72,55 +73,28 @@ impl FrameworkSupport for VitePress {
 impl ConfigurationFileDeserialization for VitePressConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
         if let Some(module) = program.as_module() {
             for item in &module.body {
                 if let Some(Decl(decl)) = item.as_stmt() {
                     if let Some(variable_decl) = decl.as_var() {
                         let variable = &**variable_decl;
                         for declaration in &variable.decls {
-                            if let Some(init_decl) = &declaration.init {
-                                if let Some(init_decl_obj) = init_decl.as_object() {
-                                    for props in &init_decl_obj.props {
-                                        if let Some(dir_prop) = props.as_prop() {
-                                            if let Some(kv) = (*dir_prop).as_key_value() {
-                                                if let Some(ident) = kv.key.as_ident() {
-                                                    if ident.sym.as_ref() == "outDir" {
-                                                        if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                            return Ok(Self {
-                                                                output: Some(s.value.to_string())
-                                                            });
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                           let output = get_variable_property_as_string(&declaration, "outDir");
+                            if output.is_some() {
+                                return Ok(Self {
+                                    output
+                                });
                             }
                         }
                     }
                 } else if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
-                    // callee value "defineConfig"
                     if let Some(call) = export_expression.expr.as_call() {
-                        for call_arg in &call.args {
-                            if let Some(obj) = call_arg.expr.as_object() {
-                                for props in &obj.props {
-                                    if let Some(dir_prop) = props.as_prop() {
-                                        if let Some(kv) = (*dir_prop).as_key_value() {
-                                            if let Some(ident) = kv.key.as_ident() {
-                                                if ident.sym.as_ref() == "outDir" {
-                                                    if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                        return Ok(Self {
-                                                            output: Some(s.value.to_string())
-                                                        });
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                        if is_call_ident(&call, "defineConfig") {
+                            let output = get_call_string_property(&call, "outDir");
+                            if output.is_some() {
+                                return Ok(Self {
+                                    output
+                                });
                             }
                         }
                     }

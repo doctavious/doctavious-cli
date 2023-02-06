@@ -4,6 +4,9 @@ use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, Var
 use swc_ecma_ast::Stmt::{Decl, Expr as ExprStmt};
 
 // TODO: maybe create some traits for these
+// - identification - is ident this name
+// - property - get properties / get property by key or key/value
+// - find methods?
 
 pub(crate) fn get_variable_declaration<'a>(program: &'a Program, ident: &'static str) -> Option<&'a VarDeclarator> {
     if let Some(module) = program.as_module() {
@@ -172,6 +175,16 @@ pub(crate) fn find_array_element<'a>(
         }
     }
     None
+}
+
+pub(crate) fn is_call_ident(call: &CallExpr, ident: &'static str) -> bool {
+    if let Some(callee) = call.callee.as_expr() {
+        if let Some(callee_ident) = callee.as_ident() {
+            println!("{}", callee_ident.sym.as_ref());
+            return callee_ident.sym.as_ref() == ident;
+        }
+    }
+    return false;
 }
 
 // TODO: add method that just gets specific string via get_string_property_value
