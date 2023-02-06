@@ -13,6 +13,7 @@ use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
 
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::get_string_property_value;
 use crate::doctavious_error::Result as DoctaviousResult;
 use crate::doctavious_error::DoctaviousError;
 
@@ -82,20 +83,11 @@ impl ConfigurationFileDeserialization for NuxtJSConfig {
             for item in &module.body {
                 if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
                     if let Some(obj) = export_expression.expr.as_object() {
-                        for props in &obj.props {
-                            if let Some(dir_prop) = props.as_prop() {
-                                if let Some(kv) = (*dir_prop).as_key_value() {
-                                    if let Some(ident) = kv.key.as_ident() {
-                                        if ident.sym.as_ref() == "buildDir" {
-                                            if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                return Ok(Self {
-                                                    output: Some(s.value.to_string())
-                                                });
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        let output = get_string_property_value(&obj.props, "buildDir");
+                        if output.is_some() {
+                            return Ok(Self {
+                                output
+                            });
                         }
                     }
                 }
