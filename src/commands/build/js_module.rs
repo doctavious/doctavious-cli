@@ -1,12 +1,69 @@
+use std::sync::Arc;
+use swc::{HandlerOpts, try_with_handler};
+use swc_common::{FileName, GLOBALS, SourceMap};
 /// This contains a set of helper functions for traversing JS program modules
 
-use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp};
+use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp, EsVersion};
 use swc_ecma_ast::Stmt::{Decl, Expr as ExprStmt};
+use swc_ecma_parser::{EsConfig, Syntax};
+use crate::doctavious_error::DoctaviousError;
+use crate::DoctaviousResult;
 
 // TODO: maybe create some traits for these
 // - identification - is ident this name
 // - property - get properties / get property by key or key/value
 // - find methods?
+
+
+pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Program> {
+    let cm = Arc::<SourceMap>::default();
+    let c = swc::Compiler::new(cm.clone());
+    let output = GLOBALS
+        .set(&Default::default(), || {
+            try_with_handler(
+                cm.clone(),
+                HandlerOpts {
+                    ..Default::default()
+                },
+                |handler| {
+                    // println!("{}", file);
+                    let fm = cm.new_source_file(filename, src);
+                    //.load_file(Path::new(file))
+                    //.expect("failed to load file");
+
+                    // Ok(c.process_js_file(
+                    //     fm,
+                    //     handler,
+                    //     &Options {
+                    //         ..Default::default()
+                    //     },
+                    // )
+                    //     .expect("failed to process file"))
+
+                    let result = c.parse_js(
+                        fm,
+                        handler,
+                        EsVersion::Es2020,
+                        Syntax::Es(EsConfig::default()),
+                        swc::config::IsModule::Bool(true),
+                        None,
+                    );
+                    result
+                },
+            )
+        });
+
+    // println!("{}", serde_json::to_string(&output).unwrap());
+
+    // TODO: wasnt sure how to use ? above as its an anyhow error and attempting from wasnt working
+    match output {
+        Ok(o) => Ok(o),
+        Err(e) => {
+            Err(DoctaviousError::Msg("failed to parse js".to_string()))
+        }
+    }
+}
+
 
 pub(crate) fn get_variable_declaration<'a>(program: &'a Program, ident: &'static str) -> Option<&'a VarDeclarator> {
     if let Some(module) = program.as_module() {

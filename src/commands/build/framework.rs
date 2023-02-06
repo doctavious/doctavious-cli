@@ -8,6 +8,7 @@ use swc_common::{errors::{ColorConfig, Handler}, FileName, GLOBALS, SourceMap};
 use swc_ecma_ast::{*, EsVersion};
 use swc_ecma_parser::{EsConfig, Syntax};
 
+use crate::commands::build::js_module::parse_js_module;
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
 
@@ -187,54 +188,6 @@ pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResul
     return Err(DoctaviousError::Msg("".to_string()));
 }
 
-pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Program> {
-    let cm = Arc::<SourceMap>::default();
-    let c = swc::Compiler::new(cm.clone());
-    let output = GLOBALS
-        .set(&Default::default(), || {
-            try_with_handler(
-                cm.clone(),
-                HandlerOpts {
-                    ..Default::default()
-                },
-                |handler| {
-                    // println!("{}", file);
-                    let fm = cm.new_source_file(filename, src);
-                        //.load_file(Path::new(file))
-                        //.expect("failed to load file");
-
-                    // Ok(c.process_js_file(
-                    //     fm,
-                    //     handler,
-                    //     &Options {
-                    //         ..Default::default()
-                    //     },
-                    // )
-                    //     .expect("failed to process file"))
-
-                    let result = c.parse_js(
-                        fm,
-                        handler,
-                        EsVersion::Es2020,
-                        Syntax::Es(EsConfig::default()),
-                        swc::config::IsModule::Bool(true),
-                        None,
-                    );
-                    result
-                },
-            )
-        });
-
-    // println!("{}", serde_json::to_string(&output).unwrap());
-
-    // TODO: wasnt sure how to use ? above as its an anyhow error and attempting from wasnt working
-    match output {
-        Ok(o) => Ok(o),
-        Err(e) => {
-            Err(DoctaviousError::Msg("failed to parse js".to_string()))
-        }
-    }
-}
 
 
 
