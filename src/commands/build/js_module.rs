@@ -196,6 +196,15 @@ pub(crate) fn get_variable_properties<'a>(variable: &'a VarDeclarator, property:
     None
 }
 
+pub(crate) fn get_variable_property_as_string(variable: &VarDeclarator, property: &'static str) -> Option<String> {
+    if let Some(init_decl) = &variable.init {
+        if let Some(init_decl_obj) = init_decl.as_object() {
+            return get_string_property_value(&init_decl_obj.props, property);
+        }
+    }
+    None
+}
+
 pub(crate) fn get_string_property_value(properties: &Vec<PropOrSpread>, key: &'static str) -> Option<String> {
     for prop_spread in properties {
         if let Some(prop) = prop_spread.as_prop() {

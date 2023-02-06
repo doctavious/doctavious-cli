@@ -9,6 +9,7 @@ use serde::{Deserialize};
 use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::{Decl, Expr};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_string_property_value, get_variable_properties, get_variable_property_as_string};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -61,31 +62,16 @@ impl ConfigurationFileDeserialization for NextJSConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
         // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
         if let Some(module) = program.as_module() {
             for item in &module.body {
                 if let Some(Decl(decl)) = item.as_stmt() {
                     if let Some(variable_decl) = decl.as_var() {
                         let variable = &**variable_decl;
                         for declaration in &variable.decls {
-                            if let Some(init_decl) = &declaration.init {
-                                if let Some(init_decl_obj) = init_decl.as_object() {
-                                    for props in &init_decl_obj.props {
-                                        if let Some(dir_prop) = props.as_prop() {
-                                            if let Some(kv) = (*dir_prop).as_key_value() {
-                                                if let Some(ident) = kv.key.as_ident() {
-                                                    if ident.sym.as_ref() == "distDir" {
-                                                        if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                            return Ok(Self {
-                                                                output: s.value.to_string()
-                                                            });
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            if let Some(output) = get_variable_property_as_string(&declaration, "distDir") {
+                                return Ok(Self {
+                                    output
+                                });
                             }
                         }
                     }
@@ -94,20 +80,10 @@ impl ConfigurationFileDeserialization for NextJSConfig {
                     if let Some(assign) = expression.as_assign() {
                         let rhs = &*assign.right;
                         if let Some(obj) = rhs.as_object() {
-                            for prop in &obj.props {
-                                if let Some(p) = prop.as_prop() {
-                                    if let Some(kv) = p.as_key_value() {
-                                        if let Some(ident) = kv.key.as_ident() {
-                                            if ident.sym.as_ref() == "distDir" {
-                                                if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                    return Ok(Self {
-                                                        output: s.value.to_string()
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            if let Some(output) = get_string_property_value(&obj.props, "distDir") {
+                                return Ok(Self {
+                                    output
+                                });
                             }
                         }
                     }
