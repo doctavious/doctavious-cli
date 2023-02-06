@@ -20,6 +20,7 @@ use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
 use swc_ecma_ast::Stmt::{Expr};
 use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_call_string_property, get_string_property_value, is_call_ident};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -90,29 +91,16 @@ impl ConfigurationFileDeserialization for VuePressConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
         // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
         if let Some(module) = program.as_module() {
             for item in &module.body {
                 if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
-                    // callee value "defineConfig"
                     if let Some(call) = export_expression.expr.as_call() {
-                        for call_arg in &call.args {
-                            if let Some(obj) = call_arg.expr.as_object() {
-                                for props in &obj.props {
-                                    if let Some(dir_prop) = props.as_prop() {
-                                        if let Some(kv) = (*dir_prop).as_key_value() {
-                                            if let Some(ident) = kv.key.as_ident() {
-                                                if ident.sym.as_ref() == "dest" {
-                                                    if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                        return Ok(Self {
-                                                            dest: Some(s.value.to_string())
-                                                        });
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                        if is_call_ident(&call, "defineConfig") {
+                            let dest = get_call_string_property(&call, "dest");
+                            if dest.is_some() {
+                                return Ok(Self {
+                                    dest
+                                });
                             }
                         }
                     }
@@ -121,20 +109,11 @@ impl ConfigurationFileDeserialization for VuePressConfig {
                     if let Some(assign) = expression.as_assign() {
                         let rhs = &*assign.right;
                         if let Some(obj) = rhs.as_object() {
-                            for prop in &obj.props {
-                                if let Some(p) = prop.as_prop() {
-                                    if let Some(kv) = p.as_key_value() {
-                                        if let Some(ident) = kv.key.as_ident() {
-                                            if ident.sym.as_ref() == "dest" {
-                                                if let Some(Lit::Str(s)) = &kv.value.as_lit() {
-                                                    return Ok(Self {
-                                                        dest: Some(s.value.to_string())
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            let dest = get_string_property_value(&obj.props, "dest");
+                            if dest.is_some() {
+                                return Ok(Self {
+                                    dest
+                                });
                             }
                         }
                     }

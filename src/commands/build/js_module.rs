@@ -180,7 +180,6 @@ pub(crate) fn find_array_element<'a>(
 pub(crate) fn is_call_ident(call: &CallExpr, ident: &'static str) -> bool {
     if let Some(callee) = call.callee.as_expr() {
         if let Some(callee_ident) = callee.as_ident() {
-            println!("{}", callee_ident.sym.as_ref());
             return callee_ident.sym.as_ref() == ident;
         }
     }
@@ -188,6 +187,8 @@ pub(crate) fn is_call_ident(call: &CallExpr, ident: &'static str) -> bool {
 }
 
 // TODO: add method that just gets specific string via get_string_property_value
+// TODO: could also do one that takes in a struct and a property
+// could even go one further and do vec of object keys, with property, to do a recursive call to get to property
 pub(crate) fn get_variable_properties<'a>(variable: &'a VarDeclarator, property: &'static str) -> Option<&'a Vec<PropOrSpread>> {
     if let Some(init_decl) = &variable.init {
         if let Some(init_decl_obj) = init_decl.as_object() {
