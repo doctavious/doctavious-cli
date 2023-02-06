@@ -8,7 +8,15 @@ use serde::{Deserialize};
 use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::{Decl};
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
@@ -93,7 +101,7 @@ impl ConfigurationFileDeserialization for SvelteKitConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::SvelteKit;
 
     #[test]

@@ -7,7 +7,15 @@
 
 use serde::{Deserialize};
 use swc_ecma_ast::{Lit, ModuleDecl, Program};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 use crate::commands::build::js_module::{get_call_expression, get_call_string_property};
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
@@ -83,7 +91,7 @@ impl ConfigurationFileDeserialization for AstroConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Astro;
 
     #[test]

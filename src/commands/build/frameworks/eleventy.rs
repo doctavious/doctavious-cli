@@ -11,7 +11,15 @@
 use serde::{Deserialize};
 use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::Stmt::Expr;
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 use crate::commands::build::js_module::{get_assignment_function, get_function_return_obj, get_obj_property, get_string_property_value};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
@@ -63,24 +71,6 @@ impl FrameworkSupport for Eleventy {
                     println!("{}", e.to_string());
                 }
             }
-
-            // for config in configs {
-            //     // TODO: this might be better to parse into struct
-            //     println!("{}", config);
-            //     if let Ok(contents) = fs::read_to_string(config) {
-            //         match serde_yaml::from_str::<AntoraConfig>(contents.as_str()) {
-            //             Ok(c) => {
-            //                 return c.output.dir
-            //             }
-            //             Err(e) => {
-            //                 // log warning/error
-            //                 println!("{}", e.to_string());
-            //             }
-            //         }
-            //     } else {
-            //         println!("could not read file {}", config);
-            //     }
-            // }
         }
 
         self.info.build.output_directory.to_string()
@@ -102,14 +92,13 @@ impl ConfigurationFileDeserialization for EleventyConfig {
             }
         }
 
-
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Eleventy;
 
     #[test]

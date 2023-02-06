@@ -12,7 +12,15 @@ use serde::{Deserialize};
 use swc_ecma_ast::{Lit, Program};
 use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
 
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 use crate::commands::build::js_module::get_string_property_value;
 use crate::doctavious_error::Result as DoctaviousResult;
 use crate::doctavious_error::DoctaviousError;
@@ -99,8 +107,7 @@ impl ConfigurationFileDeserialization for NuxtJSConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::NuxtJS;
 
     #[test]

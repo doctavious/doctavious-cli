@@ -5,7 +5,15 @@
 // BUILDDIR env var
 
 use std::env;
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 
 pub struct Sphinx { info: FrameworkInfo }
 
@@ -21,11 +29,11 @@ impl Default for Sphinx {
                 project_file: None,
                 build: FrameworkBuildSettings {
                     // docs docs/_build
-                    command: "sphinx-build", // TODO: source has to be passed in? Default here?
+                    command: "sphinx-build",
                     command_args: Some(FrameworkBuildArgs {
                         source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
                         config: None,
-                        output: Some(FrameworkBuildArg::Arg(2, None))
+                        output: Some(FrameworkBuildArg::Arg(2, None)) // TODO: should we default?
                     }),
                     // TODO: must be passed in to command which presents a problem if we dont know where the build script is
                     output_directory: "docs/_build",
@@ -53,7 +61,7 @@ impl FrameworkSupport for Sphinx {
 mod tests {
     use std::env;
 
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
 
     use super::Sphinx;
 

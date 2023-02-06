@@ -1,6 +1,7 @@
 mod infer;
 mod frameworks;
 mod js_module;
+mod framework;
 
 
 use std::process::Command;

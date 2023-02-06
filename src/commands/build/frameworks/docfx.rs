@@ -4,7 +4,15 @@
 // docfx build [-o:<output_path>] [-t:<template folder>]
 
 use serde::{Deserialize};
-use crate::commands::build::frameworks::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkInfo, FrameworkSupport, read_config_files};
+use crate::commands::build::framework::{
+    ConfigurationFileDeserialization,
+    FrameworkBuildArg,
+    FrameworkBuildArgs,
+    FrameworkBuildSettings,
+    FrameworkInfo,
+    FrameworkSupport,
+    read_config_files
+};
 
 #[derive(Deserialize)]
 struct DocFxConfigBuild { dest: String }
@@ -65,7 +73,7 @@ impl ConfigurationFileDeserialization for DocFxConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::frameworks::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use crate::commands::build::frameworks::docfx::DocFx;
 
     #[test]
