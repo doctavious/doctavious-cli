@@ -42,9 +42,9 @@ impl Default for VuePress{
                 ]),
                 project_file: None,
                 build: FrameworkBuildSettings {
-                    command: "vuepress build", // TODO: needs source dir
+                    command: "vuepress build",
                     command_args: Some(FrameworkBuildArgs {
-                        source: None,
+                        source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
                         config: Some(FrameworkBuildArg::Option {
                             short: "-c",
                             long: "--config"
