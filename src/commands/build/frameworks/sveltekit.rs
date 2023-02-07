@@ -82,6 +82,8 @@ impl FrameworkSupport for SvelteKit {
 
 impl ConfigurationFileDeserialization for SvelteKitConfig {
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
+        // TODO: not sure we need to specifically get 'config' and perhaps rather look for
+        // kit and/or outDir
         let var = get_variable_declaration(program, "config");
         if let Some(var) = var {
             let properties = get_variable_properties(var, "kit");

@@ -28,7 +28,7 @@ use crate::commands::build::framework::{
     FrameworkSupport,
     read_config_files
 };
-use crate::commands::build::js_module::{get_call_string_property, get_string_property_value, is_call_ident};
+use crate::commands::build::js_module::{get_call_string_property, get_string_property_value, is_call_ident, PropertyAccessor};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -95,38 +95,48 @@ impl FrameworkSupport for VuePress {
     }
 }
 
+
 impl ConfigurationFileDeserialization for VuePressConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
         // TODO: try and simplify
+        println!("{}", serde_json::to_string(&program)?);
         if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
-                    if let Some(call) = export_expression.expr.as_call() {
-                        if is_call_ident(&call, "defineConfig") {
-                            let dest = get_call_string_property(&call, "dest");
-                            if dest.is_some() {
-                                return Ok(Self {
-                                    dest
-                                });
-                            }
-                        }
-                    }
-                } else if let Some(Expr(stmt)) = item.as_stmt() {
-                    let expression = &*stmt.expr;
-                    if let Some(assign) = expression.as_assign() {
-                        let rhs = &*assign.right;
-                        if let Some(obj) = rhs.as_object() {
-                            let dest = get_string_property_value(&obj.props, "dest");
-                            if dest.is_some() {
-                                return Ok(Self {
-                                    dest
-                                });
-                            }
-                        }
-                    }
-                }
+            let dest = module.get_property_as_string("dest");
+            if dest.is_some() {
+                return Ok(Self {
+                    dest
+                });
             }
+            // TODO: get defineConfig?
+            // for item in &module.body {
+            //     // TODO: this should also look at ExportExpr
+            //     if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
+            //         if let Some(call) = export_expression.expr.as_call() {
+            //             if is_call_ident(&call, "defineConfig") {
+            //                 let dest = get_call_string_property(&call, "dest");
+            //                 if dest.is_some() {
+            //                     return Ok(Self {
+            //                         dest
+            //                     });
+            //                 }
+            //             }
+            //         }
+            //     } else if let Some(Expr(stmt)) = item.as_stmt() {
+            //         let expression = &*stmt.expr;
+            //         if let Some(assign) = expression.as_assign() {
+            //             let rhs = &*assign.right;
+            //             if let Some(obj) = rhs.as_object() {
+            //                 let dest = get_string_property_value(&obj.props, "dest");
+            //                 if dest.is_some() {
+            //                     return Ok(Self {
+            //                         dest
+            //                     });
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
         }
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }

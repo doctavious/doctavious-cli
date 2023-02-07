@@ -1,10 +1,10 @@
+/// This contains a set of helper functions for traversing JS program modules
+
 use std::sync::Arc;
 use swc::{HandlerOpts, try_with_handler};
 use swc_common::{FileName, GLOBALS, SourceMap};
-/// This contains a set of helper functions for traversing JS program modules
-
-use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp, EsVersion};
-use swc_ecma_ast::Stmt::{Decl, Expr as ExprStmt};
+use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp, EsVersion, ExprOrSpread, ModuleItem, Stmt, AssignExpr, FnExpr, Decl, Module};
+use swc_ecma_ast::Stmt::{Decl as DeclStmt, Expr as ExprStmt};
 use swc_ecma_parser::{EsConfig, Syntax};
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
@@ -13,6 +13,238 @@ use crate::DoctaviousResult;
 // - identification - is ident this name
 // - property - get properties / get property by key or key/value
 // - find methods?
+
+
+// variable = expression
+
+
+pub(crate) trait PropertyAccessor<'a> {
+
+    // fn get_object(&self, ident: &'static str) -> Option<&'a ObjectLit>;
+    //
+    // fn get_array(&self, ident: &'static str) -> Option<&'a ArrayLit>;
+    //
+    // fn get_properties(&self) -> Option<&'a Vec<PropOrSpread>>;
+
+    // do we need method to get Box<Prop>?
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp>;
+
+    fn get_property_with_value(&'a self, ident: &'static str, val: &'static str) -> Option<&'a KeyValueProp> {
+        if let Some(prop) = self.get_property(ident) {
+            if let Some(kv_val) = get_value_from_kv_as_string(&prop) {
+                if kv_val == val {
+                    return Some(prop);
+                }
+            }
+        }
+        None
+    }
+
+    fn get_property_as_string(&'a self, ident: &'static str) -> Option<String> {
+        if let Some(prop) = self.get_property(ident) {
+            return get_value_from_kv_as_string(&prop);
+        }
+        None
+    }
+
+    fn get_property_as_array(&'a self, ident: &'static str) -> Option<&'a ArrayLit> {
+        if let Some(prop) = self.get_property(ident) {
+            return prop.value.as_array();
+        }
+        None
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for Module {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        for item in &self.body {
+            let prop = item.get_property(ident);
+            if prop.is_some() {
+                return prop;
+            }
+        }
+        None
+    }
+}
+
+
+impl<'a> PropertyAccessor<'a> for ModuleItem {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        match self {
+            ModuleItem::ModuleDecl(m) => m.get_property(ident),
+            ModuleItem::Stmt(s) => s.get_property(ident)
+        }
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for ModuleDecl {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        match self {
+            // TODO: look at ExportDecl and ExportDefaultDecl
+            ModuleDecl::ExportDefaultExpr(e) => {
+                e.expr.get_property(ident)
+            },
+            _ => None
+        }
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for Stmt {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        match self {
+            Stmt::Return(r) => {
+                if let Some(arg) = &r.arg {
+                    return arg.get_property(ident);
+                }
+                return None;
+            }
+            DeclStmt(d) => d.get_property(ident),
+            Stmt::Expr(e) => e.expr.get_property(ident),
+            _ => None
+        }
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for Decl {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        match self {
+            // TODO: might need to do Decl::Fn
+            Decl::Var(v) =>  {
+                for declarator in &v.decls {
+                    let prop = declarator.get_property(ident);
+                    if prop.is_some() {
+                        return prop;
+                    }
+                }
+                None
+            }
+            _ => None
+        }
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for VarDeclarator {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        if let Some(init_decl) = &self.init {
+            if let Some(init_decl_obj) = init_decl.as_object() {
+                for prop_spread in &init_decl_obj.props {
+                    let prop = prop_spread.get_property(ident);
+                    if prop.is_some() {
+                        return prop;
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for ExprOrSpread {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        self.expr.get_property(ident)
+    }
+}
+
+
+
+impl<'a> PropertyAccessor<'a> for Expr {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        match self {
+            Expr::Array(a) => a.get_property(ident),
+            Expr::Assign(a) => a.get_property(ident),
+            Expr::Call(c) => c.get_property(ident),
+            Expr::Fn(f) => f.get_property(ident),
+            Expr::Object(o) => o.get_property(ident),
+            _ => None
+        }
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for AssignExpr {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        self.right.get_property(ident)
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for CallExpr {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        // TODO: this is only if we need to check ident
+        if let Some(callee) = self.callee.as_expr() {
+            let callee_prop = callee.get_property(ident);
+            if callee_prop.is_some() {
+                return callee_prop;
+            }
+        }
+
+        for arg in &self.args {
+            let prop = arg.get_property(ident);
+            if prop.is_some() {
+                return prop;
+            }
+        }
+
+        None
+    }
+}
+
+
+impl<'a> PropertyAccessor<'a> for FnExpr {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        if let Some(fn_body) = &self.function.body {
+            for statement in &fn_body.stmts {
+                let prop = statement.get_property(ident);
+                if prop.is_some() {
+                    return prop;
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for ArrayLit {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        for elem in &self.elems {
+            if let Some(exp) = elem {
+                let prop = exp.get_property(ident);
+                if prop.is_some() {
+                    return prop
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for ObjectLit {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        for ps in &self.props {
+            let found = ps.get_property(ident);
+            if found.is_some() {
+                return found
+            }
+        }
+        None
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for PropOrSpread {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        return match self {
+            PropOrSpread::Spread(_) => None,
+            PropOrSpread::Prop(p) => {
+                if let Some(kv) = p.as_key_value() {
+                    if let Some(kv_ident) = kv.key.as_ident() {
+                        if kv_ident.sym.as_ref() == ident {
+                            return Some(kv);
+                        }
+                    }
+                }
+                None
+            }
+        }
+    }
+}
 
 
 pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Program> {
@@ -26,20 +258,7 @@ pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Prog
                     ..Default::default()
                 },
                 |handler| {
-                    // println!("{}", file);
                     let fm = cm.new_source_file(filename, src);
-                    //.load_file(Path::new(file))
-                    //.expect("failed to load file");
-
-                    // Ok(c.process_js_file(
-                    //     fm,
-                    //     handler,
-                    //     &Options {
-                    //         ..Default::default()
-                    //     },
-                    // )
-                    //     .expect("failed to process file"))
-
                     let result = c.parse_js(
                         fm,
                         handler,
@@ -53,9 +272,6 @@ pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Prog
             )
         });
 
-    // println!("{}", serde_json::to_string(&output).unwrap());
-
-    // TODO: wasnt sure how to use ? above as its an anyhow error and attempting from wasnt working
     match output {
         Ok(o) => Ok(o),
         Err(e) => {
@@ -68,7 +284,7 @@ pub fn parse_js_module(filename: FileName, src: String) -> DoctaviousResult<Prog
 pub(crate) fn get_variable_declaration<'a>(program: &'a Program, ident: &'static str) -> Option<&'a VarDeclarator> {
     if let Some(module) = program.as_module() {
         for item in &module.body {
-            if let Some(Decl(decl)) = item.as_stmt() {
+            if let Some(DeclStmt(decl)) = item.as_stmt() {
                 if let Some(variable_decl) = decl.as_var() {
                     for declaration in &variable_decl.decls {
                         if let Some(decl_ident) = declaration.name.as_ident() {
@@ -289,34 +505,6 @@ pub(crate) fn get_string_property_value(properties: &Vec<PropOrSpread>, key: &'s
                     }
                 }
             }
-
-            // if let Some(kv) = (*prop).as_key_value() {
-            //     if let Some(ident) = kv.key.as_ident() {
-            //         if ident.sym.as_ref() == key {
-            //             return match &*kv.value {
-            //                 Expr::Lit(l) => {
-            //                     match l {
-            //                         Lit::Str(v) => Some(v.value.to_string()),
-            //                         Lit::Bool(v) => Some(v.value.to_string()),
-            //                         Lit::Null(_) => None,
-            //                         Lit::Num(v) => Some(v.to_string()),
-            //                         Lit::BigInt(v) => Some(v.value.to_string()),
-            //                         Lit::Regex(v) => Some(v.exp.to_string()),
-            //                         Lit::JSXText(v) => Some(v.value.to_string())
-            //                     }
-            //                 }
-            //                 Expr::Tpl(tpl) => {
-            //                     return if let Some(TplElement { cooked: Some(atom), .. }) = &tpl.quasis.first() {
-            //                         Some(atom.to_string())
-            //                     } else {
-            //                         None
-            //                     }
-            //                 }
-            //                 _ => None
-            //             };
-            //         }
-            //     }
-            // }
         }
     }
 

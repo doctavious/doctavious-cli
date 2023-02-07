@@ -21,7 +21,7 @@ use crate::commands::build::framework::{
     FrameworkSupport,
     read_config_files
 };
-use crate::commands::build::js_module::get_string_property_value;
+use crate::commands::build::js_module::{get_string_property_value, PropertyAccessor};
 use crate::doctavious_error::Result as DoctaviousResult;
 use crate::doctavious_error::DoctaviousError;
 
@@ -85,21 +85,25 @@ impl FrameworkSupport for NuxtJS {
 impl ConfigurationFileDeserialization for NuxtJSConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: try and simplify
-        println!("{}", serde_json::to_string(program)?);
         if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
-                    if let Some(obj) = export_expression.expr.as_object() {
-                        let output = get_string_property_value(&obj.props, "buildDir");
-                        if output.is_some() {
-                            return Ok(Self {
-                                output
-                            });
-                        }
-                    }
-                }
+            let output = module.get_property_as_string("buildDir");
+            if output.is_some() {
+                return Ok(Self {
+                    output
+                });
             }
+            // for item in &module.body {
+            //     if let Some(ExportDefaultExpr(export_expression)) = item.as_module_decl() {
+            //         if let Some(obj) = export_expression.expr.as_object() {
+            //             let output = get_string_property_value(&obj.props, "buildDir");
+            //             if output.is_some() {
+            //                 return Ok(Self {
+            //                     output
+            //                 });
+            //             }
+            //         }
+            //     }
+            // }
         }
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }

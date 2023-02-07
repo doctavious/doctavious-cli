@@ -17,7 +17,7 @@ use crate::commands::build::framework::{
     FrameworkSupport,
     read_config_files
 };
-use crate::commands::build::js_module::{get_string_property_value, get_variable_properties, get_variable_property_as_string};
+use crate::commands::build::js_module::{get_string_property_value, get_variable_properties, get_variable_property_as_string, PropertyAccessor};
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -71,33 +71,38 @@ impl ConfigurationFileDeserialization for NextJSConfig {
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
         // TODO: try and simplify
         if let Some(module) = program.as_module() {
-            for item in &module.body {
-                if let Some(Decl(decl)) = item.as_stmt() {
-                    if let Some(variable_decl) = decl.as_var() {
-                        let variable = &**variable_decl;
-                        for declaration in &variable.decls {
-                            if let Some(output) = get_variable_property_as_string(&declaration, "distDir") {
-                                return Ok(Self {
-                                    output
-                                });
-                            }
-                        }
-                    }
-                } else if let Some(Expr(stmt)) = item.as_stmt() {
-                    let expression = &*stmt.expr;
-                    if let Some(assign) = expression.as_assign() {
-                        let rhs = &*assign.right;
-                        if let Some(obj) = rhs.as_object() {
-                            if let Some(output) = get_string_property_value(&obj.props, "distDir") {
-                                return Ok(Self {
-                                    output
-                                });
-                            }
-                        }
-                    }
-                }
-
+            if let Some(output) = module.get_property_as_string("distDir") {
+                return Ok(Self {
+                    output
+                });
             }
+            // for item in &module.body {
+            //     if let Some(Decl(decl)) = item.as_stmt() {
+            //         if let Some(variable_decl) = decl.as_var() {
+            //             let variable = &**variable_decl;
+            //             for declaration in &variable.decls {
+            //                 if let Some(output) = get_variable_property_as_string(&declaration, "distDir") {
+            //                     return Ok(Self {
+            //                         output
+            //                     });
+            //                 }
+            //             }
+            //         }
+            //     } else if let Some(Expr(stmt)) = item.as_stmt() {
+            //         let expression = &*stmt.expr;
+            //         if let Some(assign) = expression.as_assign() {
+            //             let rhs = &*assign.right;
+            //             if let Some(obj) = rhs.as_object() {
+            //                 if let Some(output) = get_string_property_value(&obj.props, "distDir") {
+            //                     return Ok(Self {
+            //                         output
+            //                     });
+            //                 }
+            //             }
+            //         }
+            //     }
+            //
+            // }
         }
         Err(DoctaviousError::Msg("invalid config".to_string()))
     }

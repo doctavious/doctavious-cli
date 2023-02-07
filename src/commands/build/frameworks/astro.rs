@@ -75,6 +75,7 @@ struct AstroConfig { output: String }
 impl ConfigurationFileDeserialization for AstroConfig {
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
+        // TODO: do we care what its called?
         let define_config = get_call_expression(program, "defineConfig");
         if let Some(define_config) = define_config {
             if let Some(val) = get_call_string_property(&define_config, "outDir") {
