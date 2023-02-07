@@ -40,6 +40,20 @@ pub(crate) trait PropertyAccessor<'a> {
         None
     }
 
+    fn get_property_as_array(&'a self, ident: &'static str) -> Option<&'a ArrayLit> {
+        if let Some(prop) = self.get_property(ident) {
+            return prop.value.as_array();
+        }
+        None
+    }
+
+    fn get_property_as_obj(&'a self, ident: &'static str) -> Option<&'a ObjectLit> {
+        if let Some(prop) = self.get_property(ident) {
+            return prop.value.as_object();
+        }
+        None
+    }
+
     fn get_property_as_string(&'a self, ident: &'static str) -> Option<String> {
         if let Some(prop) = self.get_property(ident) {
             return get_value_from_kv_as_string(&prop);
@@ -47,12 +61,6 @@ pub(crate) trait PropertyAccessor<'a> {
         None
     }
 
-    fn get_property_as_array(&'a self, ident: &'static str) -> Option<&'a ArrayLit> {
-        if let Some(prop) = self.get_property(ident) {
-            return prop.value.as_array();
-        }
-        None
-    }
 }
 
 impl<'a> PropertyAccessor<'a> for Module {
