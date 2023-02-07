@@ -98,7 +98,10 @@ impl<'a> PropertyAccessor<'a> for Stmt {
                 }
                 return None;
             }
-            DeclStmt(d) => d.get_property(ident),
+            DeclStmt(d) => {
+                println!("{}", serde_json::to_string(d).unwrap());
+                d.get_property(ident)
+            },
             Stmt::Expr(e) => e.expr.get_property(ident),
             _ => None
         }
@@ -125,14 +128,11 @@ impl<'a> PropertyAccessor<'a> for Decl {
 
 impl<'a> PropertyAccessor<'a> for VarDeclarator {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        if let Some(init_decl) = &self.init {
-            if let Some(init_decl_obj) = init_decl.as_object() {
-                for prop_spread in &init_decl_obj.props {
-                    let prop = prop_spread.get_property(ident);
-                    if prop.is_some() {
-                        return prop;
-                    }
-                }
+        if let Some(exp) = &self.init {
+            println!("{}", serde_json::to_string(exp).unwrap());
+            let prop = exp.get_property(ident);
+            if prop.is_some() {
+                return prop;
             }
         }
         None
@@ -238,6 +238,11 @@ impl<'a> PropertyAccessor<'a> for PropOrSpread {
                         if kv_ident.sym.as_ref() == ident {
                             return Some(kv);
                         }
+                    }
+
+                    let val_prop = kv.value.get_property(ident);
+                    if val_prop.is_some() {
+                        return val_prop;
                     }
                 }
                 None
