@@ -27,16 +27,6 @@ pub struct FrameworkInfo {
     /// https://nextjs.org
     pub website: Option<&'static str>,
 
-    // Short description of the framework
-    // pub description: String,
-
-    // TODO: might not need this
-    // /// The environment variable prefix
-    // ///
-    // /// # Examples
-    // /// NEXT_PUBLIC_
-    // pub envPrefix: Option<String>,
-
     // TODO: could string be a glob?
     // TODO: does this really need to be an Option? How about just empty?
     /// List of potential config files
@@ -84,9 +74,8 @@ pub trait FrameworkSupport {
     fn get_info(&self) -> &FrameworkInfo;
 
     fn get_output_dir(&self) -> String {
-        // default implementation...this might be necessary as we'll likely have custom for each
-        // self.get_info().build.output_dir
-        String::default()
+        // default implementation...this might not be necessary as we'll likely have custom for each
+        self.get_info().build.output_directory.to_string()
     }
 }
 
