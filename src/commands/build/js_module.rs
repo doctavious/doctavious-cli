@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use swc::{HandlerOpts, try_with_handler};
 use swc_common::{FileName, GLOBALS, SourceMap};
-use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp, EsVersion, ExprOrSpread, ModuleItem, Stmt, AssignExpr, FnExpr, Decl, Module};
+use swc_ecma_ast::{Expr, Lit, Program, ModuleDecl, PropOrSpread, TplElement, VarDeclarator, CallExpr, Function, ObjectLit, ArrayLit, Prop, KeyValueProp, EsVersion, ExprOrSpread, ModuleItem, Stmt, AssignExpr, FnExpr, Decl, Module, BlockStmt};
 use swc_ecma_ast::Stmt::{Decl as DeclStmt, Expr as ExprStmt};
 use swc_ecma_parser::{EsConfig, Syntax};
 use crate::doctavious_error::DoctaviousError;
@@ -20,13 +20,6 @@ use crate::DoctaviousResult;
 
 pub(crate) trait PropertyAccessor<'a> {
 
-    // fn get_object(&self, ident: &'static str) -> Option<&'a ObjectLit>;
-    //
-    // fn get_array(&self, ident: &'static str) -> Option<&'a ArrayLit>;
-    //
-    // fn get_properties(&self) -> Option<&'a Vec<PropOrSpread>>;
-
-    // do we need method to get Box<Prop>?
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp>;
 
     fn get_property_with_value(&'a self, ident: &'static str, val: &'static str) -> Option<&'a KeyValueProp> {
@@ -41,37 +34,23 @@ pub(crate) trait PropertyAccessor<'a> {
     }
 
     fn get_property_as_array(&'a self, ident: &'static str) -> Option<&'a ArrayLit> {
-        if let Some(prop) = self.get_property(ident) {
-            return prop.value.as_array();
-        }
-        None
+        self.get_property(ident).and_then(|prop| prop.value.as_array())
     }
 
     fn get_property_as_obj(&'a self, ident: &'static str) -> Option<&'a ObjectLit> {
-        if let Some(prop) = self.get_property(ident) {
-            return prop.value.as_object();
-        }
-        None
+        self.get_property(ident).and_then(|prop| prop.value.as_object())
     }
 
     fn get_property_as_string(&'a self, ident: &'static str) -> Option<String> {
-        if let Some(prop) = self.get_property(ident) {
-            return get_value_from_kv_as_string(&prop);
-        }
-        None
+        self.get_property(ident).and_then(get_value_from_kv_as_string)
     }
 
 }
 
 impl<'a> PropertyAccessor<'a> for Module {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        for item in &self.body {
-            let prop = item.get_property(ident);
-            if prop.is_some() {
-                return prop;
-            }
-        }
-        None
+        self.body.iter()
+            .find_map(|item| item.get_property(ident))
     }
 }
 
@@ -100,16 +79,8 @@ impl<'a> PropertyAccessor<'a> for ModuleDecl {
 impl<'a> PropertyAccessor<'a> for Stmt {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
         match self {
-            Stmt::Return(r) => {
-                if let Some(arg) = &r.arg {
-                    return arg.get_property(ident);
-                }
-                return None;
-            }
-            DeclStmt(d) => {
-                println!("{}", serde_json::to_string(d).unwrap());
-                d.get_property(ident)
-            },
+            Stmt::Return(r) => r.arg.as_ref().and_then(|expr| expr.get_property(ident)),
+            DeclStmt(d) => d.get_property(ident),
             Stmt::Expr(e) => e.expr.get_property(ident),
             _ => None
         }
@@ -121,13 +92,8 @@ impl<'a> PropertyAccessor<'a> for Decl {
         match self {
             // TODO: might need to do Decl::Fn
             Decl::Var(v) =>  {
-                for declarator in &v.decls {
-                    let prop = declarator.get_property(ident);
-                    if prop.is_some() {
-                        return prop;
-                    }
-                }
-                None
+                v.decls.iter()
+                    .find_map(|declarator| declarator.get_property(ident))
             }
             _ => None
         }
@@ -136,14 +102,7 @@ impl<'a> PropertyAccessor<'a> for Decl {
 
 impl<'a> PropertyAccessor<'a> for VarDeclarator {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        if let Some(exp) = &self.init {
-            println!("{}", serde_json::to_string(exp).unwrap());
-            let prop = exp.get_property(ident);
-            if prop.is_some() {
-                return prop;
-            }
-        }
-        None
+        self.init.as_ref().and_then(|expr| expr.get_property(ident))
     }
 }
 
@@ -184,55 +143,46 @@ impl<'a> PropertyAccessor<'a> for CallExpr {
             }
         }
 
-        for arg in &self.args {
-            let prop = arg.get_property(ident);
-            if prop.is_some() {
-                return prop;
-            }
-        }
-
-        None
+        self.args.iter().find_map(|expr| expr.get_property(ident))
     }
 }
 
 
 impl<'a> PropertyAccessor<'a> for FnExpr {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        if let Some(fn_body) = &self.function.body {
-            for statement in &fn_body.stmts {
-                let prop = statement.get_property(ident);
-                if prop.is_some() {
-                    return prop;
-                }
-            }
-        }
-        None
+        self.function.body.as_ref().and_then(|body| body.get_property(ident))
+    }
+}
+
+impl<'a> PropertyAccessor<'a> for BlockStmt {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        self.stmts.iter().find_map(|ps| ps.get_property(ident))
     }
 }
 
 impl<'a> PropertyAccessor<'a> for ArrayLit {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        for elem in &self.elems {
-            if let Some(exp) = elem {
-                let prop = exp.get_property(ident);
-                if prop.is_some() {
-                    return prop
-                }
-            }
-        }
-        None
+        // TODO: see how this performs against the for loop
+        self.elems.iter()
+            .filter(|e| e.is_some())
+            .map(|e| e.as_ref().unwrap())
+            .find_map(|expr| expr.get_property(ident))
+        // for elem in &self.elems {
+        //     if let Some(exp) = elem {
+        //         let prop = exp.get_property(ident);
+        //         if prop.is_some() {
+        //             return prop
+        //         }
+        //     }
+        // }
+        // None
     }
 }
 
 impl<'a> PropertyAccessor<'a> for ObjectLit {
     fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
-        for ps in &self.props {
-            let found = ps.get_property(ident);
-            if found.is_some() {
-                return found
-            }
-        }
-        None
+        self.props.iter()
+            .find_map(|ps| ps.get_property(ident))
     }
 }
 
@@ -241,21 +191,21 @@ impl<'a> PropertyAccessor<'a> for PropOrSpread {
         return match self {
             PropOrSpread::Spread(_) => None,
             PropOrSpread::Prop(p) => {
-                if let Some(kv) = p.as_key_value() {
-                    if let Some(kv_ident) = kv.key.as_ident() {
-                        if kv_ident.sym.as_ref() == ident {
-                            return Some(kv);
-                        }
-                    }
-
-                    let val_prop = kv.value.get_property(ident);
-                    if val_prop.is_some() {
-                        return val_prop;
-                    }
-                }
-                None
+                p.as_key_value().and_then(|kv| kv.get_property(ident))
             }
         }
+    }
+}
+
+
+
+impl<'a> PropertyAccessor<'a> for KeyValueProp {
+    fn get_property(&'a self, ident: &'static str) -> Option<&'a KeyValueProp> {
+        if self.key.as_ident().filter(|kv_ident| kv_ident.sym.as_ref() == ident).is_some() {
+            return Some(self);
+        }
+
+        return self.value.get_property(ident);
     }
 }
 
