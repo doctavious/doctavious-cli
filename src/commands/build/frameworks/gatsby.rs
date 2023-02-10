@@ -29,13 +29,14 @@ struct GatsbyConfig { output: String }
 
 pub struct Gatsby { info: FrameworkInfo }
 
-impl Default for Gatsby {
-    fn default() -> Self {
+impl Gatsby {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Gatsby",
                 website: Some("https://www.gatsbyjs.com/"),
-                configs: Some(Vec::from(["gatsby-config.js", "gatsby-config.ts"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "gatsby build",
@@ -44,6 +45,14 @@ impl Default for Gatsby {
                 },
             }
         }
+    }
+}
+
+impl Default for Gatsby {
+    fn default() -> Self {
+        Gatsby::new(
+            Some(Vec::from(["gatsby-config.js", "gatsby-config.ts"]))
+        )
     }
 }
 
@@ -92,24 +101,13 @@ impl ConfigurationFileDeserialization for GatsbyConfig {
 #[cfg(test)]
 mod tests {
     use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
     use super::Gatsby;
 
     #[test]
     fn test_gatsby() {
-        let gatsby = Gatsby {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/gatsby/gatsby-config.js"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let gatsby = Gatsby::new(
+            Some(vec!["tests/resources/framework_configs/gatsby/gatsby-config.js"])
+        );
 
         let output = gatsby.get_output_dir();
         assert_eq!(output, "dist")

@@ -22,13 +22,14 @@ use crate::DoctaviousResult;
 
 pub struct Astro { info: FrameworkInfo }
 
-impl Default for Astro {
-    fn default() -> Self {
+impl Astro {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Astro",
                 website: Some("https://astro.build"),
-                configs: Some(Vec::from(["astro.config.mjs"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "astro build",
@@ -44,6 +45,12 @@ impl Default for Astro {
                 },
             }
         }
+    }
+}
+
+impl Default for Astro {
+    fn default() -> Self {
+        Astro::new(Some(Vec::from(["astro.config.mjs"])))
     }
 }
 
@@ -97,19 +104,9 @@ mod tests {
 
     #[test]
     fn test_astro() {
-        let astro = Astro {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/astro/astro.config.mjs"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let astro = Astro::new(
+            Some(vec!["tests/resources/framework_configs/astro/astro.config.mjs"])
+        );
 
         let output = astro.get_output_dir();
         assert_eq!(output, "./build")

@@ -17,7 +17,7 @@ use crate::commands::build::framework::{
     FrameworkSupport,
     read_config_files
 };
-use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties};
+use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties, PropertyAccessor};
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -28,13 +28,13 @@ struct SvelteKitConfig { output: Option<String> }
 
 pub struct SvelteKit { info: FrameworkInfo }
 
-impl Default for SvelteKit {
-    fn default() -> Self {
+impl SvelteKit {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "SvelteKit",
                 website: Some("https://kit.svelte.dev/"),
-                configs: Some(vec!["svelte.config.js"]),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "vite build",
@@ -53,6 +53,14 @@ impl Default for SvelteKit {
                 },
             },
         }
+    }
+}
+
+impl Default for SvelteKit {
+    fn default() -> Self {
+        SvelteKit::new(
+            Some(vec!["svelte.config.js"]),
+        )
     }
 }
 
@@ -84,6 +92,16 @@ impl ConfigurationFileDeserialization for SvelteKitConfig {
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
         // TODO: not sure we need to specifically get 'config' and perhaps rather look for
         // kit and/or outDir
+        // if let Some(module) = program.as_module() {
+        //     let output = module.get_property_as_string("outDir");
+        //     if output.is_some() {
+        //         return Ok(Self {
+        //             output
+        //         });
+        //     }
+        // }
+
+
         let var = get_variable_declaration(program, "config");
         if let Some(var) = var {
             let properties = get_variable_properties(var, "kit");
@@ -108,19 +126,9 @@ mod tests {
 
     #[test]
     fn test_sveltekit() {
-        let sveltekit = SvelteKit {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/sveltekit/svelte.config.js"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let sveltekit = SvelteKit::new(
+            Some(vec!["tests/resources/framework_configs/sveltekit/svelte.config.js"])
+        );
 
         let output = sveltekit.get_output_dir();
         assert_eq!(output, "build")

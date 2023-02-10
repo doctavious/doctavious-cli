@@ -17,15 +17,14 @@ use crate::commands::build::framework::{
 
 pub struct Sphinx { info: FrameworkInfo }
 
-impl Default for Sphinx {
-    fn default() -> Self {
+impl Sphinx {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Sphinx",
                 website: Some("https://www.sphinx-doc.org/en/master/"),
-                // this is relative to source and i dont think we need it as it doesnt help with build
-                // TODO: should we remove?
-                configs: Some(vec!["conf.py"]),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     // docs docs/_build
@@ -40,6 +39,15 @@ impl Default for Sphinx {
                 },
             },
         }
+    }
+
+}
+
+impl Default for Sphinx {
+    fn default() -> Self {
+        // this is relative to source and i dont think we need it as it doesnt help with build
+        // TODO: should we remove?
+        Sphinx::new(Some(vec!["conf.py"]))
     }
 }
 
@@ -67,40 +75,20 @@ mod tests {
 
     #[test]
     fn test_sphinx() {
-        let sphinx = Sphinx {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let sphinx = Sphinx::new(
+            Some(vec!["tests/resources/framework_configs/sphinx/config.py"])
+        );
 
         let output = sphinx.get_output_dir();
-        assert_eq!(output, "")
+        assert_eq!(output, "docs/_build")
     }
 
     #[test]
     fn should_use_env_var_when_present() {
         temp_env::with_var("BUILDDIR", Some("build"), || {
-            let sphinx = Sphinx {
-                info: FrameworkInfo {
-                    name: "",
-                    website: None,
-                    configs: Some(vec!["tests/resources/framework_configs/sphinx/config.py"]),
-                    project_file: None,
-                    build: FrameworkBuildSettings {
-                        command: "",
-                        command_args: None,
-                        output_directory: "",
-                    },
-                },
-            };
+            let sphinx = Sphinx::new(
+                Some(vec!["tests/resources/framework_configs/sphinx/config.py"])
+            );
 
             let output = sphinx.get_output_dir();
             assert_eq!(output, "build")

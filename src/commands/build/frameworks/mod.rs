@@ -37,29 +37,6 @@ mod sveltekit;
 mod vitepress;
 mod vuepress;
 
-// const FRAMEWORKS: [dyn FrameworkSupport + ?Sized;2] = [Antora::default(), Astro::default()];
-// pub fn get_frameworks<T>() -> [T;2]
-// where T: FrameworkSupport  {
-//     [Antora::default(), Astro::default()]
-// }
-
-// pub fn get_frameworks<T: FrameworkSupport>() -> Vec<T> {
-//     vec![Antora::default(), Astro::default()]
-// }
-
-// pub fn get_frameworks<T: FrameworkSupport>() -> Vec<T> {
-//     let mut frameworks = Vec::new();
-//     frameworks.push(Antora::default());
-//     frameworks.push(Astro::default());
-//     frameworks
-// }
-
-// pub fn get_frameworks<>() -> Vec<impl FrameworkSupport> {
-//     let mut frameworks = Vec::<dyn FrameworkSupport>::new();
-//     frameworks.push(Antora::default());
-//     frameworks.push(Astro::default());
-//     frameworks
-// }
 
 // I wish Box<dyn> hasnt necessary and maybe its not with a different structure
 // but I'm at a loss for how how to structure these frameworks and allow fn overrides,
@@ -84,16 +61,4 @@ pub fn get_frameworks<>() -> Vec<Box<dyn FrameworkSupport>> {
     frameworks.push(Box::new(VitePress::default()));
     frameworks.push(Box::new(VuePress::default()));
     frameworks
-}
-
-// pub fn get_frameworks<>() -> Vec<impl FrameworkSupport> {
-//     let a = [Antora::default(), Astro::default()].iter().collect::<Vec<FrameworkSupport>>();
-//     a
-// }
-
-
-
-pub enum Framework {
-    ANTORA(Antora),
-    ASTRO(Astro)
 }

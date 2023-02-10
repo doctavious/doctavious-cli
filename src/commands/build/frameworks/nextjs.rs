@@ -26,13 +26,13 @@ struct NextJSConfig { output: String }
 
 pub struct NextJS { info: FrameworkInfo }
 
-impl Default for NextJS {
-    fn default() -> Self {
+impl NextJS {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Next.js",
                 website: Some("https://nextjs.org/"),
-                configs: Some(Vec::from(["next.config.js", "next.config.mjs"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "next build",
@@ -41,6 +41,12 @@ impl Default for NextJS {
                 },
             }
         }
+    }
+}
+
+impl Default for NextJS {
+    fn default() -> Self {
+        NextJS::new(Some(Vec::from(["next.config.js", "next.config.mjs"])))
     }
 }
 
@@ -115,20 +121,11 @@ mod tests {
 
     #[test]
     fn test_nextjs() {
-        for config in ["tests/resources/framework_configs/nextjs/next_js_v1.mjs", "tests/resources/framework_configs/nextjs/next_js_v2.mjs"] {
-            let nextjs = NextJS {
-                info: FrameworkInfo {
-                    name: "",
-                    website: None,
-                    configs: Some(vec![config]),
-                    project_file: None,
-                    build: FrameworkBuildSettings {
-                        command: "",
-                        command_args: None,
-                        output_directory: "",
-                    },
-                },
-            };
+        for config in [
+            "tests/resources/framework_configs/nextjs/next_js_v1.mjs",
+            "tests/resources/framework_configs/nextjs/next_js_v2.mjs"
+        ] {
+            let nextjs = NextJS::new(Some(vec![config]));
 
             let output = nextjs.get_output_dir();
             assert_eq!(output, String::from("build"))

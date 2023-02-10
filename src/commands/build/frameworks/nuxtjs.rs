@@ -30,13 +30,13 @@ struct NuxtJSConfig { output: Option<String> }
 
 pub struct NuxtJS { info: FrameworkInfo }
 
-impl Default for NuxtJS {
-    fn default() -> Self {
+impl NuxtJS {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Nuxt",
                 website: Some("https://nuxtjs.org/"),
-                configs: Some(Vec::from(["nuxt.config.js"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "nuxt build",
@@ -48,14 +48,11 @@ impl Default for NuxtJS {
     }
 }
 
-// NUXTJS: NuxtJS = NuxtJS {
-//     info: FrameworkInfo {
-//         name: "Nuxt",
-//         website: Some("https://nuxtjs.org/"),
-//         configs: Some(Vec::from(["nuxt.config.js"])),
-//         project_file: None,
-//     },
-// };
+impl Default for NuxtJS {
+    fn default() -> Self {
+        NuxtJS::new(Some(Vec::from(["nuxt.config.js"])))
+    }
+}
 
 
 impl FrameworkSupport for NuxtJS {
@@ -117,19 +114,7 @@ mod tests {
     #[test]
     fn test_nuxtjs() {
         for config in ["tests/resources/framework_configs/nuxtjs/nuxt.config.js"] {
-            let nuxtjs = NuxtJS {
-                info: FrameworkInfo {
-                    name: "",
-                    website: None,
-                    configs: Some(vec![config]),
-                    project_file: None,
-                    build: FrameworkBuildSettings {
-                        command: "",
-                        command_args: None,
-                        output_directory: "",
-                    },
-                },
-            };
+            let nuxtjs = NuxtJS::new(Some(vec![config]));
 
             let output = nuxtjs.get_output_dir();
             assert_eq!(output, String::from("build"))

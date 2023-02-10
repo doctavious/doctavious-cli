@@ -21,13 +21,14 @@ struct HexoConfig { public_dir: Option<String> }
 
 pub struct Hexo { info: FrameworkInfo }
 
-impl Default for Hexo {
-    fn default() -> Self {
+impl Hexo {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Hexo",
                 website: Some("https://hexo.io/"),
-                configs: Some(Vec::from(["_config.yml"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "hexo generate",
@@ -43,6 +44,13 @@ impl Default for Hexo {
                 },
             }
         }
+    }
+
+}
+
+impl Default for Hexo {
+    fn default() -> Self {
+        Hexo::new(Some(Vec::from(["_config.yml"])))
     }
 }
 
@@ -75,24 +83,13 @@ impl ConfigurationFileDeserialization for HexoConfig {}
 #[cfg(test)]
 mod tests {
     use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
     use super::Hexo;
 
     #[test]
     fn test_hexo() {
-        let hexo = Hexo {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/hexo/_config.yml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let hexo = Hexo::new(
+            Some(vec!["tests/resources/framework_configs/hexo/_config.yml"])
+        );
 
         let output = hexo.get_output_dir();
         assert_eq!(output, "build")

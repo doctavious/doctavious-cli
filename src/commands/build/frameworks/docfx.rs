@@ -22,13 +22,13 @@ struct DocFxConfig { build: DocFxConfigBuild }
 
 pub struct DocFx { info: FrameworkInfo }
 
-impl Default for DocFx {
-    fn default() -> Self {
+impl DocFx {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "DocFX",
                 website: Some("https://dotnet.github.io/docfx/"),
-                configs: Some(Vec::from(["docfx.json"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "docfx build",
@@ -44,6 +44,12 @@ impl Default for DocFx {
                 },
             }
         }
+    }
+}
+
+impl Default for DocFx {
+    fn default() -> Self {
+        DocFx::new(Some(Vec::from(["docfx.json"])))
     }
 }
 
@@ -78,19 +84,9 @@ mod tests {
 
     #[test]
     fn test_docfx() {
-        let docfx = DocFx {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/docfx/docfx.json"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let docfx = DocFx::new(
+            Some(vec!["tests/resources/framework_configs/docfx/docfx.json"])
+        );
 
         let output = docfx.get_output_dir();
         assert_eq!(output, "dist")

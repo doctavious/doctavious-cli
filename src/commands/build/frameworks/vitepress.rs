@@ -30,19 +30,13 @@ struct VitePressConfig { output: Option<String> }
 
 pub struct VitePress { info: FrameworkInfo }
 
-impl Default for VitePress {
-    fn default() -> Self {
+impl VitePress {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "VitePress",
                 website: Some("https://vitepress.vuejs.org/"),
-                configs: Some(vec![
-                    ".vitepress/config.cjs",
-                    ".vitepress/config.js",
-                    ".vitepress/config.mjs",
-                    ".vitepress/config.mts",
-                    ".vitepress/config.ts"
-                ]),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "vitepress build docs",
@@ -51,6 +45,20 @@ impl Default for VitePress {
                 },
             },
         }
+    }
+}
+
+impl Default for VitePress {
+    fn default() -> Self {
+        VitePress::new(
+            Some(vec![
+                ".vitepress/config.cjs",
+                ".vitepress/config.js",
+                ".vitepress/config.mjs",
+                ".vitepress/config.mts",
+                ".vitepress/config.ts"
+            ])
+        )
     }
 }
 
@@ -132,19 +140,7 @@ mod tests {
             "tests/resources/framework_configs/vitepress/config.ts",
         ];
         for config in configs {
-            let vitepress = VitePress {
-                info: FrameworkInfo {
-                    name: "",
-                    website: None,
-                    configs: Some(vec![config]),
-                    project_file: None,
-                    build: FrameworkBuildSettings {
-                        command: "",
-                        command_args: None,
-                        output_directory: "",
-                    },
-                },
-            };
+            let vitepress = VitePress::new(Some(vec![config]));
 
             let output = vitepress.get_output_dir();
             assert_eq!(output, String::from("build"))

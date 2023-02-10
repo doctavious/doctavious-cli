@@ -22,13 +22,13 @@ struct MDBookConfig { build: Option<MDBookBuildOptions> }
 
 pub struct MDBook { info: FrameworkInfo }
 
-impl Default for MDBook {
-    fn default() -> Self {
+impl MDBook {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "mdBook",
                 website: Some("https://rust-lang.github.io/mdBook/"),
-                configs: Some(Vec::from(["book.toml"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "mdbook build",
@@ -44,6 +44,12 @@ impl Default for MDBook {
                 },
             }
         }
+    }
+}
+
+impl Default for MDBook {
+    fn default() -> Self {
+        MDBook::new(Some(Vec::from(["book.toml"])))
     }
 }
 
@@ -80,19 +86,9 @@ mod tests {
 
     #[test]
     fn test_mdbook() {
-        let book = MDBook {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/mdbook/book.toml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let book = MDBook::new(
+            Some(vec!["tests/resources/framework_configs/mdbook/book.toml"])
+        );
 
         let output = book.get_output_dir();
         assert_eq!(output, "build")

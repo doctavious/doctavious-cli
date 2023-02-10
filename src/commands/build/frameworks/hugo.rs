@@ -25,16 +25,13 @@ struct HugoConfig { publish_dir: Option<String> }
 
 pub struct Hugo { info: FrameworkInfo }
 
-impl Default for Hugo {
-    fn default() -> Self {
+impl Hugo {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Hexo",
                 website: Some("https://gohugo.io/"),
-                configs: Some(Vec::from([
-                    "config.json", "config.toml", "config.yaml",
-                    "hugo.json", "hugo.toml", "hugo.yaml"
-                ])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "hugo",
@@ -53,6 +50,17 @@ impl Default for Hugo {
                 },
             }
         }
+    }
+}
+
+impl Default for Hugo {
+    fn default() -> Self {
+        Hugo::new(
+            Some(Vec::from([
+                "config.json", "config.toml", "config.yaml",
+                "hugo.json", "hugo.toml", "hugo.yaml"
+            ]))
+        )
     }
 }
 
@@ -86,24 +94,13 @@ impl ConfigurationFileDeserialization for HugoConfig {}
 #[cfg(test)]
 mod tests {
     use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
     use super::Hugo;
 
     #[test]
     fn test_hugo() {
-        let hugo = Hugo {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/hugo/config.toml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let hugo = Hugo::new(
+            Some(vec!["tests/resources/framework_configs/hugo/config.toml"])
+        );
 
         let output = hugo.get_output_dir();
         assert_eq!(output, "build")

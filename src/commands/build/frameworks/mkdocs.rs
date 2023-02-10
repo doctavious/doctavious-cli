@@ -18,13 +18,13 @@ struct MKDocsConfig { site_dir: Option<String> }
 
 pub struct MKDocs { info: FrameworkInfo }
 
-impl Default for MKDocs {
-    fn default() -> Self {
+impl MKDocs {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "MkDocs",
                 website: Some("https://www.mkdocs.org/"),
-                configs: Some(Vec::from(["mkdocs.yml"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "mkdocs build",
@@ -43,6 +43,12 @@ impl Default for MKDocs {
                 },
             }
         }
+    }
+}
+
+impl Default for MKDocs {
+    fn default() -> Self {
+        MKDocs::new(Some(Vec::from(["mkdocs.yml"])))
     }
 }
 
@@ -76,24 +82,13 @@ impl ConfigurationFileDeserialization for MKDocsConfig {}
 #[cfg(test)]
 mod tests {
     use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
     use super::MKDocs;
 
     #[test]
     fn test_hugo() {
-        let mkdocs = MKDocs {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/mkdocs/mkdocs.yml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let mkdocs = MKDocs::new(
+            Some(vec!["tests/resources/framework_configs/mkdocs/mkdocs.yml"])
+        );
 
         let output = mkdocs.get_output_dir();
         assert_eq!(output, "build")

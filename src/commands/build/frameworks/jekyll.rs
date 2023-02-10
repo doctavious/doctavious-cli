@@ -21,13 +21,13 @@ struct JekyllConfig { destination: Option<String> }
 
 pub struct Jekyll { info: FrameworkInfo }
 
-impl Default for Jekyll {
-    fn default() -> Self {
+impl Jekyll {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Jekyll",
                 website: Some("https://jekyllrb.com/"),
-                configs: Some(Vec::from(["_config.yml", "_config.toml"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     // bundle exec jekyll build
@@ -47,6 +47,14 @@ impl Default for Jekyll {
                 },
             }
         }
+    }
+}
+
+impl Default for Jekyll {
+    fn default() -> Self {
+        Jekyll::new(
+            Some(Vec::from(["_config.yml", "_config.toml"]))
+        )
     }
 }
 
@@ -85,19 +93,9 @@ mod tests {
 
     #[test]
     fn test_jekyll() {
-        let jekyll = Jekyll {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/jekyll/_config.yml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let jekyll = Jekyll::new(
+            Some(vec!["tests/resources/framework_configs/jekyll/_config.yml"])
+        );
 
         let output = jekyll.get_output_dir();
         assert_eq!(output, "build")

@@ -37,18 +37,13 @@ struct VuePressConfig { dest: Option<String> }
 
 pub struct VuePress { info: FrameworkInfo }
 
-impl Default for VuePress{
-    fn default() -> Self {
+impl VuePress {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "VuePress",
                 website: Some("https://vuepress.vuejs.org/"),
-                configs: Some(vec![
-                    ".vuepress/config.js",
-                    ".vuepress/config.yml",
-                    ".vuepress/config.toml",
-                    ".vuepress/config.ts"
-                ]),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "vuepress build",
@@ -67,6 +62,19 @@ impl Default for VuePress{
                 },
             },
         }
+    }
+}
+
+impl Default for VuePress{
+    fn default() -> Self {
+        VuePress::new(
+            Some(vec![
+                ".vuepress/config.js",
+                ".vuepress/config.yml",
+                ".vuepress/config.toml",
+                ".vuepress/config.ts"
+            ])
+        )
     }
 }
 
@@ -155,19 +163,7 @@ mod tests {
             "tests/resources/framework_configs/vuepress/config.ts"
         ];
         for config in configs {
-            let vuepress = VuePress {
-                info: FrameworkInfo {
-                    name: "",
-                    website: None,
-                    configs: Some(vec![config]),
-                    project_file: None,
-                    build: FrameworkBuildSettings {
-                        command: "",
-                        command_args: None,
-                        output_directory: "",
-                    },
-                },
-            };
+            let vuepress = VuePress::new(Some(vec![config]));
 
             let output = vuepress.get_output_dir();
             assert_eq!(output, String::from("build"))

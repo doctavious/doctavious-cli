@@ -24,13 +24,15 @@ struct AntoraConfigOutputKeys { dir: Option<String> }
 struct AntoraConfig { output: Option<AntoraConfigOutputKeys> }
 
 pub struct Antora { info: FrameworkInfo }
-impl Default for Antora {
-    fn default() -> Self {
+
+impl Antora {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Antora",
                 website: Some("https://antora.org/"),
-                configs: Some(Vec::from(["antora-playbook.yaml"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "antora generate",
@@ -47,9 +49,17 @@ impl Default for Antora {
             },
         }
     }
+
+}
+
+impl Default for Antora {
+    fn default() -> Self {
+        Antora::new(Some(Vec::from(["antora-playbook.yaml"])))
+    }
 }
 
 impl FrameworkSupport for Antora {
+
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
     }
@@ -81,22 +91,11 @@ mod tests {
     use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
     use super::Antora;
 
-    // assert!(env::set_current_dir(&root).is_ok());
     #[test]
     fn test_antora() {
-        let antora = Antora {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/antora/antora-playbook.yaml"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let antora = Antora::new(
+            Some(vec!["tests/resources/framework_configs/antora/antora-playbook.yaml"])
+        );
 
         let output = antora.get_output_dir();
         assert_eq!(output, "./launch")

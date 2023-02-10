@@ -45,14 +45,20 @@ use crate::commands::build::framework::{
 struct DocusaurusV2Config { output: String }
 
 pub struct DocusaurusV2 { info: FrameworkInfo }
+impl DocusaurusV2 {
 
-impl Default for DocusaurusV2 {
-    fn default() -> Self {
+    // there is a saying that if things are hard to test then the design sucks (aka is wrong)
+    // and that might be true here. Testing that we can get output directory from a config,
+    // specifically a JS config, is hard. That is, configs have static names that we want to search
+    // for but the contents can have different structures that we ultimately want to test for.
+    // This forces us to have test config file names that differ from the predefined ones we would
+    // look for outside testing. I dont have a better idea on how to do this.
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Docusaurus 2",
                 website: Some("https://docusaurus.io/"),
-                configs: Some(Vec::from(["docusaurus.config.js"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "docusaurus build",
@@ -74,11 +80,20 @@ impl Default for DocusaurusV2 {
     }
 }
 
+
+impl Default for DocusaurusV2 {
+    fn default() -> Self {
+        DocusaurusV2::new(Some(Vec::from(["docusaurus.config.js"])))
+    }
+}
+
 impl FrameworkSupport for DocusaurusV2 {
     fn get_info(&self) -> &FrameworkInfo {
         &self.info
     }
 
+    // Vercel checks if there is a a single file (directory) under build and if so uses it
+    // otherwise uses build
     fn get_output_dir(&self) -> String {
         // doesnt support overriding via configuration file
         // TODO: look at package.json scripts build
@@ -100,19 +115,9 @@ mod tests {
 
     #[test]
     fn test_docusaurus() {
-        let docusaurus = DocusaurusV2 {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/docusaurus2/docusaurus.config.js"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            }
-        };
+        let docusaurus = DocusaurusV2::new(
+            Some(vec!["tests/resources/framework_configs/docusaurus2/docusaurus.config.js"])
+        );
 
         let output = docusaurus.get_output_dir();
         assert_eq!(output, "build")

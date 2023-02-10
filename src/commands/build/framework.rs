@@ -7,6 +7,7 @@ use swc::{self, config::Options, HandlerOpts, try_with_handler};
 use swc_common::{errors::{ColorConfig, Handler}, FileName, GLOBALS, SourceMap};
 use swc_ecma_ast::{*, EsVersion};
 use swc_ecma_parser::{EsConfig, Syntax};
+use crate::commands::build::infer::Framework;
 
 use crate::commands::build::js_module::parse_js_module;
 use crate::doctavious_error::DoctaviousError;
@@ -45,9 +46,6 @@ pub struct FrameworkInfo {
 
     pub build: FrameworkBuildSettings,
 
-    // pub install_command: Box<dyn Fn(&Self) -> String>,
-    // pub output_dir_name: Box<dyn Fn(&Self) -> String>,
-    // pub build_command: Box<dyn Fn(&Self) -> String>
 }
 
 pub struct FrameworkBuildSettings {
@@ -74,7 +72,6 @@ pub trait FrameworkSupport {
     fn get_info(&self) -> &FrameworkInfo;
 
     fn get_output_dir(&self) -> String {
-        // default implementation...this might not be necessary as we'll likely have custom for each
         self.get_info().build.output_directory.to_string()
     }
 }
@@ -104,52 +101,6 @@ pub trait ConfigurationFileDeserialization: for<'a> Deserialize<'a> {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// TODO: parse to generic or just parse to struct with output directory
-// could need to pass in key
-// TODO: swap if/else with enum match or some form of iteration? would be nice
-// not have to remember to add here and have compiler cause error or pick it up automatically
-// fn read_config_files<'a, T: ?Sized>(files: &Vec<String>) -> DoctaviousResult<T>
-// where for<'de> T: Deserialize<'de> + 'a
-// {
-//     for file in files {
-//         let path = Path::new(&file);
-//         if let Some(extension) = path.extension() {
-//             if let Ok(content) = fs::read_to_string(&file) {
-//                 if extension == "json" {
-//                     return Ok(serde_json::from_str::<T>(content.as_str())?);
-//                 } else if extension == "yaml" || extension == "yml" {
-//                     return Ok(serde_yaml::from_str::<T>(content.as_str())?);
-//                 } else if extension == "toml" {
-//                     return Ok(toml::from_str::<T>(content.as_str())?);
-//                 } else if extension == "js" || extension == "ts" || extension == "mjs" || extension == "cjs" {
-//                     let program = parse_js_module(path.to_owned().into(), content)?;
-//                     return from_program(program);
-//                     // return Ok(program.try_into()?);
-//                     // return Err(DoctaviousError::Msg("".to_string()));
-//
-//                 }
-//             }
-//         }
-//     }
-//
-//     return Err(DoctaviousError::Msg("".to_string()));
-// }
-
 pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResult<T>
     where T: ConfigurationFileDeserialization
 {
@@ -166,9 +117,6 @@ pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResul
                 } else if extension == "js" || extension == "ts" || extension == "mjs" || extension == "cjs" {
                     let program = parse_js_module(path.to_owned().into(), content)?;
                     return T::from_js_module(&program);
-                    // return Ok(program.try_into()?);
-                    // return Err(DoctaviousError::Msg("".to_string()));
-
                 }
             }
         }
@@ -176,57 +124,3 @@ pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResul
 
     return Err(DoctaviousError::Msg("".to_string()));
 }
-
-
-
-
-// #[cfg(test)]
-// mod tests {
-//     use crate::commands::build::frameworks::{Antora, Astro, DocFx, FrameworkInfo, FrameworkSupport};
-//
-//     #[test]
-//     fn test_antora() {
-//         let antora = Antora {
-//             info: FrameworkInfo {
-//                 name: "".to_string(),
-//                 website: None,
-//                 configs: Some(vec![String::from("antora-playbook.yaml")]),
-//                 project_file: None,
-//             },
-//         };
-//
-//         let output = antora.get_output_dir();
-//         println!("{}", output);
-//     }
-//
-//     #[test]
-//     fn test_astro() {
-//         let astro = Astro {
-//             info: FrameworkInfo {
-//                 name: "".to_string(),
-//                 website: None,
-//                 configs: Some(vec![String::from("tests/resources/framework_configs/astro/astro.config.mjs")]),
-//                 project_file: None,
-//             },
-//         };
-//
-//         let output = astro.get_output_dir();
-//         println!("{}", output);
-//     }
-//
-//     #[test]
-//     fn test_docfx() {
-//         let docfx = DocFx {
-//             info: FrameworkInfo {
-//                 name: "".to_string(),
-//                 website: None,
-//                 configs: Some(vec![String::from("tests/resources/framework_configs/docfx/docfx.json")]),
-//                 project_file: None,
-//             }
-//         };
-//
-//         let output = docfx.get_output_dir();
-//         println!("{}", output);
-//     }
-//
-// }

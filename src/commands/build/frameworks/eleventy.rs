@@ -29,13 +29,14 @@ struct EleventyConfig { output: String }
 
 pub struct Eleventy { info: FrameworkInfo }
 
-impl Default for Eleventy {
-    fn default() -> Self {
+impl Eleventy {
+
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Eleventy",
                 website: Some("https://www.11ty.dev/"),
-                configs: Some(Vec::from([".eleventy.js", "eleventy.config.js", "eleventy.config.cjs"])),
+                configs,
                 project_file: None,
                 build: FrameworkBuildSettings {
                     command: "eleventy",
@@ -51,6 +52,14 @@ impl Default for Eleventy {
                 },
             }
         }
+    }
+}
+
+impl Default for Eleventy {
+    fn default() -> Self {
+        Eleventy::new(
+            Some(Vec::from([".eleventy.js", "eleventy.config.js", "eleventy.config.cjs"])),
+        )
     }
 }
 
@@ -103,19 +112,9 @@ mod tests {
 
     #[test]
     fn test_eleventy() {
-        let eleventy = Eleventy {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/eleventy/.eleventy.js"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let eleventy = Eleventy::new(
+            Some(vec!["tests/resources/framework_configs/eleventy/.eleventy.js"])
+        );
 
         let output = eleventy.get_output_dir();
         assert_eq!(output, String::from("dist"))
