@@ -23,7 +23,6 @@ impl Astro {
                 name: "Astro",
                 website: Some("https://astro.build"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

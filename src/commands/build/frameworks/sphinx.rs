@@ -18,7 +18,6 @@ impl Sphinx {
                 name: "Sphinx",
                 website: Some("https://www.sphinx-doc.org/en/master/"),
                 configs,
-                // project_file: None,
                 language: Language::Python,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,
@@ -29,9 +28,9 @@ impl Sphinx {
                 build: FrameworkBuildSettings {
                     command: "sphinx-build",
                     command_args: Some(FrameworkBuildArgs {
-                        source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
+                        source: Some(FrameworkBuildArg::Arg{ index: 1, default_value: Some("docs") }),
                         config: None,
-                        output: Some(FrameworkBuildArg::Arg(2, None)) // TODO: should we default?
+                        output: Some(FrameworkBuildArg::Arg {index: 2, default_value: None }) // TODO: should we default?
                     }),
                     // TODO: must be passed in to command which presents a problem if we dont know
                     // where the build script is

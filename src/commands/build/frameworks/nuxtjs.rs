@@ -29,7 +29,6 @@ impl NuxtJS {
                 name: "Nuxt",
                 website: Some("https://nuxtjs.org/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

@@ -26,7 +26,6 @@ impl Antora {
                 name: "Antora",
                 website: Some("https://antora.org/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Any,
@@ -39,7 +38,7 @@ impl Antora {
                     command: "antora generate",
                     command_args: Some(FrameworkBuildArgs {
                         source: None,
-                        config: Some(FrameworkBuildArg::Arg(1, None)),
+                        config: Some(FrameworkBuildArg::Arg { index: 1, default_value: None }),
                         output: Some(FrameworkBuildArg::Option {
                             short: "",
                             long: "--to-dir"

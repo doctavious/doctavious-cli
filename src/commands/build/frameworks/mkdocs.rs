@@ -18,7 +18,6 @@ impl MKDocs {
                 name: "MkDocs",
                 website: Some("https://www.mkdocs.org/"),
                 configs,
-                // project_file: None,
                 language: Language::Python,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

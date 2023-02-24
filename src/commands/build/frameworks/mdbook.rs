@@ -22,7 +22,6 @@ impl MDBook {
                 name: "mdBook",
                 website: Some("https://rust-lang.github.io/mdBook/"),
                 configs,
-                // project_file: None,
                 language: Language::Rust,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

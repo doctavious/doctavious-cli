@@ -25,7 +25,6 @@ impl Hugo {
                 name: "Hexo",
                 website: Some("https://gohugo.io/"),
                 configs,
-                // project_file: None,
                 language: Language::Go,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

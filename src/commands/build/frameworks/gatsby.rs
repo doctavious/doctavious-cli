@@ -28,7 +28,6 @@ impl Gatsby {
                 name: "Gatsby",
                 website: Some("https://www.gatsbyjs.com/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

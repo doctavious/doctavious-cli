@@ -21,7 +21,6 @@ impl Jekyll {
                 name: "Jekyll",
                 website: Some("https://jekyllrb.com/"),
                 configs,
-                // project_file: None,
                 language: Language::Ruby,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

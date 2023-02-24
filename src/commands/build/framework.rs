@@ -170,7 +170,7 @@ pub struct FrameworkBuildArgs {
 pub enum FrameworkBuildArg {
     // TODO: include named arguments
     /// 0-based index of argument and default value
-    Arg(i8, Option<&'static str>),
+    Arg {index: i8, default_value: Option<&'static str> },
     // TODO: do we care short or long? how about use vec/array?
     Option { short: &'static str, long: &'static str }
 }

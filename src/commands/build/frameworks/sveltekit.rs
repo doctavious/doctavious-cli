@@ -27,7 +27,6 @@ impl SvelteKit {
                 name: "SvelteKit",
                 website: Some("https://kit.svelte.dev/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

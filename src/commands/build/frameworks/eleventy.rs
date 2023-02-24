@@ -29,7 +29,6 @@ impl Eleventy {
                 name: "Eleventy",
                 website: Some("https://www.11ty.dev/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

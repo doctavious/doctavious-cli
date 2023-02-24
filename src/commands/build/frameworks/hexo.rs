@@ -22,7 +22,6 @@ impl Hexo {
                 name: "Hexo",
                 website: Some("https://hexo.io/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

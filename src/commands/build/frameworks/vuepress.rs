@@ -35,7 +35,6 @@ impl VuePress {
                 name: "VuePress",
                 website: Some("https://vuepress.vuejs.org/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,
@@ -46,7 +45,7 @@ impl VuePress {
                 build: FrameworkBuildSettings {
                     command: "vuepress build",
                     command_args: Some(FrameworkBuildArgs {
-                        source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
+                        source: Some(FrameworkBuildArg::Arg {index: 1, default_value: Some("docs") }),
                         config: Some(FrameworkBuildArg::Option {
                             short: "-c",
                             long: "--config"

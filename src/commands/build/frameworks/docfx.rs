@@ -22,7 +22,6 @@ impl DocFx {
                 name: "DocFX",
                 website: Some("https://dotnet.github.io/docfx/"),
                 configs,
-                // project_file: None,
                 language: Language::DotNet,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

@@ -28,7 +28,6 @@ impl VitePress {
                 name: "VitePress",
                 website: Some("https://vitepress.vuejs.org/"),
                 configs,
-                // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,

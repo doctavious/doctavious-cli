@@ -24,14 +24,13 @@ struct StatiqConfig { }
 
 pub struct Statiq { info: FrameworkInfo }
 
-impl Default for Statiq {
-    fn default() -> Self {
+impl Statiq {
+    fn new(configs: Option<Vec<&'static str>>) -> Self {
         Self {
             info: FrameworkInfo {
                 name: "Statiq",
                 website: Some("https://www.statiq.dev/"),
-                configs: None,
-                // project_file: None,
+                configs,
                 language: Language::DotNet,
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Every,
@@ -43,9 +42,15 @@ impl Default for Statiq {
                     command: "",
                     command_args: None,
                     output_directory: "",
-                },
-            },
+                }
+            }
         }
+    }
+}
+
+impl Default for Statiq {
+    fn default() -> Self {
+        Statiq::new(None)
     }
 }
 
@@ -81,19 +86,7 @@ mod tests {
 
     #[test]
     fn test_statiq() {
-        let statiq = Statiq {
-            info: FrameworkInfo {
-                name: "",
-                website: None,
-                configs: Some(vec!["tests/resources/framework_configs/statiq/statiq.json"]),
-                project_file: None,
-                build: FrameworkBuildSettings {
-                    command: "",
-                    command_args: None,
-                    output_directory: "",
-                },
-            },
-        };
+        let statiq = Statiq::new(Some(vec!["tests/resources/framework_configs/statiq/statiq.json"]));
 
         let output = statiq.get_output_dir();
         assert_eq!(output, "output")
