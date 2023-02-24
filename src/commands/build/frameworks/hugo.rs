@@ -27,7 +27,7 @@ impl Hugo {
                 configs,
                 language: Language::Go,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
                         FrameworkDetectionItem::Config { content: Some("baseURL") }
                     ]

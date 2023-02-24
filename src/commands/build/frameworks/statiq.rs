@@ -33,7 +33,7 @@ impl Statiq {
                 configs,
                 language: Language::DotNet,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
                         FrameworkDetectionItem::Config { content: None }
                     ]

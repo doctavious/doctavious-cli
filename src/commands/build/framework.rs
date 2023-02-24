@@ -82,7 +82,7 @@ impl FrameworkInfo {
             };
 
             match &self.detection.matching_strategy {
-                FrameworkMatchingStrategy::Every => {
+                FrameworkMatchingStrategy::All => {
                     results.push(result);
                 }
                 FrameworkMatchingStrategy::Any => {
@@ -139,7 +139,7 @@ pub enum FrameworkDetectionItem {
 #[derive(Serialize)]
 pub enum FrameworkMatchingStrategy {
     /// Strategy that requires all detectors must match
-    Every, // TODO: change to all
+    All,
 
     /// Strategy where one match causes the framework to be detected
     Any

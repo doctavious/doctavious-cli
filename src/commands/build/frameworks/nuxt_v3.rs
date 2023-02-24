@@ -21,7 +21,7 @@ impl Nuxt3JS {
                 configs,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
                         FrameworkDetectionItem::Package {dependency: "nuxt3"},
                     ]

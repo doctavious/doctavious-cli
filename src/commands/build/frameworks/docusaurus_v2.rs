@@ -55,7 +55,7 @@ impl DocusaurusV2 {
                 // project_file: None,
                 language: Language::Javascript,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
                         FrameworkDetectionItem::Package {dependency: "@docusaurus/core"}
                     ]

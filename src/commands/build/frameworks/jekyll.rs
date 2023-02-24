@@ -23,7 +23,7 @@ impl Jekyll {
                 configs,
                 language: Language::Ruby,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
                         FrameworkDetectionItem::Package {dependency: "jekyll"}
                     ]
