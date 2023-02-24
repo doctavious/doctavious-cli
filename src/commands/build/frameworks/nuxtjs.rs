@@ -34,7 +34,6 @@ impl NuxtJS {
                     matching_strategy: FrameworkMatchingStrategy::Every,
                     detectors: vec![
                         FrameworkDetectionItem::Package {dependency: "nuxt"},
-                        FrameworkDetectionItem::Package {dependency: "nuxt3"}, // TODO: delete when adding nuxt_v3
                         FrameworkDetectionItem::Package {dependency: "nuxt-edge"}
                     ]
                 },
