@@ -1,17 +1,28 @@
-use lazy_static::lazy_static;
-use serde::ser::SerializeSeq;
-use serde::{Serialize, Serializer};
-
-use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_CONFIG_NAME};
-use clap::Parser;
 use std::collections::HashMap;
 use std::env;
+use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs::{self};
-use std::io::ErrorKind;
 use std::io::{self};
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
+
+use clap::Parser;
+use lazy_static::lazy_static;
+use serde::{Serialize, Serializer};
+use serde::ser::SerializeSeq;
+
+use crate::commands::build::{BuildCommand, handle_build_command};
+use crate::commands::design_decisions::adr::{ADR, handle_adr_command};
+use crate::commands::design_decisions::rfd::{handle_rfd_command, RFD};
+use crate::commands::til::{handle_til_command, Til};
+use crate::constants::{DEFAULT_ADR_TEMPLATE_PATH, DEFAULT_CONFIG_NAME};
+use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
+use crate::doctavious_error::Result as DoctaviousResult;
+use crate::file_structure::FileStructure;
+use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
+use crate::output::{Output, parse_output, print_output};
+use crate::utils::{parse_enum};
 
 mod commands;
 mod constants;
@@ -29,29 +40,6 @@ mod settings;
 mod templates;
 mod utils;
 mod files;
-
-use crate::commands::build::{
-    BuildCommand, build
-};
-use crate::commands::build_toc;
-use crate::commands::design_decisions::adr::{graph_adrs, init_adr, new_adr, reserve_adr, ADRCommand, GenerateAdrsCommand, ADR, handle_adr_command};
-use crate::commands::design_decisions::rfd::{
-    graph_rfds, init_rfd, new_rfd, reserve_rfd, GenerateRFDsCommand, handle_rfd_command,
-    RFDCommand, RFD,
-};
-use crate::commands::til::{build_til_readme, handle_til_command, init_til, new_til, Til, TilCommand};
-use crate::constants::{DEFAULT_ADR_DIR, DEFAULT_RFD_DIR};
-use crate::doctavious_error::{Result as DoctaviousResult};
-use crate::file_structure::FileStructure;
-use crate::markup_format::MARKUP_FORMAT_EXTENSIONS;
-use crate::output::{parse_output, print_output, Output};
-use crate::settings::{
-    load_settings, persist_settings, AdrSettings, RFDSettings, TilSettings,
-    SETTINGS,
-};
-use crate::utils::list;
-use crate::utils::{format_number, is_valid_file, parse_enum};
-use std::error::Error;
 
 #[derive(Parser, Debug)]
 #[command(name = "Doctavious")]
@@ -217,9 +205,7 @@ fn main() -> DoctaviousResult<()> {
     match opt.cmd {
         Command::Adr(adr) => return handle_adr_command(adr, opt.output),
 
-        Command::Build(cmd) => {
-            return build(None);
-        },
+        Command::Build(cmd) => return handle_build_command(cmd, opt.output),
 
         Command::Presentation(params) => {
             // TODO: implement
