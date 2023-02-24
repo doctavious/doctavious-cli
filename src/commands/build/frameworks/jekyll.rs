@@ -6,15 +6,8 @@
 // jekyll build -d, --destination DIR
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 struct JekyllConfig { destination: Option<String> }
@@ -28,7 +21,14 @@ impl Jekyll {
                 name: "Jekyll",
                 website: Some("https://jekyllrb.com/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Ruby,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "jekyll"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     // bundle exec jekyll build
                     command: "jekyll build",
@@ -88,7 +88,7 @@ impl ConfigurationFileDeserialization for JekyllConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Jekyll;
 
     #[test]

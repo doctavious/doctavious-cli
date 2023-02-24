@@ -6,15 +6,8 @@
 // hexo --config custom.yml
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 struct HexoConfig { public_dir: Option<String> }
@@ -29,7 +22,14 @@ impl Hexo {
                 name: "Hexo",
                 website: Some("https://hexo.io/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "hexo"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "hexo generate",
                     command_args: Some(FrameworkBuildArgs {
@@ -82,7 +82,7 @@ impl ConfigurationFileDeserialization for HexoConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Hexo;
 
     #[test]

@@ -54,6 +54,7 @@ swc_ecma_parser = "0.124.2"
 swc = "0.245.5"
 swc_common = { version = "0.29.27", features = ["tty-emitter"] }
 swc_ecma_ast = "0.96.1"
+serde-xml-rs = "0.6.0"
 
 # presentations
 # https://github.com/marp-team/marpit
@@ -85,4 +86,7 @@ walkdir = "2.3.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.0"
+once_cell = "1.17.1"
+serial_test = "1.0.0"
 temp-env = "0.3.1"
+tempfile = "3"

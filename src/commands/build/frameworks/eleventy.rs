@@ -9,18 +9,10 @@
 
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::Stmt::Expr;
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
 use crate::commands::build::js_module::{get_assignment_function, get_function_return_obj, get_obj_property, get_string_property_value};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -37,7 +29,14 @@ impl Eleventy {
                 name: "Eleventy",
                 website: Some("https://www.11ty.dev/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "@11ty/eleventy"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "eleventy",
                     command_args: Some(FrameworkBuildArgs {
@@ -107,7 +106,7 @@ impl ConfigurationFileDeserialization for EleventyConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Eleventy;
 
     #[test]

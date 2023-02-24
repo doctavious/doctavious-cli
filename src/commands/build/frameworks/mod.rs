@@ -41,7 +41,7 @@ mod vuepress;
 // I wish Box<dyn> hasnt necessary and maybe its not with a different structure
 // but I'm at a loss for how how to structure these frameworks and allow fn overrides,
 // so I suppose this will have to work until I or someone else comes up with something better
-pub fn get_frameworks<>() -> Vec<Box<dyn FrameworkSupport>> {
+pub fn get_frameworks() -> Vec<Box<dyn FrameworkSupport>> {
     let mut frameworks = Vec::<Box<dyn FrameworkSupport>>::new();
     frameworks.push(Box::new(Antora::default()));
     frameworks.push(Box::new(Astro::default()));

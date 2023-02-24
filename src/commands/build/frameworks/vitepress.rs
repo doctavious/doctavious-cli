@@ -9,19 +9,10 @@
 
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
-use swc_ecma_ast::Stmt::{Decl};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
-use crate::commands::build::js_module::{get_call_string_property, get_variable_property_as_string, is_call_ident, PropertyAccessor};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{PropertyAccessor};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -37,7 +28,14 @@ impl VitePress {
                 name: "VitePress",
                 website: Some("https://vitepress.vuejs.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "vitepress"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "vitepress build docs",
                     command_args: None, // TODO: check
@@ -130,7 +128,7 @@ impl ConfigurationFileDeserialization for VitePressConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::VitePress;
 
     #[test]

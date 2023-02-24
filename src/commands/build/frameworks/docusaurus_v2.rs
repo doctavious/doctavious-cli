@@ -28,15 +28,8 @@
 
 use serde::{Deserialize};
 
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
 // and ConfigurationFileDeserialization?
@@ -59,7 +52,14 @@ impl DocusaurusV2 {
                 name: "Docusaurus 2",
                 website: Some("https://docusaurus.io/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "@docusaurus/core"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "docusaurus build",
                     command_args: Some(FrameworkBuildArgs {
@@ -115,6 +115,7 @@ mod tests {
 
     #[test]
     fn test_docusaurus() {
+        // TODO: lets just put file contents in tests and write to tempdir + known file
         let docusaurus = DocusaurusV2::new(
             Some(vec!["tests/resources/framework_configs/docusaurus2/docusaurus.config.js"])
         );

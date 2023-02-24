@@ -1,3 +1,4 @@
+use glob::PatternError;
 use thiserror::Error;
 
 // #[non_exhaustive]
@@ -67,6 +68,12 @@ pub enum DoctaviousError {
     #[error("Serde yaml error: `{0}`")]
     SerdeYaml(#[from] serde_yaml::Error),
 
+    #[error("Serde xml error: `{0}`")]
+    SerdeXml(#[from] serde_xml_rs::Error),
+
+    #[error("Pattern error: `{0}`")]
+    PatternError(#[from] PatternError),
+
     /// Error that may occur while reserving ADR/RFD number.
     #[error("{0} has already been reserved")]
     ReservedNumberError(i32),
@@ -89,5 +96,6 @@ pub struct EnumError {
     pub message: String,
 }
 
+// TODO: dont rename result and just use DoctaviousResult
 pub type Result<T> = core::result::Result<T, DoctaviousError>;
 // pub type Result<T, E = Error> = std::result::Result<T, E>;

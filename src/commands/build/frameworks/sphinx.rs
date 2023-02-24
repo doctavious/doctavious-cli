@@ -5,15 +5,8 @@
 // BUILDDIR env var
 
 use std::env;
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport};
+use crate::commands::build::language::Language;
 
 pub struct Sphinx { info: FrameworkInfo }
 
@@ -25,16 +18,23 @@ impl Sphinx {
                 name: "Sphinx",
                 website: Some("https://www.sphinx-doc.org/en/master/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Python,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Config { content: None }
+                    ]
+                },
                 build: FrameworkBuildSettings {
-                    // docs docs/_build
                     command: "sphinx-build",
                     command_args: Some(FrameworkBuildArgs {
                         source: Some(FrameworkBuildArg::Arg(1, Some("docs"))),
                         config: None,
                         output: Some(FrameworkBuildArg::Arg(2, None)) // TODO: should we default?
                     }),
-                    // TODO: must be passed in to command which presents a problem if we dont know where the build script is
+                    // TODO: must be passed in to command which presents a problem if we dont know
+                    // where the build script is
                     output_directory: "docs/_build",
                 },
             },
@@ -67,10 +67,7 @@ impl FrameworkSupport for Sphinx {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
-
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Sphinx;
 
     #[test]

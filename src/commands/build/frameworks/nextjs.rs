@@ -6,18 +6,10 @@
 // change be changed via distDir
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::Stmt::{Decl, Expr};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
-use crate::commands::build::js_module::{get_string_property_value, get_variable_properties, get_variable_property_as_string, PropertyAccessor};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{PropertyAccessor};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -33,7 +25,14 @@ impl NextJS {
                 name: "Next.js",
                 website: Some("https://nextjs.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "next"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "next build",
                     command_args: None,
@@ -116,7 +115,7 @@ impl ConfigurationFileDeserialization for NextJSConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::NextJS;
 
     #[test]

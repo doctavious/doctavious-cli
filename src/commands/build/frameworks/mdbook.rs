@@ -3,15 +3,8 @@
 // change be changed via build.build-dir
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -29,7 +22,14 @@ impl MDBook {
                 name: "mdBook",
                 website: Some("https://rust-lang.github.io/mdBook/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Rust,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Config { content: None }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "mdbook build",
                     command_args: Some(FrameworkBuildArgs {
@@ -81,7 +81,7 @@ impl ConfigurationFileDeserialization for MDBookConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::MDBook;
 
     #[test]

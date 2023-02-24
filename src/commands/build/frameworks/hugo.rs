@@ -9,15 +9,8 @@
 // can be changed via publishDir
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +25,14 @@ impl Hugo {
                 name: "Hexo",
                 website: Some("https://gohugo.io/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Go,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Config { content: Some("baseURL") }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "hugo",
                     command_args: Some(FrameworkBuildArgs {
@@ -93,7 +93,7 @@ impl ConfigurationFileDeserialization for HugoConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Hugo;
 
     #[test]

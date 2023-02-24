@@ -6,17 +6,10 @@
 
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, ModuleDecl, Program};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
 use crate::commands::build::js_module::{get_call_expression, get_call_string_property};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::DoctaviousError;
 use crate::DoctaviousResult;
 
@@ -30,7 +23,14 @@ impl Astro {
                 name: "Astro",
                 website: Some("https://astro.build"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package { dependency: "astro" }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "astro build",
                     command_args: Some(FrameworkBuildArgs {
@@ -99,7 +99,7 @@ impl ConfigurationFileDeserialization for AstroConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Astro;
 
     #[test]

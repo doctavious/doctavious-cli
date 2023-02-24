@@ -5,19 +5,11 @@
 
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::Stmt::{Decl};
+use swc_ecma_ast::{Program};
 
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
-use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties, PropertyAccessor};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{get_string_property_value, get_variable_declaration, get_variable_properties};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -35,7 +27,14 @@ impl SvelteKit {
                 name: "SvelteKit",
                 website: Some("https://kit.svelte.dev/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "@sveltejs/kit"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "vite build",
                     command_args: Some(FrameworkBuildArgs {
@@ -121,7 +120,7 @@ impl ConfigurationFileDeserialization for SvelteKitConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::SvelteKit;
 
     #[test]

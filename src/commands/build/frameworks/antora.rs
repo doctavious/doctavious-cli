@@ -7,15 +7,8 @@
 
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 struct AntoraConfigOutputKeys { dir: Option<String> }
@@ -33,7 +26,15 @@ impl Antora {
                 name: "Antora",
                 website: Some("https://antora.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Any,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package { dependency: "@antora/cli" },
+                        FrameworkDetectionItem::Package { dependency: "@antora/site-generator" }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "antora generate",
                     command_args: Some(FrameworkBuildArgs {
@@ -88,7 +89,7 @@ impl ConfigurationFileDeserialization for AntoraConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Antora;
 
     #[test]

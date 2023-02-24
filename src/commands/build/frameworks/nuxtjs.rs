@@ -9,19 +9,11 @@
 // dist/
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
+use swc_ecma_ast::{Program};
 
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
-use crate::commands::build::js_module::{get_string_property_value, PropertyAccessor};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{PropertyAccessor};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::Result as DoctaviousResult;
 use crate::doctavious_error::DoctaviousError;
 
@@ -37,7 +29,16 @@ impl NuxtJS {
                 name: "Nuxt",
                 website: Some("https://nuxtjs.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "nuxt"},
+                        FrameworkDetectionItem::Package {dependency: "nuxt3"}, // TODO: delete when adding nuxt_v3
+                        FrameworkDetectionItem::Package {dependency: "nuxt-edge"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "nuxt build",
                     command_args: None,
@@ -108,7 +109,7 @@ impl ConfigurationFileDeserialization for NuxtJSConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::NuxtJS;
 
     #[test]

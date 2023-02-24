@@ -13,15 +13,8 @@
 
 use serde::{Serialize, Deserialize, de};
 use swc_ecma_ast::Program;
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 // #[derive(Deserialize)]
 // struct AntoraConfigOutputKeys { dir: String }
@@ -38,7 +31,14 @@ impl Default for Statiq {
                 name: "Statiq",
                 website: Some("https://www.statiq.dev/"),
                 configs: None,
-                project_file: None,
+                // project_file: None,
+                language: Language::DotNet,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Config { content: None }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "",
                     command_args: None,

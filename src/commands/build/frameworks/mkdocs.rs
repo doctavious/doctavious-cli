@@ -3,15 +3,8 @@
 // change be changed via site_dir
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 struct MKDocsConfig { site_dir: Option<String> }
@@ -25,7 +18,14 @@ impl MKDocs {
                 name: "MkDocs",
                 website: Some("https://www.mkdocs.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Python,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package { dependency: "mkdocs" }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "mkdocs build",
                     command_args: Some(FrameworkBuildArgs {
@@ -81,7 +81,7 @@ impl ConfigurationFileDeserialization for MKDocsConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::MKDocs;
 
     #[test]

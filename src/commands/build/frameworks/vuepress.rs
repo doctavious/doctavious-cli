@@ -16,19 +16,10 @@
 
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::ModuleDecl::ExportDefaultExpr;
-use swc_ecma_ast::Stmt::{Expr};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
-use crate::commands::build::js_module::{get_call_string_property, get_string_property_value, is_call_ident, PropertyAccessor};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::js_module::{PropertyAccessor};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::DoctaviousError;
 use crate::doctavious_error::{Result as DoctaviousResult};
 
@@ -44,7 +35,14 @@ impl VuePress {
                 name: "VuePress",
                 website: Some("https://vuepress.vuejs.org/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "vuepress"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "vuepress build",
                     command_args: Some(FrameworkBuildArgs {
@@ -152,7 +150,7 @@ impl ConfigurationFileDeserialization for VuePressConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::VuePress;
 
     #[test]

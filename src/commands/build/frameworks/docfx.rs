@@ -4,15 +4,8 @@
 // docfx build [-o:<output_path>] [-t:<template folder>]
 
 use serde::{Deserialize};
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildArg, FrameworkBuildArgs, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
+use crate::commands::build::language::Language;
 
 #[derive(Deserialize)]
 struct DocFxConfigBuild { dest: String }
@@ -29,7 +22,14 @@ impl DocFx {
                 name: "DocFX",
                 website: Some("https://dotnet.github.io/docfx/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::DotNet,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Config { content: None }
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "docfx build",
                     command_args: Some(FrameworkBuildArgs {
@@ -79,7 +79,7 @@ impl ConfigurationFileDeserialization for DocFxConfig {}
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use crate::commands::build::frameworks::docfx::DocFx;
 
     #[test]

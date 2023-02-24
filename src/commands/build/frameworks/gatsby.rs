@@ -6,19 +6,10 @@
 // gatsby build
 
 use serde::{Deserialize};
-use swc_ecma_ast::{Lit, Program};
-use swc_ecma_ast::Stmt::{Expr};
-
-use crate::commands::build::framework::{
-    ConfigurationFileDeserialization,
-    FrameworkBuildArg,
-    FrameworkBuildArgs,
-    FrameworkBuildSettings,
-    FrameworkInfo,
-    FrameworkSupport,
-    read_config_files
-};
+use swc_ecma_ast::{Program};
+use crate::commands::build::framework::{ConfigurationFileDeserialization, FrameworkBuildSettings, FrameworkDetectionItem, FrameworkDetector, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport, read_config_files};
 use crate::commands::build::js_module::{find_array_element, get_array_property, get_assignment_obj, get_obj_property, get_string_property_value};
+use crate::commands::build::language::Language;
 use crate::doctavious_error::{DoctaviousError, Result as DoctaviousResult};
 
 // TODO: given there is no option to override does it make sense to still enforce Deserialize
@@ -37,7 +28,14 @@ impl Gatsby {
                 name: "Gatsby",
                 website: Some("https://www.gatsbyjs.com/"),
                 configs,
-                project_file: None,
+                // project_file: None,
+                language: Language::Javascript,
+                detection: FrameworkDetector {
+                    matching_strategy: FrameworkMatchingStrategy::Every,
+                    detectors: vec![
+                        FrameworkDetectionItem::Package {dependency: "gatsby"}
+                    ]
+                },
                 build: FrameworkBuildSettings {
                     command: "gatsby build",
                     command_args: None,
@@ -100,7 +98,7 @@ impl ConfigurationFileDeserialization for GatsbyConfig {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::build::framework::{FrameworkBuildSettings, FrameworkInfo, FrameworkSupport};
+    use crate::commands::build::framework::{FrameworkSupport};
     use super::Gatsby;
 
     #[test]
