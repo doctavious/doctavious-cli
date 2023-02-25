@@ -26,7 +26,6 @@ pub struct FrameworkInfo {
     /// https://nextjs.org
     pub website: Option<&'static str>,
 
-    // TODO: could string be a glob?
     // TODO: does this really need to be an Option? How about just empty?
     /// List of potential config files
     pub configs: Option<Vec<&'static str>>,
@@ -111,23 +110,15 @@ pub struct FrameworkDetector {
 pub enum FrameworkDetectionItem {
 
     // TODO: regex
-    Config { content: Option<&'static str> },
+    /// A matcher for a config file
+    Config {
+        /// Content that must be present in the config file
+        content: Option<&'static str>
+    },
 
+    /// A matcher for a dependency found in project file
     Dependency { name: &'static str }
 }
-
-// TODO: better name. Enum?
-// pub struct FrameworkDetectionItem {
-//     /// A file path to detect.
-//     path: Option<String>,
-//     /// A matcher for the entire file.
-//     /// @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
-//     matchContent: Option<String>,
-//     // TODO: we need to support more than just package.json ex: .NET core
-//     /// A matcher for a package specifically found in a "package.json" file.
-//     /// @example "\"(dev)?(d|D)ependencies\":\\s*{[^}]*\"next\":\\s*\".+?\"[^}]*}"
-//     matchPackage: Option<String>
-// }
 
 
 // TODO: change name?
@@ -199,7 +190,7 @@ pub trait ConfigurationFileDeserialization: for<'a> Deserialize<'a> {
     }
 
     fn from_js_module(program: &Program) -> DoctaviousResult<Self> {
-        // TODO: not implemented
+        // TODO: not implemented error
         Err(DoctaviousError::Msg("not implemented".to_string()))
     }
 }
@@ -211,15 +202,15 @@ pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResul
         let path = Path::new(&file);
         if let Some(extension) = path.extension() {
             if let Ok(content) = fs::read_to_string(&file) {
-                if extension == "json" {
-                    return T::from_json(content.as_str());
-                } else if extension == "yaml" || extension == "yml" {
-                    return T::from_yaml(content.as_str());
-                } else if extension == "toml" {
-                    return T::from_toml(content.as_str());
-                } else if extension == "js" || extension == "ts" || extension == "mjs" || extension == "cjs" {
-                    let program = parse_js_module(path.to_owned().into(), content)?;
-                    return T::from_js_module(&program);
+                return match extension.to_str() {
+                    Some("json") => T::from_json(content.as_str()),
+                    Some("yaml") | Some("yml") => T::from_yaml(content.as_str()),
+                    Some("toml") => T::from_toml(content.as_str()),
+                    Some("js") | Some("ts") | Some("mjs") | Some("cjs") => {
+                        let program = parse_js_module(path.to_owned().into(), content)?;
+                        return T::from_js_module(&program);
+                    }
+                    _ => Err(DoctaviousError::Msg(format!("unknown extension {:?}", extension).to_string()))
                 }
             }
         }
