@@ -26,7 +26,7 @@ impl Hexo {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "hexo"}
+                        FrameworkDetectionItem::Dependency { name: "hexo"}
                     ]
                 },
                 build: FrameworkBuildSettings {

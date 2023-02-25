@@ -31,7 +31,7 @@ impl SvelteKit {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "@sveltejs/kit"}
+                        FrameworkDetectionItem::Dependency { name: "@sveltejs/kit"}
                     ]
                 },
                 build: FrameworkBuildSettings {

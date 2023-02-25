@@ -30,8 +30,8 @@ impl Antora {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::Any,
                     detectors: vec![
-                        FrameworkDetectionItem::Package { dependency: "@antora/cli" },
-                        FrameworkDetectionItem::Package { dependency: "@antora/site-generator" }
+                        FrameworkDetectionItem::Dependency { name: "@antora/cli" },
+                        FrameworkDetectionItem::Dependency { name: "@antora/site-generator" }
                     ]
                 },
                 build: FrameworkBuildSettings {

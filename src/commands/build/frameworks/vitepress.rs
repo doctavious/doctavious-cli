@@ -32,7 +32,7 @@ impl VitePress {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "vitepress"}
+                        FrameworkDetectionItem::Dependency { name: "vitepress"}
                     ]
                 },
                 build: FrameworkBuildSettings {

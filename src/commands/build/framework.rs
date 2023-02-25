@@ -71,7 +71,7 @@ impl FrameworkInfo {
                     }
                     false
                 }
-                FrameworkDetectionItem::Package { dependency } => {
+                FrameworkDetectionItem::Dependency { name: dependency } => {
                     for pck_manager in self.language.get_package_managers() {
                         if pck_manager.has_dependency(dependency) {
                             return true;
@@ -109,16 +109,11 @@ pub struct FrameworkDetector {
 
 #[derive(Serialize)]
 pub enum FrameworkDetectionItem {
-    // TODO: should path support glob or should we force individual items?
 
-    // /// content - regex
-    // Config { path: String, content: Option<String> },
+    // TODO: regex
     Config { content: Option<&'static str> },
 
-    // TODO: change to Dependency with a name
-    // /// content - regex
-    // Package { path: String, content: String }
-    Package { dependency: &'static str }
+    Dependency { name: &'static str }
 }
 
 // TODO: better name. Enum?
@@ -136,16 +131,15 @@ pub enum FrameworkDetectionItem {
 
 
 // TODO: change name?
+/// Matching strategies to match on a framework
 #[derive(Serialize)]
 pub enum FrameworkMatchingStrategy {
-    /// Strategy that requires all detectors must match
+    /// Strategy that requires all detectors to match for the framework to be detected
     All,
 
     /// Strategy where one match causes the framework to be detected
     Any
 }
-
-
 
 
 #[derive(Serialize)]

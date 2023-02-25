@@ -29,7 +29,7 @@ impl NextJS {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "next"}
+                        FrameworkDetectionItem::Dependency { name: "next"}
                     ]
                 },
                 build: FrameworkBuildSettings {

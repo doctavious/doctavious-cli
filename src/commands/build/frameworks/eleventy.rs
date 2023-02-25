@@ -33,7 +33,7 @@ impl Eleventy {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "@11ty/eleventy"}
+                        FrameworkDetectionItem::Dependency { name: "@11ty/eleventy"}
                     ]
                 },
                 build: FrameworkBuildSettings {

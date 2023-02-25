@@ -33,8 +33,8 @@ impl NuxtJS {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "nuxt"},
-                        FrameworkDetectionItem::Package {dependency: "nuxt-edge"}
+                        FrameworkDetectionItem::Dependency { name: "nuxt"},
+                        FrameworkDetectionItem::Dependency { name: "nuxt-edge"}
                     ]
                 },
                 build: FrameworkBuildSettings {

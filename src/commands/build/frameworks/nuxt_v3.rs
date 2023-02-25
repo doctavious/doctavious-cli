@@ -23,7 +23,7 @@ impl Nuxt3JS {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "nuxt3"},
+                        FrameworkDetectionItem::Dependency { name: "nuxt3"},
                     ]
                 },
                 build: FrameworkBuildSettings {

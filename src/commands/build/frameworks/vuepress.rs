@@ -39,7 +39,7 @@ impl VuePress {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "vuepress"}
+                        FrameworkDetectionItem::Dependency { name: "vuepress"}
                     ]
                 },
                 build: FrameworkBuildSettings {

@@ -57,7 +57,7 @@ impl DocusaurusV2 {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "@docusaurus/core"}
+                        FrameworkDetectionItem::Dependency { name: "@docusaurus/core"}
                     ]
                 },
                 build: FrameworkBuildSettings {

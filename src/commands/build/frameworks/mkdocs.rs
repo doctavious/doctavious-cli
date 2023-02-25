@@ -22,7 +22,7 @@ impl MKDocs {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package { dependency: "mkdocs" }
+                        FrameworkDetectionItem::Dependency { name: "mkdocs" }
                     ]
                 },
                 build: FrameworkBuildSettings {

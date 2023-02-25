@@ -32,7 +32,7 @@ impl Gatsby {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "gatsby"}
+                        FrameworkDetectionItem::Dependency { name: "gatsby"}
                     ]
                 },
                 build: FrameworkBuildSettings {

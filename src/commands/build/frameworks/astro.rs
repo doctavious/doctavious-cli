@@ -27,7 +27,7 @@ impl Astro {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package { dependency: "astro" }
+                        FrameworkDetectionItem::Dependency { name: "astro" }
                     ]
                 },
                 build: FrameworkBuildSettings {

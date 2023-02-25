@@ -25,7 +25,7 @@ impl Jekyll {
                 detection: FrameworkDetector {
                     matching_strategy: FrameworkMatchingStrategy::All,
                     detectors: vec![
-                        FrameworkDetectionItem::Package {dependency: "jekyll"}
+                        FrameworkDetectionItem::Dependency { name: "jekyll"}
                     ]
                 },
                 build: FrameworkBuildSettings {
