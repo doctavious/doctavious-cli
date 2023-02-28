@@ -13,6 +13,26 @@ pub(crate) struct CSProj {
     pub item_groups: Vec<ItemGroup>
 }
 
+impl CSProj {
+
+    // if we want to get version this could be get_package_reference and have it return Option
+    pub(crate) fn has_package_reference(&self, package_reference: &str) -> bool {
+        for item_group in &self.item_groups {
+            // could also do item_group.package_references.unwrap_or_default()
+            if let Some(package_references ) = &item_group.package_references {
+                for pkref in package_references {
+                    if package_reference == pkref.include {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+}
+
 /// Contains a set of user-defined Item elements.
 /// Every item used in an MSBuild project must be specified as a child of an ItemGroup element.
 #[derive(Debug, Deserialize, PartialEq)]
