@@ -4,6 +4,8 @@ mod frameworks;
 mod js_module;
 mod language;
 mod package_manager;
+mod project_file;
+mod framework_detection;
 
 use std::process::Command;
 use std::path::PathBuf;

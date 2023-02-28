@@ -71,11 +71,16 @@ impl FrameworkInfo {
                     false
                 }
                 FrameworkDetectionItem::Dependency { name: dependency } => {
-                    for pck_manager in self.language.get_package_managers() {
-                        if pck_manager.has_dependency(dependency) {
-                            return true;
-                        }
+                    for project_file in self.language.project_files() {
+                        // if project_file.has_dependency(dependency) {
+                        //     return true;
+                        // }
                     }
+                    // for pck_manager in self.language.get_package_managers() {
+                    //     if pck_manager.has_dependency(dependency) {
+                    //         return true;
+                    //     }
+                    // }
                     false
                 }
             };
@@ -210,7 +215,7 @@ pub(crate) fn read_config_files<T>(files: &Vec<&'static str>) -> DoctaviousResul
                         let program = parse_js_module(path.to_owned().into(), content)?;
                         return T::from_js_module(&program);
                     }
-                    _ => Err(DoctaviousError::Msg(format!("unknown extension {:?}", extension).to_string()))
+                    _ => Err(DoctaviousError::Msg(format!("unknown extension {:?}", extension)))
                 }
             }
         }
