@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use glob::glob;
 use serde_derive::Serialize;
 use crate::commands::build::package_manager::{PackageManager, PackageManagerInfo};
-use crate::commands::build::project_file::{Proj, ProjectFile};
+use crate::commands::build::projects::project_file::{Proj, ProjectFile};
 
 #[non_exhaustive]
 #[derive(Serialize)]

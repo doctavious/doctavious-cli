@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use glob::glob;
 use serde_derive::{Serialize};
 use serde_json::Value;
-use crate::commands::build::csproj::CSProj;
+use crate::commands::build::projects::csproj::CSProj;
 use crate::commands::build::package_manager::PackageManager;
 use crate::doctavious_error::Result as DoctaviousResult;
 

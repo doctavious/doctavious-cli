@@ -5,7 +5,7 @@ use serde_derive::{Serialize};
 use serde_json::Value;
 use serde_xml_rs::Error;
 use crate::doctavious_error::Result as DoctaviousResult;
-use crate::commands::build::csproj::CSProj;
+use crate::commands::build::projects::csproj::CSProj;
 
 // TODO: should I flip relationship and instead have Projects with supported package managers?
 

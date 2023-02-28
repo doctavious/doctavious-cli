@@ -1,8 +1,8 @@
 use std::fs;
 use serde_json::Value;
-use crate::commands::build::csproj::CSProj;
+use crate::commands::build::projects::csproj::CSProj;
 use crate::commands::build::framework::{FrameworkDetectionItem, FrameworkInfo, FrameworkMatchingStrategy};
-use crate::commands::build::project_file::{Proj, ProjectFile};
+use crate::commands::build::projects::project_file::{Proj, ProjectFile};
 use crate::doctavious_error::Result as DoctaviousResult;
 
 // Return matched Framework
