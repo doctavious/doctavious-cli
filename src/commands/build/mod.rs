@@ -21,6 +21,7 @@ use crate::settings::{SETTINGS, SETTINGS_FILE};
 // https://github.com/vercel/vercel/blob/6b23950b650011f612b62c1b2c79982cdee76bf9/packages/frameworks/src/frameworks.ts
 // https://github.com/vercel/vercel/tree/6b23950b650011f612b62c1b2c79982cdee76bf9/packages/fs-detectors
 
+// The build command can be used to build a projects locally or in your own CI environment
 #[derive(Parser, Debug)]
 #[command(about = "Build on your local machine")]
 pub(crate) struct BuildCommand {

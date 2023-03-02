@@ -23,6 +23,7 @@ mod software_template;
 mod tag;
 pub mod telemetry;
 pub mod til;
+mod setup;
 
 
 // TODO: not a fan of the list ToC for ADRs and RFDs
