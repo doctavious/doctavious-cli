@@ -35,80 +35,6 @@ pub(crate) fn detect_framework(frameworks: &[FrameworkInfo]) -> Option<&Framewor
 
 fn matches(framework: &FrameworkInfo) -> Option<MatchResult> {
     let mut results: Vec<Option<MatchResult>> = vec![];
-    // for detector in &framework.detection.detectors {
-    //     let result = match detector {
-    //         FrameworkDetectionItem::Config { content } => {
-    //             if let Some(configs) = &framework.configs {
-    //                 for config in configs {
-    //                     // TODO: extract to check_config method
-    //                     if let Ok(file_content) = fs::read_to_string(config) {
-    //                         if let Some(content) = content {
-    //                             // TODO: switch to regex
-    //                             if file_content.contains(content) {
-    //                                 return Some(MatchResult { project: None });
-    //                             }
-    //                             continue;
-    //                         }
-    //                         return Some(MatchResult { project: None });
-    //                     }
-    //                 }
-    //             }
-    //             None
-    //         }
-    //         FrameworkDetectionItem::Dependency { name: dependency } => {
-    //             for p in framework.language.project_files() {
-    //                 for path in p.get_project_paths() {
-    //                     if !path.exists() {
-    //                         // TODO: log
-    //                         continue;
-    //                     }
-    //
-    //                     if path.is_dir() {
-    //                         // TODO: log
-    //                         continue;
-    //                     }
-    //
-    //                     let file_content = fs::read_to_string(path);
-    //                     match file_content {
-    //                         Ok(c) => {
-    //                             let found = has_dependency(p, c, dependency);
-    //                             match found {
-    //                                 Ok(f) => {
-    //                                     if f {
-    //                                         return Some(MatchResult { project: Some(*p) });
-    //                                     } else {
-    //                                         // TODO: log -- dependency not found
-    //                                     }
-    //                                 }
-    //                                 Err(_) => {
-    //                                     // TODO: log -- error checking file for dependency
-    //                                 }
-    //                             }
-    //                         }
-    //                         Err(e) => {
-    //                             // TODO: log -- error reading file
-    //                             continue;
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //
-    //             None
-    //         }
-    //     };
-    //
-    //     match &framework.detection.matching_strategy {
-    //         FrameworkMatchingStrategy::All => {
-    //             results.push(result);
-    //         }
-    //         FrameworkMatchingStrategy::Any => {
-    //             if let Some(result) = result {
-    //                 results.push(Some(result));
-    //                 break;
-    //             }
-    //         }
-    //     }
-    // }
 
     match &framework.detection.matching_strategy {
         FrameworkMatchingStrategy::All => {
@@ -126,7 +52,6 @@ fn matches(framework: &FrameworkInfo) -> Option<MatchResult> {
             }
         }
     }
-
 
     // use std::convert::identity might be more idiomatic here
     if results.iter().all(|r| r.is_some()) {
