@@ -78,6 +78,8 @@ pub(crate) fn handle_build_command(command: BuildCommand, output: Option<Output>
     Ok(())
 }
 
+// https://github.com/vercel/vercel/blob/61de63d2859c740d49ba1d28288fb7242886420c/packages/cli/src/commands/build.ts#L659
+// https://github.com/vercel/vercel/blob/61de63d2859c740d49ba1d28288fb7242886420c/packages/static-build/src/index.ts#L1
 // supporting dir probably makes mono-repos with separate docs easier for end-user
 pub(crate) fn build(
     dir: Option<PathBuf> // maybe we always assume current working directory or we change how to get settings

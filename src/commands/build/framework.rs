@@ -83,6 +83,7 @@ impl FrameworkInfo {
                     // }
                     false
                 }
+                _ => { false }
             };
 
             match &self.detection.matching_strategy {
@@ -114,6 +115,12 @@ pub struct FrameworkDetector {
 #[derive(Serialize)]
 pub enum FrameworkDetectionItem {
 
+    // TODO: see if this can replace Config
+    File {
+        path: &'static str,
+        content: Option<&'static str>
+    },
+
     // TODO: regex
     /// A matcher for a config file
     Config {
@@ -124,6 +131,8 @@ pub enum FrameworkDetectionItem {
     /// A matcher for a dependency found in project file
     Dependency { name: &'static str }
 }
+
+
 
 
 // TODO: change name?
@@ -160,7 +169,7 @@ pub struct FrameworkBuildArgs {
 pub enum FrameworkBuildArg {
     // TODO: include named arguments
     /// 0-based index of argument and default value
-    Arg {index: i8, default_value: Option<&'static str> },
+    Arg { index: i8, default_value: Option<&'static str> },
     // TODO: do we care short or long? how about use vec/array?
     Option { short: &'static str, long: &'static str }
 }

@@ -4,10 +4,9 @@ use std::path::Path;
 use serde_derive::{Serialize};
 use serde_json::Value;
 use serde_xml_rs::Error;
+use crate::commands::build::framework::{FrameworkDetectionItem, FrameworkDetector, FrameworkMatchingStrategy};
 use crate::doctavious_error::Result as DoctaviousResult;
 use crate::commands::build::projects::csproj::CSProj;
-
-// TODO: should I flip relationship and instead have Projects with supported package managers?
 
 // TODO: could add PDM and Anaconda (Python)
 #[non_exhaustive]
@@ -24,7 +23,6 @@ pub enum PackageManager {
     Yarn,
 }
 
-// TODO: do we need to support non-lock files?
 #[derive(Serialize)]
 pub struct PackageManagerInfo {
     pub name: &'static str,
@@ -37,7 +35,11 @@ pub struct PackageManagerInfo {
     // pub project_files: &'a [ProjectFile],
 
     // TODO: multiple files?
-    pub lock_file: &'static str
+    pub lock_file: &'static str,
+
+    // TODO: should we use something specific to package managers?
+    // maybe it makes more sense as a trait?
+    pub detection: FrameworkDetector
 }
 
 impl<'a> PackageManager {
@@ -52,88 +54,153 @@ impl<'a> PackageManager {
         PackageManager::Yarn,
     ];
 
-    pub const fn info(&self) -> PackageManagerInfo {
+    pub fn info(&self) -> PackageManagerInfo {
         match self {
             PackageManager::Cargo => {
                 PackageManagerInfo {
                     name: "cargo",
                     install_command: "cargo add",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::CargoToml],
                     lock_file: "Cargo.lock",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "Cargo.lock", content: None },
+                            FrameworkDetectionItem::File { path: "Cargo.toml", content: None }
+                        ]
+                    },
                 }
             },
             PackageManager::Go => {
                 PackageManagerInfo {
                     name: "go",
                     install_command: "go get",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::GoMod],
                     // TODO: not sure this is appropriate for a lock file
                     lock_file: "go.sum",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "go.sum", content: None },
+                        ]
+                    },
                 }
             },
             PackageManager::NPM => {
                 PackageManagerInfo {
                     name: "npm",
                     install_command: "npm install",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::PackageJson],
                     lock_file: "package-lock.json",
+                    // TODO: if package.json is found with no packageManager should we default
+                    // to NPM? Which would mean we would be forced to make sure its at the end
+                    // or a way to say content not present
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "package-lock.json", content: None },
+                            FrameworkDetectionItem::File {
+                                path: "package.json",
+                                content: Some(r#""packageManager":\\s*"npm@.*"""#)
+                            }
+                        ]
+                    },
                 }
             }
             PackageManager::Nuget => {
                 PackageManagerInfo {
                     name: "nuget",
                     install_command: "dotnet add",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::CSProj],
                     lock_file: "packages.lock.json",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "packages.lock.json", content: None },
+                        ]
+                    },
                 }
             }
             PackageManager::Poetry => {
                 PackageManagerInfo {
                     name: "poetry",
                     install_command: "poetry install",
-                    // manifests: &["pyproject.toml"],
-                    // project_files: &[ProjectFile::PyProject],
                     lock_file: "poetry.lock",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "poetry.lock", content: None },
+                            FrameworkDetectionItem::File {
+                                path: "pyproject.toml",
+                                content: Some("[tool.poetry]")
+                            },
+                        ]
+                    },
                 }
             }
             PackageManager::PIP => {
                 PackageManagerInfo {
                     name: "pip",
                     install_command: "pip install",
-                    // manifests: &["pipfile", "requirements.txt"],
-                    // project_files: &[ProjectFile::PipFile, ProjectFile::RequirementsTxt],
                     lock_file: "pipfile.lock",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "pipfile.lock", content: None },
+                            FrameworkDetectionItem::File { path: "pipfile", content: None },
+                            FrameworkDetectionItem::File { path: "requirements.txt", content: None },
+                        ]
+                    },
                 }
             }
             PackageManager::PNPM => {
                 PackageManagerInfo {
                     name: "pnpm",
                     install_command: "pnpm install",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::PackageJson],
                     lock_file: "pnpm-lock.yaml",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "pnpm-lock.yaml", content: None },
+                            FrameworkDetectionItem::File {
+                                path: "package.json",
+                                content: Some(r#""packageManager":\\s*"pnpm@.*""#)
+                            },
+                        ]
+                    },
                 }
             }
             PackageManager::RubyGems => {
                 PackageManagerInfo {
                     name: "rubygems",
                     install_command: "gem install",
-                    // manifests: &["Gemfile"],
-                    // project_files: &[ProjectFile::GemFile],
                     lock_file: "Gemfile.lock",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "Gemfile.lock", content: None },
+                            FrameworkDetectionItem::File { path: "Gemfile", content: None },
+                        ]
+                    },
                 }
             }
             PackageManager::Yarn => {
                 PackageManagerInfo {
                     name: "yarn",
                     install_command: "yarn install",
-                    // manifests: &["package.json"],
-                    // project_files: &[ProjectFile::PackageJson],
                     lock_file: "yarn.lock",
+                    detection: FrameworkDetector {
+                        matching_strategy: FrameworkMatchingStrategy::Any,
+                        // TODO: is this enough?
+                        detectors: vec![
+                            FrameworkDetectionItem::File { path: "yarn.lock", content: None },
+                            FrameworkDetectionItem::File {
+                                path: "package.json",
+                                content: Some(r#""packageManager":\\s*"yarn@.*""#)
+                            },
+                        ]
+                    },
                 }
             }
         }
