@@ -1,4 +1,5 @@
 use std::fs;
+use regex::{Error, Regex, RegexBuilder};
 use serde_json::Value;
 use crate::commands::build::projects::csproj::CSProj;
 use crate::commands::build::framework::{FrameworkDetectionItem, FrameworkInfo, FrameworkMatchingStrategy};
@@ -142,14 +143,21 @@ fn check(framework: &FrameworkInfo, item: &FrameworkDetectionItem) -> Option<Mat
         FrameworkDetectionItem::Config { content } => {
             if let Some(configs) = &framework.configs {
                 for config in configs {
-                    // TODO: extract to check_config method
                     if let Ok(file_content) = fs::read_to_string(config) {
                         if let Some(content) = content {
-                            // TODO: switch to regex
-                            if file_content.contains(content) {
-                                return Some(MatchResult { project: None });
+                            let regex = RegexBuilder::new(content)
+                                .multi_line(true)
+                                .build();
+                            match regex {
+                                Ok(regex) => {
+                                    if regex.is_match(file_content.as_str()) {
+                                        return Some(MatchResult { project: None });
+                                    }
+                                }
+                                Err(e) => {
+                                    // TODO: log
+                                }
                             }
-                            continue;
                         }
                         return Some(MatchResult { project: None });
                     }
