@@ -107,7 +107,7 @@ impl Proj {
 
 // Manifest
 #[non_exhaustive]
-#[derive(Serialize)]
+#[derive(Clone, Copy, Serialize)]
 pub enum ProjectFile {
     CargoToml,
     CSProj,
@@ -292,6 +292,7 @@ mod tests {
     use std::io::Write;
     use serial_test::serial;
     use crate::commands::build::project_file::ProjectFile;
+    use crate::commands::build::projects::project_file::ProjectFile;
 
     static SERIAL_TEST: Lazy<Mutex<()>> = Lazy::new(Default::default);
 
