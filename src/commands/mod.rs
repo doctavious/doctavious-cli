@@ -24,6 +24,7 @@ mod tag;
 pub mod telemetry;
 pub mod til;
 mod setup;
+mod link;
 
 
 // TODO: not a fan of the list ToC for ADRs and RFDs
