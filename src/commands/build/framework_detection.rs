@@ -1,8 +1,10 @@
 use std::fs;
 use regex::{Error, Regex, RegexBuilder};
 use serde_json::Value;
+use serde_derive::{Serialize};
+
 use crate::commands::build::projects::csproj::CSProj;
-use crate::commands::build::framework::{FrameworkDetectionItem, FrameworkInfo, FrameworkMatchingStrategy};
+use crate::commands::build::framework::{FrameworkDetectionItem, FrameworkInfo, FrameworkMatchingStrategy, FrameworkSupport};
 use crate::commands::build::projects::project_file::{Proj, ProjectFile};
 use crate::doctavious_error::Result as DoctaviousResult;
 
@@ -14,6 +16,7 @@ pub(crate) struct MatchedFramework<'a> {
     pub project: Option<ProjectFile>
 }
 
+#[derive(Clone, Copy, Serialize)]
 pub(crate) struct MatchResult {
     pub project: Option<ProjectFile>
     // dependency -- could also do a dependency/version struct tuple and have an array of them
@@ -21,11 +24,13 @@ pub(crate) struct MatchResult {
 }
 
 
-pub(crate) fn detect_framework(frameworks: &[FrameworkInfo]) -> Option<&FrameworkInfo> {
-
+pub(crate) fn detect_framework<'a>(frameworks: Vec<Box<dyn FrameworkSupport>>) -> Option<Box<dyn FrameworkSupport>> {
     for framework in frameworks {
-        let m = matches(framework);
+        println!("{:?}", serde_json::to_string(framework.get_info()));
+        let m = matches(framework.get_info());
+        // TODO: return MatchResult?
         if m.is_some() {
+            println!("we found something");
             return Some(framework);
         }
     }
@@ -33,17 +38,31 @@ pub(crate) fn detect_framework(frameworks: &[FrameworkInfo]) -> Option<&Framewor
     None
 }
 
+// pub(crate) fn detect_framework(frameworks: &[FrameworkInfo]) -> Option<&FrameworkInfo> {
+//
+//     for framework in frameworks {
+//         let m = matches(framework);
+//         if m.is_some() {
+//             return Some(framework);
+//         }
+//     }
+//
+//     None
+// }
+
 fn matches(framework: &FrameworkInfo) -> Option<MatchResult> {
     let mut results: Vec<Option<MatchResult>> = vec![];
 
     match &framework.detection.matching_strategy {
         FrameworkMatchingStrategy::All => {
-            let a = framework.detection.detectors
-                .iter().map(|item| check(&framework, item));
+            let a = framework.detection.detectors.iter()
+                .map(|item| check(&framework, item))
+                .collect::<Vec<Option<MatchResult>>>();
             results.extend(a);
         }
         FrameworkMatchingStrategy::Any => {
             for item in &framework.detection.detectors {
+                println!("{:?}", item);
                 let result = check(&framework, item);
                 if result.is_some() {
                     results.push(result);
@@ -53,10 +72,20 @@ fn matches(framework: &FrameworkInfo) -> Option<MatchResult> {
         }
     }
 
-    // use std::convert::identity might be more idiomatic here
-    if results.iter().all(|r| r.is_some()) {
-        return None;
+    for result in results {
+        if result.is_some() {
+            println!("match result found {:?}", serde_json::to_string(&result).unwrap());
+            return Some(MatchResult { project: None });
+        } else {
+
+        }
     }
+
+    // TODO: why doesnt this work? Getting Ok(None) for some unknown reason
+    // use std::convert::identity might be more idiomatic here
+    // if results.iter().all(|r| r.is_some()) {
+    //     return Some(MatchResult { project: None });
+    // }
 
     // get first
 
@@ -64,6 +93,7 @@ fn matches(framework: &FrameworkInfo) -> Option<MatchResult> {
 }
 
 fn check(framework: &FrameworkInfo, item: &FrameworkDetectionItem) -> Option<MatchResult> {
+    println!("checking {:?}", framework.name);
     match item {
         FrameworkDetectionItem::Config { content } => {
             if let Some(configs) = &framework.configs {
@@ -75,6 +105,7 @@ fn check(framework: &FrameworkInfo, item: &FrameworkDetectionItem) -> Option<Mat
                                 .build();
                             match regex {
                                 Ok(regex) => {
+
                                     if regex.is_match(file_content.as_str()) {
                                         return Some(MatchResult { project: None });
                                     }
@@ -110,6 +141,7 @@ fn check(framework: &FrameworkInfo, item: &FrameworkDetectionItem) -> Option<Mat
                             match found {
                                 Ok(f) => {
                                     if f {
+                                        println!("...found");
                                         return Some(MatchResult { project: Some(*p) });
                                     } else {
                                         // TODO: log -- dependency not found
@@ -127,10 +159,37 @@ fn check(framework: &FrameworkInfo, item: &FrameworkDetectionItem) -> Option<Mat
                     }
                 }
             }
-
+            println!("...none");
             None
         }
-        _ => { None }
+        FrameworkDetectionItem::File {
+            path,
+            content,
+        } => {
+            if let Ok(file_content) = fs::read_to_string(path) {
+                if let Some(content) = content {
+                    println!("file {file_content} with content {content}");
+                    let regex = RegexBuilder::new(content)
+                        .multi_line(true)
+                        .build();
+                    match regex {
+                        Ok(regex) => {
+                            println!("regex matching");
+                            if regex.is_match(file_content.as_str()) {
+                                println!("match found");
+                                return Some(MatchResult { project: None });
+                            }
+                        }
+                        Err(e) => {
+                            // TODO: log
+                            println!("error with regex {e}")
+                        }
+                    }
+                }
+                return Some(MatchResult { project: None });
+            }
+            None
+        }
     }
 }
 

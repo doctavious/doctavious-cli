@@ -4,6 +4,8 @@ use serde_derive::Serialize;
 use crate::commands::build::package_manager::{PackageManager, PackageManagerInfo};
 use crate::commands::build::projects::project_file::{Proj, ProjectFile};
 
+// TODO: We might need to determine python path in order to do python builds
+
 #[non_exhaustive]
 #[derive(Serialize)]
 pub enum Language {

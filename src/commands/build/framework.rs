@@ -112,7 +112,7 @@ pub struct FrameworkDetector {
     pub detectors: Vec<FrameworkDetectionItem>
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub enum FrameworkDetectionItem {
 
     // TODO: see if this can replace Config
@@ -171,7 +171,6 @@ pub struct FrameworkBuildArgs {
 
 #[derive(Serialize)]
 pub enum FrameworkBuildArg {
-    // TODO: include named arguments
     /// 0-based index of argument and default value
     Arg { index: i8, default_value: Option<&'static str> },
     // TODO: do we care short or long? how about use vec/array?
