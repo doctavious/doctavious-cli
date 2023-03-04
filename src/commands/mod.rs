@@ -23,7 +23,6 @@ mod software_template;
 mod tag;
 pub mod telemetry;
 pub mod til;
-mod setup;
 mod link;
 
 
