@@ -23,9 +23,10 @@ impl Jekyll {
                 configs,
                 language: Language::Ruby,
                 detection: FrameworkDetector {
-                    matching_strategy: FrameworkMatchingStrategy::All,
+                    matching_strategy: FrameworkMatchingStrategy::Any,
                     detectors: vec![
-                        FrameworkDetectionItem::Dependency { name: "jekyll"}
+                        FrameworkDetectionItem::Dependency { name: "jekyll" },
+                        FrameworkDetectionItem::File { path: "Gemfile", content: Some("jekyll_plugins") }
                     ]
                 },
                 build: FrameworkBuildSettings {
